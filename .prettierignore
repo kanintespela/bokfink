@@ -1,0 +1,13 @@
+dist/
+coverage/
+playwright-report/
+test-results/
+package-lock.json
+
+# Documentation is prose, and Prettier reflows tables and wraps lines in ways
+# that make diffs unreadable. scripts/check-doc-links.py guards what matters.
+*.md
+
+# Git worktrees the tooling puts here: a second checkout of the whole repo,
+# formatted where it belongs rather than from this one.
+.claude/
