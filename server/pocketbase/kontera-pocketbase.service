@@ -1,0 +1,15 @@
+[Unit]
+Description=Kontera PocketBase
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+# Loopback only. Nås utifrån genom tailscale serve, aldrig direkt.
+ExecStart=/opt/kontera-pocketbase/pocketbase serve --http=127.0.0.1:8091 --dir=/opt/kontera-pocketbase/pb_data
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,25 @@
+node_modules/
+dist/
+dist-agent/
+/public/tesseract/
+/public/pdf/
+# Tesseract.js cachar språkdatan i arbetskatalogen när OCR körs i Node.
+/swe.traineddata
+dist-ssr/
+coverage/
+__pycache__/
+
+# Riktiga kvitton och fakturor att testa mot. De innehåller namn, adresser och
+# kortuppgifter och hör inte hemma i versionshanteringen - de ligger lokalt.
+/dokument_foton_tester/
+.vite/
+playwright-report/
+test-results/
+*.local
+*.log
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+/blob-report/
+/.playwright/

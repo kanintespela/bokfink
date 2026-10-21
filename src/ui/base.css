@@ -1,0 +1,918 @@
+/*
+ * The visual foundation.
+ *
+ * Built for one thing: booking an expense on a phone, with one hand, in under
+ * twenty seconds. That decides most of what follows - large targets, few
+ * choices visible at once, and the number the biggest thing on the screen.
+ *
+ * Written by hand rather than taken from a framework. Hard rule 7 says
+ * everything ships with the app, the dependency policy prefers nothing to
+ * something small, and an app with this few screen shapes does not earn a
+ * design system it would have to learn to fight.
+ */
+
+:root {
+  /* Deep green rather than the usual fintech blue, and warm paper rather than
+     white, so a screen full of numbers is calmer to look at for a long time. */
+  --ink: #0e3b32;
+  --ink-svag: #1c5a4c;
+  --paper: #f7f5f0;
+  --yta: #fffdf8;
+  --text: #16211d;
+  --muted: #5a6b64;
+  --line: #ddd8cd;
+  --fara: #8c2f22;
+  --fara-yta: #fbeeec;
+
+  --rum-1: 0.25rem;
+  --rum-2: 0.5rem;
+  --rum-3: 0.75rem;
+  --rum-4: 1rem;
+  --rum-5: 1.5rem;
+  --rum-6: 2rem;
+
+  --rundning: 0.625rem;
+  --rundning-stor: 1rem;
+
+  /* Nothing interactive may be smaller than a thumb; the primary action is
+     deliberately larger still, because it is the one hit while walking. */
+  --tapp: 44px;
+  --tapp-stor: 56px;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #8fd8c4;
+    --ink-svag: #6fbfa8;
+    --paper: #121714;
+    --yta: #1a221e;
+    --text: #e8efea;
+    --muted: #9aa9a2;
+    --line: #2c3a34;
+    --fara: #ff9d8d;
+    --fara-yta: #33201c;
+
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  /* iOS zooms the page when a focused input is under 16px. */
+  font-size: 16px;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--text);
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+}
+
+main {
+  padding: max(var(--rum-5), env(safe-area-inset-top))
+    max(var(--rum-4), env(safe-area-inset-right))
+    max(var(--rum-5), env(safe-area-inset-bottom))
+    max(var(--rum-4), env(safe-area-inset-left));
+  max-width: 40rem;
+  margin-inline: auto;
+}
+
+.update-banner + main {
+  padding-top: var(--rum-5);
+}
+
+h1 {
+  font-size: 1.5rem;
+  margin: 0 0 var(--rum-2);
+  letter-spacing: -0.01em;
+}
+
+/*
+ * The home screen's title and the settings icon share a row, top-right being
+ * where a rarely-tapped control belongs - reachable without scrolling past a
+ * to-do list that keeps growing.
+ */
+.rubrikrad {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--rum-2);
+}
+
+.rubrikrad h1 {
+  margin: 0;
+}
+
+h2 {
+  font-size: 1.1rem;
+  margin: var(--rum-5) 0 var(--rum-2);
+}
+
+p {
+  margin: 0 0 var(--rum-3);
+  color: var(--muted);
+}
+
+/* ── Amounts ──────────────────────────────────────────────────────────────
+   Tabular figures so columns line up, and never wrapped: an amount broken
+   across two lines is unreadable at a glance, which is the only way anyone
+   reads a ledger. */
+
+.belopp {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.belopp--negativ {
+  color: var(--fara);
+}
+
+.belopp--stort {
+  font-size: 2.25rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* ── Buttons ───────────────────────────────────────────────────────────── */
+
+.knapp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--rum-2);
+  min-height: var(--tapp);
+  padding: 0 var(--rum-4);
+  border: 1px solid var(--line);
+  border-radius: var(--rundning);
+  background: var(--yta);
+  color: var(--text);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.knapp--primar {
+  min-height: var(--tapp-stor);
+  border-color: transparent;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  width: 100%;
+}
+
+.knapp--text {
+  border-color: transparent;
+  background: none;
+  color: var(--ink-svag);
+  padding-inline: var(--rum-2);
+}
+
+/*
+ * An icon with no label needs its own minimum width - .knapp only guarantees
+ * height, and a bare icon's padding alone would leave a tap target narrower
+ * than a thumb.
+ */
+.knapp--ikon {
+  min-width: var(--tapp);
+  padding-inline: 0;
+}
+
+.knapp:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.knapp:focus-visible,
+.falt:focus-visible,
+.listrad:focus-visible,
+.segment button:focus-visible {
+  outline: 2px solid var(--ink-svag);
+  outline-offset: 2px;
+}
+
+/* ── Fields ────────────────────────────────────────────────────────────── */
+
+.faltgrupp {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rum-2);
+  margin-bottom: var(--rum-4);
+}
+
+.faltgrupp > label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.falt {
+  min-height: var(--tapp);
+  padding: var(--rum-2) var(--rum-3);
+  border: 1px solid var(--line);
+  border-radius: var(--rundning);
+  background: var(--yta);
+  color: var(--text);
+  font: inherit;
+  width: 100%;
+}
+
+.falt--belopp {
+  font-size: 2.25rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  min-height: var(--tapp-stor);
+}
+
+/* ── Segmented choice ──────────────────────────────────────────────────────
+   For the two or three answers that are almost always right. Anything longer
+   belongs in a list; a segment that scrolls has stopped being a shortcut. */
+
+.segment {
+  display: flex;
+  /*
+   * Wraps rather than squeezing. Five reports do not fit across 375 px, and a
+   * row of buttons narrower than the words in them is worse than two rows.
+   */
+  flex-wrap: wrap;
+  gap: var(--rum-2);
+}
+
+.segment button {
+  /* Grow to fill the row, but never below what the label needs. */
+  flex: 1 1 auto;
+  min-height: var(--tapp);
+  padding: 0 var(--rum-2);
+  border: 1px solid var(--line);
+  border-radius: var(--rundning);
+  background: var(--yta);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.segment button[aria-pressed='true'] {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 600;
+}
+
+/* ── Lists ─────────────────────────────────────────────────────────────── */
+
+.lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--rundning);
+  overflow: hidden;
+  background: var(--yta);
+}
+
+.lista > li + li {
+  border-top: 1px solid var(--line);
+}
+
+.listrad {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rum-3);
+  width: 100%;
+  min-height: var(--tapp-stor);
+  padding: var(--rum-3) var(--rum-4);
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.listrad__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.listrad__sekundar {
+  font-size: 0.8125rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * A standalone explanatory paragraph - same muted, small-print voice as
+ * .listrad__sekundar, but never a single truncated line: unlike a list row's
+ * subtitle, a paragraph has nowhere else to put the words it doesn't have
+ * room for.
+ */
+.hjalptext {
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+/*
+ * The open row in an expandable list (a verifikat, a konto, a räkenskapsår)
+ * has to look different from the ones still closed - `aria-expanded` was
+ * already being set, but nothing painted it. Filled ink/paper mirrors the
+ * segmented-choice selected state elsewhere in this file, rather than
+ * inventing a second "selected" language.
+ */
+.listrad[aria-expanded='true'] {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.listrad[aria-expanded='true'] .listrad__sekundar {
+  color: var(--paper);
+  opacity: 0.75;
+}
+
+.listrad[aria-expanded='true'] .belopp--negativ {
+  /* --fara over --ink is too low-contrast to read; paper is always legible
+     against ink, which is the whole reason that pair exists. */
+  color: var(--paper);
+}
+
+/*
+ * Once a row is open, its still-closed siblings recede rather than compete
+ * for attention - the "what's not chosen fades" half of the same fix.
+ */
+.lista:has(> li > .listrad[aria-expanded='true'])
+  > li
+  > .listrad:not([aria-expanded='true']) {
+  opacity: 0.55;
+}
+
+/*
+ * Debet and kredit lines inside an opened verifikat otherwise differ only by
+ * the sign in front of the amount - easy to miss at a glance. A left-edge
+ * accent gives every line a second, non-numeric cue for which side it is on,
+ * the same colours the amount text itself already uses. Declared after the
+ * base .listrad rule on purpose: that rule resets `border` with a shorthand,
+ * which would otherwise win the cascade against an equal-specificity class
+ * declared earlier and zero this back out.
+ */
+.listrad--debet {
+  border-left: 3px solid var(--ink-svag);
+}
+
+.listrad--kredit {
+  border-left: 3px solid var(--fara);
+}
+
+/* ── Cards and status ──────────────────────────────────────────────────── */
+
+.kort {
+  padding: var(--rum-4);
+  border: 1px solid var(--line);
+  border-radius: var(--rundning-stor);
+  background: var(--yta);
+  margin-bottom: var(--rum-4);
+}
+
+.tomt {
+  padding: var(--rum-6) var(--rum-4);
+  text-align: center;
+  color: var(--muted);
+}
+
+[role='alert'] {
+  padding: var(--rum-3) var(--rum-4);
+  border-radius: var(--rundning);
+  background: var(--fara-yta);
+  color: var(--fara);
+}
+
+/* ── Receipts ──────────────────────────────────────────────────────────── */
+
+.kvittorutnat {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  /* Two columns on a 375 px phone, more when there is room for them. */
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: var(--rum-3);
+}
+
+.kvitto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rum-2);
+  width: 100%;
+  padding: var(--rum-2);
+  border: 1px solid var(--line);
+  border-radius: var(--rundning);
+  background: var(--yta);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.kvitto img {
+  width: 100%;
+  /* A receipt is tall; a fixed box keeps the grid even until it is tapped. */
+  height: 9rem;
+  object-fit: cover;
+  border-radius: var(--rundning);
+  background: var(--paper);
+}
+
+.beskar {
+  position: relative;
+  /* No page scrolling while a corner is being dragged across the picture. */
+  touch-action: none;
+  user-select: none;
+  margin-bottom: var(--rum-4);
+}
+
+.beskar img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--rundning);
+}
+
+.beskar__ram {
+  position: absolute;
+  border: 2px solid var(--ink);
+  box-shadow: 0 0 0 100vmax rgb(0 0 0 / 45%);
+  pointer-events: none;
+}
+
+.beskar__horn {
+  position: absolute;
+  width: var(--tapp);
+  height: var(--tapp);
+  margin: calc(var(--tapp) / -2) 0 0 calc(var(--tapp) / -2);
+  padding: 0;
+  border: 2px solid var(--paper);
+  border-radius: 50%;
+  background: var(--ink);
+  touch-action: none;
+  cursor: grab;
+}
+
+.underlagskort {
+  display: flex;
+  align-items: center;
+  /* So the OCR text can take a full line of its own under the picture. */
+  flex-wrap: wrap;
+  gap: var(--rum-3);
+}
+
+/* Stands in for a picture when the file is a PDF, so the row keeps its shape. */
+.underlagskort__symbol {
+  display: grid;
+  place-items: center;
+  width: 4rem;
+  height: 4rem;
+  border-radius: var(--rundning);
+  background: var(--paper);
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  color: var(--damp);
+}
+
+.underlagskort img {
+  width: 4rem;
+  height: 4rem;
+  object-fit: cover;
+  border-radius: var(--rundning);
+  background: var(--paper);
+}
+
+/* A thumbnail that opens the underlag; the button adds nothing to the look. */
+.underlagskort__oppna {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-in;
+  /* The picture is 4rem, under the 44 px a thumb needs; the margin makes up the rest. */
+  min-width: var(--tapp);
+  min-height: var(--tapp);
+}
+
+/*
+ * The underlag in full size, over everything else. It scrolls on its own both
+ * ways when enlarged, and overscroll-behavior keeps the page underneath from
+ * scrolling along when it reaches the end.
+ */
+.underlagsvisning {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: var(--paper);
+  --kant-vanster: max(var(--rum-4), env(safe-area-inset-left));
+  --kant-hoger: max(var(--rum-4), env(safe-area-inset-right));
+  padding: 0 var(--kant-hoger) max(var(--rum-5), env(safe-area-inset-bottom))
+    var(--kant-vanster);
+}
+
+/*
+ * Stays put at the top left while an enlarged page is scrolled under it,
+ * reaching out over the padding so nothing of the page shows beside it.
+ */
+.underlagsvisning__rad {
+  position: sticky;
+  top: 0;
+  left: calc(-1 * var(--kant-vanster));
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rum-3);
+  width: 100vw;
+  margin: 0 0 0 calc(-1 * var(--kant-vanster));
+  padding: max(var(--rum-3), env(safe-area-inset-top)) var(--kant-hoger) var(--rum-3)
+    var(--kant-vanster);
+  background: var(--paper);
+}
+
+.underlagsvisning__rad .listrad__sekundar {
+  overflow-wrap: anywhere;
+}
+
+.underlagsvisning__innehall {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: zoom-in;
+}
+
+.underlagsvisning__innehall--forstorad {
+  width: 250%;
+  cursor: zoom-out;
+}
+
+.underlagsvisning__innehall img,
+.underlagsvisning__sida {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-bottom: var(--rum-3);
+  border-radius: var(--rundning);
+  /* A PDF page is white paper whatever the app's colours are. */
+  background: #fff;
+}
+
+.underlagsvisning__fel {
+  display: block;
+  padding: var(--rum-5) 0;
+  text-align: left;
+}
+
+.underlagsvisning__hjalp {
+  position: sticky;
+  left: 0;
+  max-width: calc(100vw - var(--kant-vanster) - var(--kant-hoger));
+}
+
+/* ── Nyckeltal och diagram ─────────────────────────────────────────────── */
+
+.nyckeltal {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: var(--rum-2) var(--rum-4);
+  margin: 0 0 var(--rum-5);
+  border-top: 1px solid var(--line);
+  padding-top: var(--rum-3);
+}
+
+.nyckeltal dt {
+  padding: 0;
+  color: var(--muted);
+}
+
+.nyckeltal dd {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.25rem;
+  font-weight: 600;
+  text-align: right;
+}
+
+.diagram {
+  margin-bottom: var(--rum-5);
+}
+
+.diagram svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The figure for one month, above the picture: the latest, or the one tapped. */
+.diagram__avlasning {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--rum-3);
+  margin: 0 0 var(--rum-2);
+  color: var(--muted);
+}
+
+.diagram__avlasning strong {
+  color: var(--text);
+  font-size: 1.125rem;
+}
+
+.diagram__avlasning strong.belopp--negativ {
+  color: var(--fara);
+}
+
+.diagram__nollinje {
+  stroke: var(--muted);
+  stroke-width: 1;
+}
+
+/* Where the largest and smallest figures reach, quieter than zero. */
+.diagram__stodlinje {
+  stroke: var(--line);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+}
+
+/* The scale's own figures, haloed so a bar passing behind cannot hide them. */
+.diagram__skala {
+  font-size: 10px;
+  fill: var(--muted);
+  paint-order: stroke;
+  stroke: var(--paper);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+.diagram__markor {
+  stroke: var(--muted);
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+}
+
+.diagram__manad {
+  font-size: 11px;
+  fill: var(--muted);
+  text-anchor: middle;
+}
+
+.diagram__manad--vald {
+  fill: var(--text);
+  font-weight: 700;
+}
+
+/* A month still to come is named, so the year keeps its shape, but faintly. */
+.diagram__manad--kommande {
+  opacity: 0.4;
+}
+
+.diagram__traffyta {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.diagram__siffror summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--tapp);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.diagram__siffror dl {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--rum-2) var(--rum-4);
+  margin: 0;
+  border-top: 0;
+}
+
+/* One row per month, name and figure on the same line. */
+.diagram__siffror dt,
+.diagram__siffror dd {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 0.9375rem;
+}
+
+.diagram__siffror dt {
+  color: var(--muted);
+}
+
+.diagram__siffror dd {
+  text-align: right;
+}
+
+.diagram__stapel {
+  fill: var(--ink);
+}
+
+.diagram__stapel--minus {
+  fill: var(--fara);
+}
+
+.diagram__linje {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.diagram__punkt {
+  fill: var(--ink);
+}
+
+/* Ringed in the background colour, so it stands clear of the line through it. */
+.diagram__punkt--vald {
+  stroke: var(--paper);
+  stroke-width: 2;
+}
+
+.andelar {
+  list-style: none;
+  margin: 0 0 var(--rum-5);
+  padding: 0;
+}
+
+.andelar > li + li {
+  margin-top: var(--rum-3);
+}
+
+.andelar__rad {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--rum-3);
+}
+
+/*
+ * Wrapped rather than cut short. BAS names are long, and the part cut off is
+ * often the part that tells two accounts apart.
+ */
+.andelar__namn {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.andelar__spar {
+  height: 6px;
+  margin-top: var(--rum-1);
+  border-radius: 3px;
+  background: var(--line);
+}
+
+.andelar__fyllnad {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--ink);
+}
+
+.exportknappar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--rum-3);
+}
+
+.ocrtext {
+  flex-basis: 100%;
+  max-height: 14rem;
+  overflow: auto;
+  margin: var(--rum-2) 0 0;
+  padding: var(--rum-3);
+  border-radius: var(--rundning);
+  background: var(--paper);
+  color: var(--muted);
+  font-size: 0.75rem;
+  /* Kept as OCR produced it: the line breaks are half the diagnosis. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.kvitto__pdf {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 9rem;
+  border-radius: var(--rundning);
+  background: var(--paper);
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* ── Definition lists, used for status and summaries ───────────────────── */
+
+dl {
+  margin: 0;
+  border-top: 1px solid var(--line);
+}
+
+dt {
+  font-size: 0.8125rem;
+  color: var(--muted);
+  padding-top: var(--rum-3);
+}
+
+dd {
+  margin: 0 0 var(--rum-3);
+  padding-bottom: var(--rum-3);
+  border-bottom: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+
+/* ── Update banner ─────────────────────────────────────────────────────── */
+
+.update-banner {
+  display: flex;
+  gap: var(--rum-4);
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding: var(--rum-3) max(var(--rum-4), env(safe-area-inset-right)) var(--rum-3)
+    max(var(--rum-4), env(safe-area-inset-left));
+  padding-top: max(var(--rum-3), env(safe-area-inset-top));
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.update-banner .knapp {
+  background: var(--paper);
+  color: var(--ink);
+  border-color: transparent;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .knapp,
+  .listrad,
+  .segment button {
+    transition:
+      background-color 120ms ease,
+      border-color 120ms ease;
+  }
+}
+
+/* ── View switch ───────────────────────────────────────────────────────────
+   Along the bottom, where a thumb reaches without shifting grip. Fixed, so
+   moving between views never costs a scroll back to the top. */
+
+.vyval {
+  position: fixed;
+  inset: auto 0 0 0;
+  display: flex;
+  background: var(--yta);
+  border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 10;
+}
+
+.vyval button {
+  flex: 1;
+  min-height: var(--tapp-stor);
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.vyval button[aria-current='page'] {
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: inset 0 2px 0 var(--ink);
+}
+
+/* Room for the bar, so the last row of a list is never trapped under it. */
+main {
+  padding-bottom: calc(var(--tapp-stor) + env(safe-area-inset-bottom) + var(--rum-5));
+}
