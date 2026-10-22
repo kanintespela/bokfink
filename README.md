@@ -83,7 +83,7 @@ Status: ⬜ ej påbörjad · 🟡 pågår · ✅ klar · ⏸️ nedprioriterad
 |---|---|
 | ⏸️ | Lås med Face ID / Touch ID / kod via passkey (WebAuthn) |
 | 🟡 | Krypterad säkerhetskopia och synk; databasen på enheten krypteras inte (iOS krypterar redan lagringen) |
-| ✅ | Snabb manuell krypterad säkerhetskopiering med automatiskt testad återställning (automatisk kopiering nedprioriterad) |
+| ✅ | Snabb manuell säkerhetskopiering, krypterad eller oskyddad efter eget val, med automatiskt testad återställning (automatisk kopiering nedprioriterad) |
 | 🟡 | Synkronisering mellan telefon och dator över egen PocketBase-server, med krypterad nyttolast. Byggd och testad, men servern är inte uppsatt — enheterna byter krypterade kopior som filer |
 
 Fyllig beskrivning av varje punkt, inklusive vad som är tekniskt möjligt i en PWA på iOS och vad som inte är det, finns i [utvecklingsplanen](docs/UTVECKLINGSPLAN.md).

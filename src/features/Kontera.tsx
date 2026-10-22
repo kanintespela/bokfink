@@ -764,16 +764,25 @@ export function Kontera() {
             )}
             fakturor={vantandeFakturor(laddat.kvitton, idag)}
             onSnabbBackup={async (losenfras) => {
-              const fil = await skapaKrypteradKopia(losenfras);
-              const namn = `kontera-sakerhetskopia-${new Date()
-                .toISOString()
-                .slice(0, 10)}.json`;
+              // Same names and wording as the Säkerhetskopia screen, so a
+              // folder of copies reads the same whichever button made them.
+              const krypterad = losenfras !== undefined;
+              const fil = krypterad
+                ? await skapaKrypteradKopia(losenfras)
+                : await exporteraSomText(db);
+              const datum = new Date().toISOString().slice(0, 10);
+              const namn = krypterad
+                ? `kontera-sakerhetskopia-${datum}.json`
+                : `kontera-oskyddad-kopia-${datum}.json`;
               const utfall = await delaEllerSpara(namn, fil, 'application/json');
               await db.setMeta('backup.senast', systemklocka().idag());
               setLaddat(await hamta());
+              const vad = krypterad
+                ? 'Den krypterade säkerhetskopian'
+                : 'Den oskyddade kopian';
               return utfall === 'delad'
-                ? 'Den krypterade säkerhetskopian delades.'
-                : `Den krypterade säkerhetskopian sparades som ${namn}.`;
+                ? `${vad} delades.`
+                : `${vad} sparades som ${namn}.`;
             }}
             onBokfor={() => setVy('bokfor')}
             onMoms={() => setVy('moms')}

@@ -450,7 +450,7 @@ Punkter som saknades i den ursprungliga kravlistan men som behövs för att appe
 
 ## 9. Öppna beslut
 
-Nitton frågor är besvarade och har arbetats in i planen. De kvarstående kan vänta.
+Tjugo frågor är besvarade och har arbetats in i planen. De kvarstående kan vänta.
 
 ### Besvarade
 
@@ -467,6 +467,7 @@ Nitton frågor är besvarade och har arbetats in i planen. De kvarstående kan v
 | J | Momsperiod | **Kvartal** | Grundförutsättningar uppdaterad. Rapportperioder och påminnelser (Etapp 9) utgår från kvartal |
 | K | Bank | **Bankimport nedprioriterad** | Bankens app visar inte kontoutdrag i mobilen — den enhet som sköter den löpande bokföringen enligt beslut H — och behovet bedöms inte finnas. Etapp 3:s bankimportpunkt nedprioriterad (⏸️), koden ligger kvar oanvänd |
 | L | Automatisk säkerhetskopiering | **Manuell, men snabb** | En PWA kan inte skriva tyst till iCloud Drive (se Etapp 5). I stället: en snabbkopia direkt på Att göra-kortet, samma två tryck som ett bokfört verifikat |
+| U | Kryptering av säkerhetskopian (2026-10-22) | **Valbar.** Lösenfras ger en krypterad kopia, utan lösenfras en oskyddad | Räkenskapsinformationen förvaras på enheten; kopian är redundans och ägaren väljer var den hamnar. En glömd lösenfras gör kopian oläslig för alltid, vilket kan vara värre än att den är läsbar på ägarens egen disk. Båda valen finns både på Säkerhetskopia-sidan och i snabbkopian på Att göra. Synken förblir alltid krypterad, eftersom servern inte ska behöva vara betrodd |
 | M | Verksamhetens art | **Fakturering behövs sällan eller aldrig** | Etapp 6 (kunder, projekt, fakturering) nedprioriterad. Nästa etapp väljs om — se [öppna beslut, kvarstående](#9-öppna-beslut) |
 | N | Kvitton via Claude på egen server (2026-09-12) | **Ja, som utkast. Synkens lösenfras får ligga i en fil på servern** | Assistenten skickar utkast med underlag, aldrig bokförda verifikat. Filen har rättigheterna 600 och verktyget vägrar läsa den annars, men lösenfrasen ligger på samma maskin som synkservern: den som kommer åt maskinen kan läsa bokföringen, och löftet att servern aldrig ser bokföringen gäller inte mot den. Kvittobilderna passerar Anthropic via Claude-appen — det är ägarens eget val utanför appen; appen själv skickar fortfarande ingenting utöver synken (hård regel 7) |
 | O | Momslåsets räckvidd (2026-09-13) | **Stoppar bara verifikat som påverkar momsdeklarationen** | Bokslutets poster daterade 31 december går att bokföra efter att fjärde kvartalet låsts. Ett avslutat år är fortfarande helt stängt |
