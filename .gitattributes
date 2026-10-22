@@ -1,0 +1,3 @@
+# Reference files for Skatteverket's formats are compared byte for byte:
+# ISO 8859-1 and CR LF, exactly as uploaded. Never let git normalise them.
+**/__fixtures__/** -text

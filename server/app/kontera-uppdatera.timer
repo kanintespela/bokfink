@@ -1,0 +1,9 @@
+[Unit]
+Description=Kontera - leta efter ett nytt bygge var femte minut
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+
+[Install]
+WantedBy=timers.target
