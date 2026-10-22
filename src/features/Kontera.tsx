@@ -29,7 +29,7 @@ import {
   senastBokfort,
   type Verifikatpost,
 } from '../data/bokforing';
-import { db } from '../data/instance';
+import type { KonteraDatabase } from '../data/db';
 import { newIdentifier } from '../data/id';
 import {
   annulleraVerifikat,
@@ -241,7 +241,10 @@ function forraArsslutet(idag: Datum): Datum {
  * without making old copies unreadable. Shared between the settings screen
  * and the one-tap backup on Att göra, so the two paths cannot drift apart.
  */
-async function skapaKrypteradKopia(losenfras: string): Promise<string> {
+async function skapaKrypteradKopia(
+  db: KonteraDatabase,
+  losenfras: string,
+): Promise<string> {
   const klartext = await exporteraSomText(db);
   const salt = nyttSalt();
   const nyckel = await harledNyckel(losenfras, salt, ITERATIONER);
@@ -255,7 +258,7 @@ async function skapaKrypteradKopia(losenfras: string): Promise<string> {
   });
 }
 
-async function skrivkontext(): Promise<Skrivkontext> {
+async function skrivkontext(db: KonteraDatabase): Promise<Skrivkontext> {
   const enhet = await db.getMeta<string>('deviceId');
   return {
     enhet: enhet ?? 'okand',
@@ -264,16 +267,16 @@ async function skrivkontext(): Promise<Skrivkontext> {
   };
 }
 
-export function Kontera() {
+export function Kontera({ db }: { db: KonteraDatabase }) {
   const [vy, setVy] = useVy();
   // Stable, so the NE screen reads a year once rather than on every render.
-  const lasNeJusteringar = useCallback((arId: Uuid) => lasNejusteringar(db, arId), []);
+  const lasNeJusteringar = useCallback((arId: Uuid) => lasNejusteringar(db, arId), [db]);
   const lasNe = useCallback(
     async (arId: Uuid) => ({
       justeringar: await lasNejusteringar(db, arId),
       deklarant: await lasDeklarant(db),
     }),
-    [],
+    [db],
   );
   const [laddat, setLaddat] = useState<Laddat | undefined>();
   const [fel, setFel] = useState<string | undefined>();
@@ -377,7 +380,7 @@ export function Kontera() {
         enhet: (await db.getMeta<string>('deviceId')) ?? 'okänd',
       },
     };
-  }, []);
+  }, [db]);
 
   useEffect(() => {
     let avbruten = false;
@@ -412,7 +415,7 @@ export function Kontera() {
     return () => {
       avbruten = true;
     };
-  }, [hamta]);
+  }, [db, hamta]);
 
   /*
    * Object URLs for the receipts waiting to be booked.
@@ -458,7 +461,7 @@ export function Kontera() {
       avbruten = true;
       urler.forEach(URL.revokeObjectURL);
     };
-  }, [kvitton]);
+  }, [db, kvitton]);
 
   /*
    * The same for the evidence already attached to a verifikat, so the list
@@ -515,7 +518,7 @@ export function Kontera() {
       urler.forEach(URL.revokeObjectURL);
       setUnderlagsbilder(new Map());
     };
-  }, [visarUnderlag, underlagPerVerifikat]);
+  }, [db, visarUnderlag, underlagPerVerifikat]);
 
   /*
    * One sync round, used both by the button and by the automatic rounds.
@@ -565,7 +568,7 @@ export function Kontera() {
       filer +
       avvisade
     );
-  }, [laddat, hamta]);
+  }, [db, laddat, hamta]);
 
   const [autosynkfel, setAutosynkfel] = useState<string | undefined>();
 
@@ -719,7 +722,7 @@ export function Kontera() {
             : 'Ingen text kunde läsas ur underlaget.',
         );
       }
-      await sparaUnderlagstext(db, await skrivkontext(), underlag.id, text, sakerhet);
+      await sparaUnderlagstext(db, await skrivkontext(db), underlag.id, text, sakerhet);
       tolka(text, sakerhet);
       setLaddat(await hamta());
     } catch (orsak) {
@@ -768,7 +771,7 @@ export function Kontera() {
               // folder of copies reads the same whichever button made them.
               const krypterad = losenfras !== undefined;
               const fil = krypterad
-                ? await skapaKrypteradKopia(losenfras)
+                ? await skapaKrypteradKopia(db, losenfras)
                 : await exporteraSomText(db);
               const datum = new Date().toISOString().slice(0, 10);
               const namn = krypterad
@@ -831,7 +834,7 @@ export function Kontera() {
             onBokfor={async (utkast) => {
               const verifikat = await bokforUtkast(
                 db,
-                await skrivkontext(),
+                await skrivkontext(db),
                 utkast,
                 verifikatserie(laddat.serie),
                 utkast.mall === undefined ? 'manuell' : 'mall',
@@ -840,7 +843,7 @@ export function Kontera() {
               return `Bokfört som ${beteckning(verifikat)}.`;
             }}
             onKassera={async (utkast) => {
-              await kasseraUtkast(db, await skrivkontext(), utkast.id);
+              await kasseraUtkast(db, await skrivkontext(db), utkast.id);
               setLaddat(await hamta());
             }}
           />
@@ -862,7 +865,7 @@ export function Kontera() {
             onForfallodag={async (kvitto, forfallodag) => {
               await sparaForfallodag(
                 db,
-                await skrivkontext(),
+                await skrivkontext(db),
                 kvitto.underlag.id,
                 forfallodag,
               );
@@ -882,7 +885,7 @@ export function Kontera() {
               if (text.trim().length > 0) {
                 await sparaUnderlagstext(
                   db,
-                  await skrivkontext(),
+                  await skrivkontext(db),
                   underlag.id,
                   text,
                   sakerhet,
@@ -892,14 +895,14 @@ export function Kontera() {
               return text;
             }}
             onTaBort={async (kvitto) => {
-              await taBortUnderlag(db, await skrivkontext(), kvitto.underlag.id);
+              await taBortUnderlag(db, await skrivkontext(db), kvitto.underlag.id);
               if (valtKvitto === kvitto.underlag.id) {
                 setValtKvitto(undefined);
               }
               setLaddat(await hamta());
             }}
             onLaggTill={async (filer, forberedelse) => {
-              const kontext = await skrivkontext();
+              const kontext = await skrivkontext(db);
               let nya = 0;
               let fanns = 0;
               for (const fil of filer) {
@@ -1011,7 +1014,7 @@ export function Kontera() {
             <Kontosida
               konton={laddat.konton}
               onSpara={async (konto, fanns) => {
-                await skrivKonto(db, await skrivkontext(), konto, fanns);
+                await skrivKonto(db, await skrivkontext(db), konto, fanns);
                 setLaddat(await hamta());
               }}
             />
@@ -1026,7 +1029,7 @@ export function Kontera() {
               onImportera={async (filer) => {
                 const resultat = await importeraSieFiler(
                   db,
-                  await skrivkontext(),
+                  await skrivkontext(db),
                   filer,
                   {
                     avslutaTomOchMed: forraArsslutet(systemklocka().idag()),
@@ -1047,7 +1050,7 @@ export function Kontera() {
               onImporteraUnderlag={async (filer, plan) => {
                 const utfall = await importeraUnderlag(
                   db,
-                  await skrivkontext(),
+                  await skrivkontext(db),
                   filer.map((fil) => ({
                     ...fil,
                     // iOS Files hands over a PDF with no type at all; the name
@@ -1101,7 +1104,7 @@ export function Kontera() {
               onSakerhetskopia={async (losenfras) =>
                 losenfras === undefined
                   ? exporteraSomText(db)
-                  : skapaKrypteradKopia(losenfras)
+                  : skapaKrypteradKopia(db, losenfras)
               }
               onAterstall={async (rafil, losenfras) => {
                 /*
@@ -1185,27 +1188,27 @@ export function Kontera() {
             idag={idag}
             borttagbara={laddat.borttagbaraAr}
             onTaBort={async (ar) => {
-              await taBortRakenskapsar(db, await skrivkontext(), ar.id);
+              await taBortRakenskapsar(db, await skrivkontext(db), ar.id);
               setLaddat(await hamta());
             }}
             onMomslas={async (ar, tom) => {
-              await momslas(db, await skrivkontext(), ar.id, tom);
+              await momslas(db, await skrivkontext(db), ar.id, tom);
               setLaddat(await hamta());
             }}
             onAvsluta={async (ar) => {
-              await avslutaRakenskapsar(db, await skrivkontext(), ar.id);
+              await avslutaRakenskapsar(db, await skrivkontext(db), ar.id);
               setLaddat(await hamta());
             }}
             onHamtaChecklista={(ar) => arsavslutschecklista(db, ar, idag)}
             onSkapaNastaAr={async (ar) => {
-              const nasta = await skapaNastaRakenskapsar(db, await skrivkontext(), ar);
+              const nasta = await skapaNastaRakenskapsar(db, await skrivkontext(db), ar);
               setLaddat(await hamta());
               return nasta;
             }}
             onForUtgaendeBalanser={async (ar, nastaArId) => {
               const overforing = await forUtgaendeBalanserTillNastaAr(
                 db,
-                await skrivkontext(),
+                await skrivkontext(db),
                 ar,
                 nastaArId,
                 verifikatserie(laddat.serie),
@@ -1250,7 +1253,7 @@ export function Kontera() {
 
         {/* Status last: useful when something is wrong, noise the rest of
             the time. */}
-        {vy === 'enhet' && <StartPage />}
+        {vy === 'enhet' && <StartPage db={db} />}
 
         {vy === 'frikontering' && (
           <FriKontering
@@ -1266,7 +1269,7 @@ export function Kontera() {
               setVy('bokfor');
             }}
             onBokfor={async ({ datum, beskrivning, konteringar, underlagId, mall }) => {
-              const kontext = await skrivkontext();
+              const kontext = await skrivkontext(db);
               const verifikat = await bokforUtkast(
                 db,
                 kontext,
@@ -1347,7 +1350,7 @@ export function Kontera() {
               konton={laddat.konton}
               onFotografera={async (fil, forberedelse) => {
                 const forberedd = await forberedUnderlag(fil, forberedelse);
-                const { underlag } = await sparaUnderlag(db, await skrivkontext(), {
+                const { underlag } = await sparaUnderlag(db, await skrivkontext(db), {
                   sha256: await hashaFil(forberedd.data),
                   mime: forberedd.mime,
                   filnamn: forberedd.filnamn,
@@ -1426,7 +1429,7 @@ export function Kontera() {
               setLaddat(await hamta());
             }}
             onLas={async (ar, tom) => {
-              await momslas(db, await skrivkontext(), ar.id, tom);
+              await momslas(db, await skrivkontext(db), ar.id, tom);
               setLaddat(await hamta());
             }}
             onBokforMomsredovisning={async (fran, till) => {
@@ -1437,7 +1440,7 @@ export function Kontera() {
               });
               const verifikat = await bokforUtkast(
                 db,
-                await skrivkontext(),
+                await skrivkontext(db),
                 skapaUtkast({ id: newIdentifier(), ...forslag }),
                 verifikatserie(laddat.serie),
               );
@@ -1475,7 +1478,7 @@ export function Kontera() {
             kvitton={bilder}
             onSparaUnderlag={async (fil, forberedelse) => {
               const forberedd = await forberedUnderlag(fil, forberedelse);
-              const { underlag } = await sparaUnderlag(db, await skrivkontext(), {
+              const { underlag } = await sparaUnderlag(db, await skrivkontext(db), {
                 sha256: await hashaFil(forberedd.data),
                 mime: forberedd.mime,
                 filnamn: forberedd.filnamn,
@@ -1487,7 +1490,7 @@ export function Kontera() {
             onKopplaUnderlag={async (post, underlag) => {
               await kopplaUnderlag(
                 db,
-                await skrivkontext(),
+                await skrivkontext(db),
                 underlag.id,
                 post.verifikat.id,
               );
@@ -1512,13 +1515,13 @@ export function Kontera() {
               if (nar === undefined) {
                 return;
               }
-              await annulleraVerifikat(db, await skrivkontext(), post.verifikat, nar);
+              await annulleraVerifikat(db, await skrivkontext(db), post.verifikat, nar);
               setLaddat(await hamta());
             }}
             onRatta={async (post, andring) => {
               // Lets the refusal reach the form, which shows it: a correction
               // that crosses a year or a filed period has to say so.
-              await rattaVerifikat(db, await skrivkontext(), post.verifikat, andring);
+              await rattaVerifikat(db, await skrivkontext(db), post.verifikat, andring);
               setLaddat(await hamta());
             }}
           />
@@ -1540,14 +1543,14 @@ export function Kontera() {
             onRegistrera={async (uppgifter) => {
               const tillgang = await registreraAnlaggningstillgang(
                 db,
-                await skrivkontext(),
+                await skrivkontext(db),
                 uppgifter,
               );
               setLaddat(await hamta());
               return `${tillgang.benamning} registrerad.`;
             }}
             onAvyttra={async (id, avyttring) => {
-              await avyttraAnlaggningstillgang(db, await skrivkontext(), id, avyttring);
+              await avyttraAnlaggningstillgang(db, await skrivkontext(db), id, avyttring);
               setLaddat(await hamta());
               return avyttring.typ === 'forsaljning'
                 ? 'Försäljningen registrerad.'
@@ -1573,7 +1576,7 @@ export function Kontera() {
               );
               const verifikat = await bokforAvskrivning(
                 db,
-                await skrivkontext(),
+                await skrivkontext(db),
                 ar?.slut ?? idag,
                 verifikatserie(laddat.serie),
                 belopp,
@@ -1586,14 +1589,14 @@ export function Kontera() {
             onRegistreraFastighet={async (uppgifter) => {
               const tillgang = await registreraFastighetstillgang(
                 db,
-                await skrivkontext(),
+                await skrivkontext(db),
                 uppgifter,
               );
               setLaddat(await hamta());
               return `${tillgang.benamning} registrerad.`;
             }}
             onAvyttraFastighet={async (id, avyttring) => {
-              await avyttraFastighetstillgang(db, await skrivkontext(), id, avyttring);
+              await avyttraFastighetstillgang(db, await skrivkontext(db), id, avyttring);
               setLaddat(await hamta());
               return avyttring.typ === 'forsaljning'
                 ? 'Försäljningen registrerad.'
@@ -1607,7 +1610,7 @@ export function Kontera() {
             ) => {
               const verifikat = await bokforFastighetsavskrivning(
                 db,
-                await skrivkontext(),
+                await skrivkontext(db),
                 idag,
                 verifikatserie(laddat.serie),
                 id,
@@ -1629,7 +1632,7 @@ export function Kontera() {
             onRegistrera={async (uppgifter) => {
               const inventering = await registreraDjurlagerinventering(
                 db,
-                await skrivkontext(),
+                await skrivkontext(db),
                 uppgifter,
               );
               setLaddat(await hamta());
@@ -1638,7 +1641,7 @@ export function Kontera() {
             onBokforLagerforandring={async (inventering) => {
               const verifikat = await bokforLagerforandring(
                 db,
-                await skrivkontext(),
+                await skrivkontext(db),
                 inventering,
                 verifikatserie(laddat.serie),
               );
@@ -1657,7 +1660,7 @@ export function Kontera() {
             onBokfor={async ({ ar, post, beskrivning }) => {
               const { verifikat, aterforing } = await bokforBokslutspost(
                 db,
-                await skrivkontext(),
+                await skrivkontext(db),
                 ar,
                 post,
                 beskrivning,
@@ -1689,7 +1692,7 @@ export function Kontera() {
             }) => {
               const verifikat = await bokforEgetUttagInsattning(
                 db,
-                await skrivkontext(),
+                await skrivkontext(db),
                 datum,
                 verifikatserie(laddat.serie),
                 typ,
@@ -1718,7 +1721,7 @@ export function Kontera() {
             onBokforResultat={async (ar) => {
               const verifikat = await bokforResultatoverforing(
                 db,
-                await skrivkontext(),
+                await skrivkontext(db),
                 ar,
                 verifikatserie(laddat.serie),
               );
@@ -1728,7 +1731,7 @@ export function Kontera() {
             onMomsomforing={async (ar, omforing) => {
               const verifikat = await bokforMomsomforing(
                 db,
-                await skrivkontext(),
+                await skrivkontext(db),
                 ar.slut,
                 verifikatserie(laddat.serie),
                 omforing,
