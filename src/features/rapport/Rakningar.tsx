@@ -15,6 +15,7 @@ import {
 import { delar } from '../../domain/tid/datum';
 import { Exportknappar } from './Exportknappar';
 import type { BokfortVerifikat } from '../../domain/verifikat/verifikat';
+import { useFilprefix } from '../../ui/bok';
 
 interface Props {
   readonly konton: ReadonlyMap<Kontonummer, Konto>;
@@ -39,6 +40,7 @@ const LANGDER: readonly { readonly varde: Momsperiod; readonly namn: string }[] 
  * not beside it.
  */
 export function Rakningar({ konton, verifikat, rakenskapsar, vilken }: Props) {
+  const filprefix = useFilprefix();
   const ar = useMemo(
     () => [...rakenskapsar].sort((a, b) => b.start.localeCompare(a.start)),
     [rakenskapsar],
@@ -185,7 +187,7 @@ export function Rakningar({ konton, verifikat, rakenskapsar, vilken }: Props) {
           : ' · ingen jämförelseperiod'}
       </p>
 
-      <Exportknappar tabell={tabell} namn={`kontera-${vilken}-${fran}-${till}`} />
+      <Exportknappar tabell={tabell} namn={`${filprefix}-${vilken}-${fran}-${till}`} />
 
       {'grupper' in rapport ? (
         <div data-testid="resultatrakning">

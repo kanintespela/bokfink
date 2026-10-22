@@ -6,6 +6,7 @@ import { BOK_ID_NYCKEL, lasBokId, URSPRUNGLIG_BOK } from './bokidentitet';
 import {
   Bokregister,
   bytNamnPaBok,
+  filprefix,
   granskaBoknamn,
   lasBocker,
   LANGSTA_BOKNAMN,
@@ -59,6 +60,22 @@ describe('granskaBoknamn', () => {
     expect(granskaBoknamn('föreningen', [bok('Föreningen', 'f')], 'f')).toBe(
       'föreningen',
     );
+  });
+});
+
+describe('filprefix', () => {
+  it('keeps the names the original books have always had', () => {
+    expect(filprefix({ ...bok('Firman'), databas: URSPRUNGLIG_DATABAS })).toBe('kontera');
+  });
+
+  it("adds another book's name, without accents or spaces", () => {
+    expect(filprefix(bok('Kristvalla Bygdegårdsförening'))).toBe(
+      'kontera-kristvalla-bygdegardsforening',
+    );
+  });
+
+  it('falls back to a plain name when nothing in the name survives', () => {
+    expect(filprefix(bok('!!!'))).toBe('kontera-bok');
   });
 });
 

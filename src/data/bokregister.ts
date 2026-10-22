@@ -210,6 +210,27 @@ export async function bytNamnPaBok(
   return ny;
 }
 
+/**
+ * How the files a book exports begin, so that a folder of backups and SIE
+ * files says whose books each one holds.
+ *
+ * The original book keeps the names it always had - its backups are already
+ * sitting in folders under them. Any other book adds its own name, folded to
+ * what every file system accepts.
+ */
+export function filprefix(bok: Bok): string {
+  if (bok.databas === URSPRUNGLIG_DATABAS) {
+    return 'kontera';
+  }
+  const namn = bok.namn
+    .toLocaleLowerCase('sv')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return namn.length === 0 ? 'kontera-bok' : `kontera-${namn}`;
+}
+
 /** Remembers which book this device opens next time. */
 export async function valjBok(register: Bokregister, id: string): Promise<void> {
   if ((await register.bocker.get(id)) === undefined) {

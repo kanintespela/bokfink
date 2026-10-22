@@ -6,6 +6,7 @@ import type { Rakenskapsar } from '../../domain/rakenskapsar/rakenskapsar';
 import type { Uuid } from '../../domain/id/uuidv7';
 import { delaEllerSpara, lasValdaFiler, type Valdfil } from '../../platform/fil';
 import { Uppgiftsstatus, useUppgift } from './uppgift';
+import { useFilprefix } from '../../ui/bok';
 
 interface Props {
   readonly rakenskapsar: readonly Rakenskapsar[];
@@ -36,6 +37,7 @@ export function Filhantering({
   onExporteraSie,
   onArkivpaket,
 }: Props) {
+  const filprefix = useFilprefix();
   const filvaljare = useRef<HTMLInputElement>(null);
   const underlagsvaljare = useRef<HTMLInputElement>(null);
   /* Files picked for import, held until the plan below them is accepted. */
@@ -218,7 +220,7 @@ export function Filhantering({
             onClick={() =>
               void kor(async () => {
                 const bytes = await onExporteraSie(senaste.id);
-                const namn = `kontera-${arsnamn}.se`;
+                const namn = `${filprefix}-${arsnamn}.se`;
                 const utfall = await delaEllerSpara(
                   namn,
                   bytes,
@@ -245,7 +247,7 @@ export function Filhantering({
             onClick={() =>
               void kor(async () => {
                 const bytes = await onArkivpaket(senaste.id);
-                const namn = `kontera-arkiv-${arsnamn}.zip`;
+                const namn = `${filprefix}-arkiv-${arsnamn}.zip`;
                 const utfall = await delaEllerSpara(namn, bytes, 'application/zip');
                 return utfall === 'delad'
                   ? `Arkivpaketet för ${arsnamn} delades.`

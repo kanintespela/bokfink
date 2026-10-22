@@ -157,6 +157,8 @@ import {
 } from '../platform/ocr';
 import { Rakenskapsarsida } from './rakenskapsar/Rakenskapsarsida';
 import { StartPage } from './start/StartPage';
+import { Bocker, type Bokval } from './bocker/Bocker';
+import { useFilprefix } from '../ui/bok';
 import { Enhetsinstallningar } from './data/Enhetsinstallningar';
 import { Filhantering } from './data/Filhantering';
 import { Foretagsinstallningar } from './data/Foretagsinstallningar';
@@ -267,8 +269,9 @@ async function skrivkontext(db: KonteraDatabase): Promise<Skrivkontext> {
   };
 }
 
-export function Kontera({ db }: { db: KonteraDatabase }) {
+export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval }) {
   const [vy, setVy] = useVy();
+  const filprefix = useFilprefix();
   // Stable, so the NE screen reads a year once rather than on every render.
   const lasNeJusteringar = useCallback((arId: Uuid) => lasNejusteringar(db, arId), [db]);
   const lasNe = useCallback(
@@ -737,6 +740,28 @@ export function Kontera({ db }: { db: KonteraDatabase }) {
   return (
     <>
       <main>
+        {/*
+         * Which book is open, on every screen, once there is more than one.
+         * The mistake this guards against is a receipt from the firm booked
+         * in the association's books, and that happens on the booking screen,
+         * not on the home screen.
+         */}
+        {bokval.bocker.length > 1 && (
+          <p className="bokrad" data-testid="aktiv-bok">
+            <span>
+              Bok: <strong>{bokval.aktiv.namn}</strong>
+            </span>
+            {vy !== 'bocker' && (
+              <button
+                type="button"
+                className="knapp knapp--text"
+                onClick={() => setVy('bocker')}
+              >
+                Byt bok
+              </button>
+            )}
+          </p>
+        )}
         {vy === 'attgora' && (
           <div className="rubrikrad">
             <h1>Bokfink</h1>
@@ -775,8 +800,8 @@ export function Kontera({ db }: { db: KonteraDatabase }) {
                 : await exporteraSomText(db);
               const datum = new Date().toISOString().slice(0, 10);
               const namn = krypterad
-                ? `kontera-sakerhetskopia-${datum}.json`
-                : `kontera-oskyddad-kopia-${datum}.json`;
+                ? `${filprefix}-sakerhetskopia-${datum}.json`
+                : `${filprefix}-oskyddad-kopia-${datum}.json`;
               const utfall = await delaEllerSpara(namn, fil, 'application/json');
               await db.setMeta('backup.senast', systemklocka().idag());
               setLaddat(await hamta());
@@ -799,7 +824,7 @@ export function Kontera({ db }: { db: KonteraDatabase }) {
               if (poster.length === 0) {
                 return 'Det finns inga kommande datum att lägga in.';
               }
-              const namn = 'kontera-datum.ics';
+              const namn = `${filprefix}-datum.ics`;
               const utfall = await delaEllerSpara(
                 namn,
                 skrivIcs(poster, new Date().toISOString()),
@@ -987,6 +1012,7 @@ export function Kontera({ db }: { db: KonteraDatabase }) {
 
             {(
               [
+                'bocker',
                 'filer',
                 'sakerhetskopia',
                 'rakenskapsar',
@@ -1249,6 +1275,13 @@ export function Kontera({ db }: { db: KonteraDatabase }) {
             }}
             onSynka={korSynk}
           />
+        )}
+
+        {vy === 'bocker' && (
+          <>
+            <Tillbaka onTillbaka={() => setVy('installningar')} />
+            <Bocker {...bokval} />
+          </>
         )}
 
         {/* Status last: useful when something is wrong, noise the rest of
