@@ -878,6 +878,27 @@ test('warns on the start view when no backup has been taken, and clears with a t
   await expect(page.getByTestId('backup-gammal')).toHaveCount(0);
 });
 
+/*
+ * Encryption is the owner's choice: a copy kept on their own disk or in their
+ * own iCloud may not need a lock, and a forgotten passphrase is a lost year.
+ * The quick backup offers the plain copy too, as the settings screen does.
+ */
+test('takes a quick backup without a passphrase when asked for a plain copy', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const nedladdning = page.waitForEvent('download');
+  await page.getByTestId('snabb-backup-oskyddad').click();
+  expect((await nedladdning).suggestedFilename()).toMatch(/^kontera-oskyddad-kopia-/);
+
+  await expect(page.getByTestId('snabb-backup-besked')).toContainText(
+    'Den oskyddade kopian',
+  );
+
+  await page.reload();
+  await expect(page.getByTestId('backup-gammal')).toHaveCount(0);
+});
+
 test('gives each device its own series', async ({ page }) => {
   await tillEnhet(page);
 

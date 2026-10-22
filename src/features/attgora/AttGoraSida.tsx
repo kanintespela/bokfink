@@ -33,8 +33,12 @@ interface Props {
   readonly momsdeklarationer: readonly VantandeMomsdeklaration[];
   /** Waiting invoices with a due date, the one due first at the top. */
   readonly fakturor: readonly VantandeFaktura[];
-  /** Encrypts, saves or shares, and records the backup - right where the warning is. */
-  readonly onSnabbBackup: (losenfras: string) => Promise<string>;
+  /**
+   * Saves or shares a backup and records it - right where the warning is.
+   * Encrypted with a passphrase, or in plain text without one: the owner
+   * decides where the copy goes, and so whether it needs a lock.
+   */
+  readonly onSnabbBackup: (losenfras?: string) => Promise<string>;
   readonly onBokfor: () => void;
   readonly onMoms: () => void;
   /** Shares the coming deadlines as a calendar file and says what happened. */
@@ -111,12 +115,12 @@ export function AttGoraSida({
     }
   }
 
-  async function taSnabbBackup() {
+  async function taSnabbBackup(krypterad: boolean) {
     setBackupArbetar(true);
     setBackupBesked(undefined);
     setBackupFel(undefined);
     try {
-      setBackupBesked(await onSnabbBackup(backupLosenfras));
+      setBackupBesked(await onSnabbBackup(krypterad ? backupLosenfras : undefined));
       setBackupLosenfras('');
     } catch (orsak) {
       // Hard rule 11: shown, not swallowed.
@@ -211,9 +215,26 @@ export function AttGoraSida({
                   className="knapp"
                   disabled={backupArbetar || backupLosenfras.trim().length === 0}
                   data-testid="snabb-backup"
-                  onClick={() => void taSnabbBackup()}
+                  onClick={() => void taSnabbBackup(true)}
                 >
                   Säkerhetskopiera nu
+                </button>
+              </p>
+
+              <p className="hjalptext">
+                Utan lösenfras är hela bokföringen och alla kvittobilder läsbara för den
+                som kommer åt filen.
+              </p>
+
+              <p>
+                <button
+                  type="button"
+                  className="knapp knapp--text"
+                  disabled={backupArbetar}
+                  data-testid="snabb-backup-oskyddad"
+                  onClick={() => void taSnabbBackup(false)}
+                >
+                  Spara oskyddad kopia
                 </button>
               </p>
             </>
