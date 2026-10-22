@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/logga.jpg" alt="Bokfink: en bofink på en öppen huvudbok" width="260"></p>
+
 # Bokfink
 
 Bokföring för enskild firma, i telefonen — utan prenumeration och utan att din bokföring lämnar din enhet.
