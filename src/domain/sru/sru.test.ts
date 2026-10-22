@@ -76,7 +76,7 @@ const UPPGIFTER: Sruuppgifter = {
   verksamhetensArt: 'Fårskötsel',
   ne,
   skapad: { datum: datum('2026-03-15'), tid: '101500' },
-  program: 'Kontera',
+  program: 'Bokfink',
 };
 
 const fixtur = (namn: string) =>
@@ -110,7 +110,7 @@ describe('skrivNeSru', () => {
     expect(() => skrivNeSru({ ...UPPGIFTER, ne: ofardig })).toThrow(SruError);
   });
 
-  it('vägrar ett år vars blankett Kontera inte känner till', () => {
+  it('vägrar ett år vars blankett Bokfink inte känner till', () => {
     expect(() =>
       skrivNeSru({
         ...UPPGIFTER,

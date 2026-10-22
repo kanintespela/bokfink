@@ -79,7 +79,7 @@ const ELEMENT: ReadonlyMap<number, string> = new Map([
 export class OkandRutaError extends Error {
   constructor(readonly rutor: readonly number[]) {
     super(
-      `Kontera kan inte skriva en eSKD-fil som innehåller ruta ` +
+      `Bokfink kan inte skriva en eSKD-fil som innehåller ruta ` +
         `${rutor.join(', ')}: elementnamnet är okänt, och en gissning ger ` +
         'antingen en avvisad fil eller en inlämnad felaktig siffra. Redovisa ' +
         'den perioden i e-tjänsten i stället.',

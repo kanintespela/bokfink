@@ -30,7 +30,7 @@ function kravSubtle(): SubtleCrypto {
   const subtle = globalThis.crypto?.subtle;
   if (subtle === undefined) {
     throw new Error(
-      'Kontera kan inte beräkna kontrollsumman för filen, eftersom webbläsarens ' +
+      'Bokfink kan inte beräkna kontrollsumman för filen, eftersom webbläsarens ' +
         'krypto-API bara finns när sidan är öppnad över https eller på localhost. ' +
         'Öppna appen över https och försök igen.',
     );

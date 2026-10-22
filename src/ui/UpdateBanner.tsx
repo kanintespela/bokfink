@@ -26,7 +26,7 @@ export function UpdateBanner() {
 
   return (
     <div role="status" className="update-banner">
-      <span>En ny version av Kontera är redo.</span>
+      <span>En ny version av Bokfink är redo.</span>
       <button
         type="button"
         className="knapp"

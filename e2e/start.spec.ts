@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 test('shows the start page with real database status', async ({ page }) => {
   await page.goto('/');
 
-  await expect(page.getByRole('heading', { name: 'Kontera', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Bokfink', level: 1 })).toBeVisible();
 
   // The database status lives with the other registers rather than on the
   // start view, which is about what needs doing. Settings is a menu, and the
@@ -43,7 +43,7 @@ test('opens with no network at all', async ({ page, context }) => {
   await context.setOffline(true);
   await page.reload();
 
-  await expect(page.getByRole('heading', { name: 'Kontera', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Bokfink', level: 1 })).toBeVisible();
   // The whole app, not just a cached shell: the templates come from the
   // database, which had to open offline for them to be there at all.
   await expect(

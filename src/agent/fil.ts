@@ -51,7 +51,7 @@ export async function forberedUnderlag(
     };
   }
   throw new TypeError(
-    `${sokvag} är varken en bild eller en PDF. Kontera tar emot jpg, png, webp, ` +
+    `${sokvag} är varken en bild eller en PDF. Bokfink tar emot jpg, png, webp, ` +
       'heic och pdf.',
   );
 }

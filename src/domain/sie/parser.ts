@@ -248,7 +248,7 @@ export function tolkaSie(text: string): Siedokument {
   if (sietyp !== 4) {
     throw new SieError(
       0,
-      `filen är av SIE-typ ${sietyp}. Kontera läser typ 4, som är den enda som ` +
+      `filen är av SIE-typ ${sietyp}. Bokfink läser typ 4, som är den enda som ` +
         'innehåller verifikationer.',
     );
   }

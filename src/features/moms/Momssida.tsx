@@ -261,7 +261,7 @@ export function Momssida({
               ))}
           </ul>
           <p>
-            Kontera kan visa beloppen men ännu inte vilka köpare de gäller — kundregistret
+            Bokfink kan visa beloppen men ännu inte vilka köpare de gäller — kundregistret
             kommer i en senare etapp. Lämna sammanställningen i Skatteverkets e-tjänst så
             länge.
           </p>

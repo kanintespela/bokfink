@@ -15,7 +15,7 @@ const POSTER: readonly Kalenderpost[] = [
     rubrik: 'Momsdeklaration 2026 kv 3',
     beskrivning:
       'Sista dag att deklarera och betala momsen för 2026-07-01 – 2026-09-30. ' +
-      'Lås perioden i Kontera när deklarationen är inlämnad.',
+      'Lås perioden i Bokfink när deklarationen är inlämnad.',
   },
   {
     uid: 'faktura-1@kontera',

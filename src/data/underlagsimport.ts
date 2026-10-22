@@ -69,7 +69,7 @@ export async function importeraUnderlag(
     if (!arUnderlagstyp(fil.mime)) {
       avvisade.push({
         namn: fil.namn,
-        orsak: `Kontera kan inte arkivera filtypen ${fil.mime || 'okänd'}.`,
+        orsak: `Bokfink kan inte arkivera filtypen ${fil.mime || 'okänd'}.`,
       });
       continue;
     }

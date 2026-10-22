@@ -126,7 +126,7 @@ export interface Underlagsuppgifter {
 export function skapaUnderlag(uppgifter: Underlagsuppgifter): Underlag {
   if (!arUnderlagstyp(uppgifter.mime)) {
     throw new TypeError(
-      `Kontera kan inte lagra ett underlag av typen "${uppgifter.mime}". ` +
+      `Bokfink kan inte lagra ett underlag av typen "${uppgifter.mime}". ` +
         `Tillåtna typer är ${UNDERLAGSTYPER.join(', ')}.`,
     );
   }

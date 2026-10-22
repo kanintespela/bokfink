@@ -32,7 +32,7 @@ export function skrivIcs(poster: readonly Kalenderpost[], stampel: string): stri
   const rader = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Kontera//Kontera//SV',
+    'PRODID:-//Bokfink//Bokfink//SV',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     ...poster.flatMap((post) => [

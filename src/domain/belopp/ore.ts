@@ -45,7 +45,7 @@ export function ore(value: number): Ore {
 export function oreFromKronor(text: string): Ore {
   const match = DECIMAL.exec(text.trim());
   if (!match) {
-    throw new TypeError(`"${text}" är inte ett belopp Kontera kan tolka.`);
+    throw new TypeError(`"${text}" är inte ett belopp Bokfink kan tolka.`);
   }
 
   const [, sign = '', whole = '0', fraction = ''] = match;

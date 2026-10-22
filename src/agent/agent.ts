@@ -132,7 +132,7 @@ async function skickaUtkast(
         return verifikat === undefined ? 'ett utkast' : beteckning(verifikat);
       });
       throw new Error(
-        `${fil} finns redan i Kontera och hör till ${agare.join(' och ')}. ` +
+        `${fil} finns redan i Bokfink och hör till ${agare.join(' och ')}. ` +
           'Inget skickades.',
       );
     }
