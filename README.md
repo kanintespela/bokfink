@@ -4,7 +4,7 @@
 
 Bokföring för enskild firma, i telefonen — utan prenumeration och utan att din bokföring lämnar din enhet.
 
-Bokfink är en **local-first PWA**. Projektet hette tidigare Kontera, och appen och koden bär fortfarande det namnet på sina ställen. All data ligger på dina egna enheter, appen fungerar offline, och det finns ingen molntjänst som kan höja priset, lägga ner eller läsa dina siffror. Projektet är öppen källkod och byggs för att ersätta kommersiella bokföringsappar för enskild firma.
+Bokfink är en **local-first PWA**. Projektet hette tidigare Kontera, och det namnet finns kvar i koden, i filformaten och i databasen. All data ligger på dina egna enheter, appen fungerar offline, och det finns ingen molntjänst som kan höja priset, lägga ner eller läsa dina siffror. Projektet är öppen källkod och byggs för att ersätta kommersiella bokföringsappar för enskild firma.
 
 > **Status: i bruk för den löpande bokföringen.** Etapp 1 och 2 är färdiga: en utgift bokförs på några sekunder genom att svara på vad som hänt, en bokförd kontering rättas med annullering medan beskrivning och datum kan rättas direkt, en befintlig bokföring importeras från SIE-fil och exporteras tillbaka utan förlust, och momsdeklarationen räknas fram ruta för ruta. Kvitton med OCR, rapporter, krypterad säkerhetskopia, synk mellan telefon och dator (byggd, inte driftsatt), anläggningsregister och årsbokslut är i stort sett klara. Kvar är främst att bekräfta eSKD-, NE- och SRU-filerna mot Skatteverket, konfliktvyn för synken, samt fakturering och körjournal — se [utvecklingsplanen](docs/UTVECKLINGSPLAN.md).
 
@@ -12,7 +12,7 @@ Bokfink är en **local-first PWA**. Projektet hette tidigare Kontera, och appen 
 
 Bokföringsappar för enskild firma kostar löpande, låser in data i leverantörens moln och gör det svårt att komma åt sin egen räkenskapsinformation om man slutar betala. Bokföring är samtidigt ett område där reglerna är offentliga (bokföringslagen, BFN:s allmänna råd, Skatteverkets föreskrifter) och filformaten öppna (SIE, SRU, eSKD). Det finns ingen teknisk anledning till att det ska krävas en prenumeration.
 
-Kontera bygger på tre val:
+Bokfink bygger på tre val:
 
 1. **Din data är din.** Den ligger på din enhet, i format du kan läsa utan appen.
 2. **Inga prenumerationer.** Inga externa API:er, inga betaltjänster, ingen leverantör att bli beroende av. Vill du bokföra från flera enheter kan du synka via en server du själv styr över.
@@ -20,7 +20,7 @@ Kontera bygger på tre val:
 
 ## Målgrupp och avgränsning
 
-Kontera riktar sig till **enskild firma** som upprättar **förenklat årsbokslut enligt K1** (BFNAR 2006:1). Aktiebolag, handelsbolag, koncernredovisning, löneadministration och flera samtidiga användare ligger utanför projektets mål.
+Bokfink riktar sig till **enskild firma** som upprättar **förenklat årsbokslut enligt K1** (BFNAR 2006:1). Aktiebolag, handelsbolag, koncernredovisning, löneadministration och flera samtidiga användare ligger utanför projektets mål.
 
 ## Funktioner
 
@@ -78,7 +78,7 @@ Status: ⬜ ej påbörjad · 🟡 pågår · ✅ klar · ⏸️ nedprioriterad
 | ✅ | Diagram för resultat, likviditet och nyckeltal |
 | ✅ | SIE-4 export **och** import (migrering av befintlig bokföring) |
 | 🟡 | Fullständig JSON-export och återläsning, rapporter som CSV. Äkta Excel avvaktar tills det efterfrågas |
-| ✅ | Arkivpaket för sjuårsarkiveringen som går att läsa utan Kontera |
+| ✅ | Arkivpaket för sjuårsarkiveringen som går att läsa utan Bokfink |
 
 ### Säkerhet
 | | Funktion |
@@ -94,7 +94,7 @@ Fyllig beskrivning av varje punkt, inklusive vad som är tekniskt möjligt i en 
 
 - **Local-first.** Enheten är originalet. Allt annat är kopior.
 - **Fungerar i flygplansläge.** Ingen funktion får kräva uppkoppling. Det enda nätverksberoendet är synk och säkerhetskopiering mot lagring du själv valt.
-- **Öppna format hela vägen ut.** SIE, CSV, JSON, PDF. Ingen data ska kunna bli inlåst i Kontera.
+- **Öppna format hela vägen ut.** SIE, CSV, JSON, PDF. Ingen data ska kunna bli inlåst i Bokfink.
 - **Räkna i heltal.** Alla belopp lagras i öre. Aldrig flyttal.
 - **Automatik föreslår, människan bokför.** OCR och beslutsträdet fyller i formulär — de bokför aldrig själva.
 - **Regler med källa.** All logik som kommer från lag eller allmänt råd har en hänvisning i koden.
@@ -132,7 +132,7 @@ src/platform/   kamera, delning, WebAuthn, fil-I/O
 docs/           utvecklingsplan och beslutsunderlag
 ```
 
-## Regelverk som Kontera följer
+## Regelverk som Bokfink följer
 
 - Bokföringslag (1999:1078), särskilt kraven på verifikationer, systematisk ordning, rättelser som går att spåra och sjuårig arkivering
 - BFNAR 2006:1 (K1) — enskilda näringsidkare som upprättar förenklat årsbokslut
@@ -142,7 +142,7 @@ docs/           utvecklingsplan och beslutsunderlag
 
 ## Ansvarsfriskrivning
 
-Kontera är ett hobbyprojekt och inte skatte- eller redovisningsrådgivning. Det är alltid den bokföringsskyldige som ansvarar för att bokföringen är korrekt och att arkiveringskraven uppfylls. Kontrollera appens beräkningar mot Skatteverkets och Bokföringsnämndens information innan du lämnar in en deklaration.
+Bokfink är ett hobbyprojekt och inte skatte- eller redovisningsrådgivning. Det är alltid den bokföringsskyldige som ansvarar för att bokföringen är korrekt och att arkiveringskraven uppfylls. Kontrollera appens beräkningar mot Skatteverkets och Bokföringsnämndens information innan du lämnar in en deklaration.
 
 ## Licens
 

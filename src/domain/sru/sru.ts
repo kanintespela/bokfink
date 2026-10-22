@@ -67,7 +67,7 @@ export function beskattningsperiod(slut: Datum): string {
   const { ar, manad, dag } = delar(slut);
   if (manad !== 12 || dag !== 31) {
     throw new SruError(
-      'Kontera kan bara skriva NE-bilagan för ett räkenskapsår som slutar 31 december.',
+      'Bokfink kan bara skriva NE-bilagan för ett räkenskapsår som slutar 31 december.',
     );
   }
   return `${ar}P4`;
@@ -83,7 +83,7 @@ export function skrivNeSru(uppgifter: Sruuppgifter): Srufiler {
   const block = KANDA_NE_BLOCK[period];
   if (block === undefined) {
     throw new SruError(
-      `Kontera känner inte till NE-blanketten för ${period} ännu. Skatteverket ` +
+      `Bokfink känner inte till NE-blanketten för ${period} ännu. Skatteverket ` +
         'publicerar fältkoderna inför varje deklarationsperiod.',
     );
   }

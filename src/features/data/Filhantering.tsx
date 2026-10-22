@@ -261,7 +261,7 @@ export function Filhantering({
       <p className="hjalptext">
         Arkivpaketet är en zip-fil med bokföringen som SIE, en läsbar verifikationslista
         som PDF, alla kvitton och fakturor det året, och en läsanvisning — allt som behövs
-        för att spara bokföringen i sju år utan att behöva Kontera.
+        för att spara bokföringen i sju år utan att behöva Bokfink.
       </p>
 
       <Uppgiftsstatus arbetar={arbetar} besked={besked} fel={fel} />

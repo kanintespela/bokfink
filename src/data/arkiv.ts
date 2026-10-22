@@ -37,7 +37,7 @@ export interface Arkivalternativ {
 // SIE file is text, the PDF is a PDF, the receipts are plain JPEG/PNG/WEBP.
 function lasmig(foretagsnamn: string, ar: Datum, arSlut: Datum, skapad: Datum): string {
   return (
-    `Arkivpaket från Kontera${foretagsnamn === '' ? '' : ` – ${foretagsnamn}`}\n` +
+    `Arkivpaket från Bokfink${foretagsnamn === '' ? '' : ` – ${foretagsnamn}`}\n` +
     `Räkenskapsår: ${ar} – ${arSlut}\n` +
     `Skapat: ${skapad}\n\n` +
     'Innehåll\n' +
@@ -57,7 +57,7 @@ function lasmig(foretagsnamn: string, ar: Datum, arSlut: Datum, skapad: Datum): 
     '    en rad inte med filens innehåll har filen ändrats eller skadats.\n\n' +
     'Bokföringslagen (1999:1078) 7 kap. 1 §: räkenskapsinformation ska kunna\n' +
     'tas fram i vanlig läsbar form under hela arkiveringstiden. Det här\n' +
-    'paketet är byggt för att gå att läsa utan Kontera installerat.\n'
+    'paketet är byggt för att gå att läsa utan Bokfink installerat.\n'
   );
 }
 

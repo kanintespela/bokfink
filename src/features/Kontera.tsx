@@ -579,9 +579,9 @@ export function Kontera() {
   if (fel !== undefined) {
     return (
       <main>
-        <h1>Kontera</h1>
+        <h1>Bokfink</h1>
         <p role="alert" data-testid="uppstart-fel">
-          Kontera kunde inte starta: {fel}
+          Bokfink kunde inte starta: {fel}
         </p>
       </main>
     );
@@ -590,7 +590,7 @@ export function Kontera() {
   if (laddat === undefined) {
     return (
       <main>
-        <h1>Kontera</h1>
+        <h1>Bokfink</h1>
         <p>Läser bokföringen …</p>
       </main>
     );
@@ -736,7 +736,7 @@ export function Kontera() {
       <main>
         {vy === 'attgora' && (
           <div className="rubrikrad">
-            <h1>Kontera</h1>
+            <h1>Bokfink</h1>
             <button
               type="button"
               className="knapp knapp--text knapp--ikon"

@@ -38,7 +38,7 @@ export function paminnelser({
       rubrik: `Momsdeklaration ${period.namn}`,
       beskrivning:
         `Sista dag att deklarera och betala momsen för ${period.fran} – ${period.till}. ` +
-        'Lås perioden i Kontera när deklarationen är inlämnad.',
+        'Lås perioden i Bokfink när deklarationen är inlämnad.',
     }),
   );
 
@@ -70,7 +70,7 @@ export function paminnelser({
           leverantor === undefined
             ? 'Betala faktura'
             : `Betala faktura från ${leverantor}`,
-        beskrivning: `Underlag: ${post.filnamn}. Bokför betalningen i Kontera när den är gjord.`,
+        beskrivning: `Underlag: ${post.filnamn}. Bokför betalningen i Bokfink när den är gjord.`,
       };
     });
 

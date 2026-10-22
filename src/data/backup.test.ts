@@ -243,7 +243,7 @@ describe('backup', () => {
     expect(las(text)).toEqual(await exportera(db, () => las(text).skapad));
   });
 
-  it('refuses a file that is not a Kontera backup', async () => {
+  it('refuses a file that is not a Bokfink backup', async () => {
     for (const trasig of ['', 'inte json', '{}', '[]', '{"format":"nagot-annat"}']) {
       expect(() => las(trasig)).toThrow(OlasbarSakerhetskopiaError);
     }

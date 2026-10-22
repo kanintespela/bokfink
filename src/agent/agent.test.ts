@@ -179,7 +179,7 @@ describe('the receipt assistant’s device', () => {
     await kor(['utkast', '/tmp/forslag.json']);
 
     await expect(kor(['utkast', '/tmp/forslag.json'])).rejects.toThrow(
-      'finns redan i Kontera och hör till ett utkast',
+      'finns redan i Bokfink och hör till ett utkast',
     );
   });
 

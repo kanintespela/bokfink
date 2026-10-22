@@ -38,7 +38,7 @@ function randomBytes(length: number): Uint8Array {
    */
   if (typeof crypto === 'undefined' || typeof crypto.getRandomValues !== 'function') {
     throw new Error(
-      'Webbläsaren saknar en kryptografiskt säker slumpgenerator, så Kontera ' +
+      'Webbläsaren saknar en kryptografiskt säker slumpgenerator, så Bokfink ' +
         'kan inte skapa identifierare. Uppdatera webbläsaren eller öppna appen ' +
         'över https.',
     );

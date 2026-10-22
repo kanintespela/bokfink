@@ -275,7 +275,7 @@ export function Nebilagasida({
         verksamhetensArt: deklarant!.verksamhetensArt,
         ne,
         skapad: nu(),
-        program: 'Kontera',
+        program: 'Bokfink',
       });
       await onSparaFil(
         vilken,

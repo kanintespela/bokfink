@@ -36,7 +36,7 @@ export function Bankimport({ onLasFil, onBokfor, onTillbaka }: Props) {
       <h2>Stäm av kontoutdrag</h2>
 
       <p className="tomt">
-        Läs in ett kontoutdrag som CSV från banken. Kontera visar vilka rader som redan är
+        Läs in ett kontoutdrag som CSV från banken. Bokfink visar vilka rader som redan är
         bokförda och vilka som saknas. Filen stannar på enheten.
       </p>
 

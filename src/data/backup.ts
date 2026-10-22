@@ -91,7 +91,7 @@ const sakerhetskopia = z.object({
 
 export class OlasbarSakerhetskopiaError extends Error {
   constructor(orsak: string) {
-    super(`Filen går inte att läsa som en säkerhetskopia från Kontera: ${orsak}`);
+    super(`Filen går inte att läsa som en säkerhetskopia från Bokfink: ${orsak}`);
     this.name = 'OlasbarSakerhetskopiaError';
   }
 }
@@ -147,7 +147,7 @@ export function las(text: string): Sakerhetskopia {
   if (resultat.data.schemaversion > latestSchemaVersion()) {
     throw new OlasbarSakerhetskopiaError(
       `den kommer från databasversion ${resultat.data.schemaversion}, och den här ` +
-        `versionen av Kontera förstår som mest ${latestSchemaVersion()}. Uppdatera ` +
+        `versionen av Bokfink förstår som mest ${latestSchemaVersion()}. Uppdatera ` +
         'appen först.',
     );
   }

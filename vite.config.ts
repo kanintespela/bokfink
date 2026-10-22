@@ -37,8 +37,8 @@ export default defineConfig({
       registerType: 'prompt',
       includeAssets: ['favicon.png', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Kontera',
-        short_name: 'Kontera',
+        name: 'Bokfink',
+        short_name: 'Bokfink',
         description: 'Bokföring för enskild firma. All data stannar på din enhet.',
         lang: 'sv-SE',
         dir: 'ltr',

@@ -7,6 +7,6 @@ import { App } from './App';
 // React or the test runner are wired up wrong, which is all stage 0 promises.
 describe('App', () => {
   it('renders the application name', () => {
-    expect(renderToStaticMarkup(<App />)).toContain('Kontera');
+    expect(renderToStaticMarkup(<App />)).toContain('Bokfink');
   });
 });

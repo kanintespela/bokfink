@@ -180,7 +180,7 @@ export async function forberedUnderlag(
 
   if (!fil.type.startsWith('image/')) {
     throw new TypeError(
-      `Kontera kan bara ta emot bilder och PDF-filer som underlag. "${fil.name}" ` +
+      `Bokfink kan bara ta emot bilder och PDF-filer som underlag. "${fil.name}" ` +
         `är av typen ${fil.type.length > 0 ? fil.type : 'okänd typ'}.`,
     );
   }

@@ -943,7 +943,7 @@ test('exports an archive package with the SIE file, a PDF and the receipt', asyn
   expect(namn).toContain('LASMIG.txt');
 });
 
-test('refuses a file that is not a Kontera backup', async ({ page }) => {
+test('refuses a file that is not a Bokfink backup', async ({ page }) => {
   await tillSakerhetskopia(page);
 
   await page.getByTestId('kopiefil').setInputFiles({
