@@ -23,6 +23,7 @@ export const VYER = [
    * everything else began five screens down.
    */
   'installningar',
+  'bocker',
   'konton',
   'filer',
   'sakerhetskopia',
@@ -49,6 +50,7 @@ export const VYNAMN: Record<Vy, string> = {
   rapporter: 'Rapporter',
   verifikat: 'Verifikat',
   installningar: 'Inställningar',
+  bocker: 'Böcker',
   konton: 'Kontoplan',
   filer: 'Filer, import och export',
   sakerhetskopia: 'Säkerhetskopia',

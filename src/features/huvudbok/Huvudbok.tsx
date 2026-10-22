@@ -8,6 +8,7 @@ import { kontoutdrag } from '../../domain/rapport/kontoutdrag';
 import { beteckning, type BokfortVerifikat } from '../../domain/verifikat/verifikat';
 import { huvudbokTabell } from '../../domain/export/tabeller';
 import { Exportknappar } from '../rapport/Exportknappar';
+import { useFilprefix } from '../../ui/bok';
 
 interface Props {
   readonly konton: ReadonlyMap<Kontonummer, Konto>;
@@ -29,6 +30,7 @@ interface Props {
  * behind it.
  */
 export function Huvudbok({ konton, verifikat, ingaendeBalanser }: Props) {
+  const filprefix = useFilprefix();
   const [oppet, setOppet] = useState<Kontonummer | undefined>();
 
   const saldon = useMemo(
@@ -56,7 +58,7 @@ export function Huvudbok({ konton, verifikat, ingaendeBalanser }: Props) {
     <>
       <Exportknappar
         tabell={huvudbokTabell(saldon, verifikat, konton)}
-        namn="kontera-huvudbok"
+        namn={`${filprefix}-huvudbok`}
       />
 
       <ul className="lista" data-testid="huvudbok">

@@ -20,7 +20,7 @@ Bokfink bygger på tre val:
 
 ## Målgrupp och avgränsning
 
-Bokfink riktar sig till **enskild firma** som upprättar **förenklat årsbokslut enligt K1** (BFNAR 2006:1). Aktiebolag, handelsbolag, koncernredovisning, löneadministration och flera samtidiga användare ligger utanför projektets mål.
+Bokfink riktar sig till **enskild firma** som upprättar **förenklat årsbokslut enligt K1** (BFNAR 2006:1). Aktiebolag, handelsbolag, koncernredovisning, löneadministration och flera samtidiga användare ligger utanför projektets mål. Stöd för en ideell förening, som en egen bok bredvid firmans, byggs i Etapp 10.
 
 ## Funktioner
 
@@ -36,6 +36,8 @@ Status: ⬜ ej påbörjad · 🟡 pågår · ✅ klar · ⏸️ nedprioriterad
 | ✅ | Oföränderliga konteringar, annullering, rättelse av beskrivning och datum, obruten nummerserie per serie och år |
 | ✅ | Periodlåsning efter inlämnad momsdeklaration, och årsavslut |
 | ✅ | Flera räkenskapsår med ingående balanser |
+| ✅ | Flera böcker på samma enhet, till exempel firman och en förening, helt åtskilda |
+| ⬜ | Föreningsprofil: ingen moms, föreningens kontoplan, projekt per konteringsrad, budget mot utfall |
 
 ### Moms och skatt
 | | Funktion |
