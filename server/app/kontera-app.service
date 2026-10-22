@@ -1,0 +1,12 @@
+[Unit]
+Description=Kontera - appen, så som CI byggde den, bakom Tailscale
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/node %h/kontera-drift/bin/servera.mjs %h/kontera-drift/current
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
