@@ -35,7 +35,7 @@ export default defineConfig({
        * decides when to take the new version.
        */
       registerType: 'prompt',
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+      includeAssets: ['favicon.png', 'apple-touch-icon.png'],
       manifest: {
         name: 'Kontera',
         short_name: 'Kontera',
@@ -46,7 +46,9 @@ export default defineConfig({
         scope: '/',
         display: 'standalone',
         orientation: 'portrait',
-        background_color: '#0e3b32',
+        // The app's own paper, which is also the logo's: the splash screen
+        // shows the icon on the colour it was drawn on.
+        background_color: '#f7f5f0',
         theme_color: '#0e3b32',
         categories: ['finance', 'business', 'productivity'],
         icons: [
