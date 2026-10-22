@@ -14,6 +14,7 @@ import type { Forberedelse } from '../../platform/bild';
 import type { Kvittobild } from '../underlag/Kvitton';
 import { LaggTillUnderlag } from './LaggTillUnderlag';
 import { Underlagsvisning, type Visat } from '../../ui/Underlagsvisning';
+import { useFilprefix } from '../../ui/bok';
 
 interface Props {
   /** Every year's verifikat; the list shows one year at a time. */
@@ -87,6 +88,7 @@ export function Verifikatlista({
   onAnnullera,
   onRatta,
 }: Props) {
+  const filprefix = useFilprefix();
   const [fraga, setFraga] = useState('');
   /** Which verifikat is being corrected, and what it is being corrected to. */
   const [rattar, setRattar] = useState<Uuid | undefined>();
@@ -217,7 +219,7 @@ export function Verifikatlista({
             poster.map((post) => post.verifikat),
             konton,
           )}
-          namn="kontera-verifikationslista"
+          namn={`${filprefix}-verifikationslista`}
         />
       )}
 

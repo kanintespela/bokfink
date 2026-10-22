@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 
 import { delaEllerSpara } from '../../platform/fil';
 import { Uppgiftsstatus, useUppgift } from './uppgift';
+import { useFilprefix } from '../../ui/bok';
 
 interface Props {
   /**
@@ -30,6 +31,7 @@ export function Sakerhetskopia({
   onAterstall,
   onArKrypterad,
 }: Props) {
+  const filprefix = useFilprefix();
   const kopievaljare = useRef<HTMLInputElement>(null);
   /*
    * The passphrase is held only while the screen is open, and never stored.
@@ -75,7 +77,7 @@ export function Sakerhetskopia({
           onClick={() =>
             void kor(async () => {
               const text = await onSakerhetskopia(losenfras);
-              const namn = `kontera-sakerhetskopia-${new Date()
+              const namn = `${filprefix}-sakerhetskopia-${new Date()
                 .toISOString()
                 .slice(0, 10)}.json`;
               const utfall = await delaEllerSpara(namn, text, 'application/json');
@@ -99,7 +101,7 @@ export function Sakerhetskopia({
           onClick={() =>
             void kor(async () => {
               const text = await onSakerhetskopia();
-              const namn = `kontera-oskyddad-kopia-${new Date()
+              const namn = `${filprefix}-oskyddad-kopia-${new Date()
                 .toISOString()
                 .slice(0, 10)}.json`;
               const utfall = await delaEllerSpara(namn, text, 'application/json');

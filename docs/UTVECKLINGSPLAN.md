@@ -164,7 +164,7 @@ Entiteter i första versionen. Alla belopp i öre, alla datum som `YYYY-MM-DD`.
 
 | Entitet | Innehåll | Noteringar |
 |---|---|---|
-| `Foretag` | namn, organisationsnummer, adress, momsregistrering, redovisningsmetod, momsperiod, logotyp | En per databas i v1, modellerad för flera |
+| `Foretag` | namn, organisationsnummer, adress, momsregistrering, redovisningsmetod, momsperiod, logotyp | En per databas. Flera böcker är flera databaser, se beslut V och Etapp 10 |
 | `Rakenskapsar` | start, slut, status (öppet / momslåst t.o.m. datum / avslutat) | Ingående balanser per konto |
 | `Konto` | nummer, namn, kontotyp, momskod, aktiv, favorit | BAS-kontoplan + egna konton |
 | `Momskod` | sats, riktning, deklarationsrutor, specialfall | Driver både bokföring och momsrapport |
@@ -397,6 +397,20 @@ Fakturering (Etapp 6) nedprioriterad efter beslut M (behövs sällan eller aldri
 - Tillgänglighet, mörkt läge, tumvänliga klickytor, snabbknappar från hemskärmen
 - Onboarding för första start
 
+### Etapp 10 — Föreningsbok · M
+
+Ägaren blir kassör i Exempelbygdens Bygdegårdsförening och för dess bokföring i Bokfink från 2027-01-01, bredvid firmans (beslut V). Föreningen är en ideell förening som hyr ut sin lokal och äger sin fastighet, och bedöms därför vara bokföringsskyldig. Den är inte momsregistrerad, bokför i dag i Visma Förening, har räkenskapsår lika med kalenderår och en revisor som får en SIE-fil. Bokföringsskyldigheten och vilket allmänt råd bokslutet ska följa är ännu inte bekräftade med revisorn.
+
+- ✅ **Flera böcker** (beslut V, 2026-10-22). Varje bok är en egen databas, med egna verifikat, konton, räkenskapsår, inställningar, säkerhetskopior och exporter. Den ursprungliga databasen är första boken och behövde ingen migrering. Ett litet register håller namnen och vilken bok som är öppen på enheten; försvinner det hittas bokdatabaserna igen. Med fler än en bok står den öppna bokens namn överst på varje skärm, eftersom det är på Bokför-skärmen ett kvitto hamnar i fel bok. Exporterade filer får bokens namn, utom den ursprungliga bokens som behåller sina. **En säkerhetskopia bär sin boks identitet**, och en återställning till en bok som redan har innehåll vägrar en kopia från en annan bok — en återställning slår ihop, och hård regel 5 ger ingen väg att ta bokförda verifikat ur fel bok igen. En tom bok tar kopians identitet, vilket är hur en bok flyttas till en ny enhet: skapa en tom bok och läs in kopian. `src/data/bokregister.ts`, `src/data/bokidentitet.ts`, `src/features/bocker/Bocker.tsx`
+- ⬜ **Föreningsprofil** per bok: ingen moms, och firmans skärmar och påminnelser dolda — momsdatum, NE-bilaga, egenavgifter, djurlager. En ny föreningsbok startar i dag med BAS K1:s grundkonton och visar momspåminnelser
+- ⬜ **Föreningens kontoplan** ur en SIE4-export från Visma Förening, i stället för BAS K1:s grundkonton. Kontoplanen (utskrift för 2024) använder 2010/2019/8999 för eget kapital och årets resultat, samma som årsbokslutet bokför enligt beslut S
+- ⬜ **Beslutsträd för föreningen**: medlemsavgifter, bidrag, uthyrning, lotterier, en medlems utlägg, fastighetens kostnader
+- ⬜ **Projekt per konteringsrad**, så att varje bidrag kan redovisas för sig. Låser datamodellen och kräver beslut innan något byggs; SIE-exporten visar om Visma redan använder projekt eller kostnadsställen
+- ⬜ **Budget mot utfall.** Stadgarna § 11 punkt 11 ger årsmötet en redovisning av budget- och verksamhetsplan
+- ⬜ **Bokslut för förening.** Förenklat årsbokslut för ideella föreningar (BFNAR 2010:1) eller årsbokslut (BFNAR 2017:3), inte K1 för enskild näringsidkare. ⚠️ Utreds mot källorna och med revisorn före det första bokslutet, för 2027, som ska till årsmötet före 1 mars 2028
+
+**Kända begränsningar.** Synken är inställd per bok, men servern skiljer inte på böcker: två böcker får inte synka mot samma konto. Kvittoassistenten (beslut N) hör till den bok vars synk den är inställd på. Registret är per enhet, så en bok som ska finnas på både telefon och dator skapas på den andra enheten genom att läsa in en säkerhetskopia i en tom bok.
+
 ---
 
 ## 7. Kompletteringar till kravlistan
@@ -450,7 +464,7 @@ Punkter som saknades i den ursprungliga kravlistan men som behövs för att appe
 
 ## 9. Öppna beslut
 
-Tjugo frågor är besvarade och har arbetats in i planen. De kvarstående kan vänta.
+Tjugoen frågor är besvarade och har arbetats in i planen. De kvarstående kan vänta.
 
 ### Besvarade
 
@@ -475,6 +489,7 @@ Tjugo frågor är besvarade och har arbetats in i planen. De kvarstående kan v�
 | Q | Prisbasbelopp från SCB (2026-09-13) | **Undantag från hård regel 7: hämtas med en knapp** | Enda anropet utöver den egna synkservern. Görs bara när användaren trycker på Hämta från SCB, skickar bara årtalet (SCB:s statistikdatabas, tabell PR0101E, CC0) och sparas först efter ett andra tryck. Värdet kan också skrivas in för hand; tabellen i koden går före där den har året |
 | R | Mallar eller beslutsträd (2026-09-13) | **Beslutsträd, och BAS K1-kontoplanen i stället för den importerade bokföringens konton** | Mallsidan och grundmallarna borttagna. Kontoanvändningen skiljer sig från tidigare år (t.ex. 4000 i stället för 4010, 2641 i stället för 2640, 2017 för egna insättningar), eftersom bokförda verifikat inte kan ändras. Konteringen kan alltid ändras innan den bokförs |
 | T | Var en fakturas förfallodag sparas (2026-10-04) | **På det väntande underlaget**, inte i ett eget leverantörsregister | Ny händelse `underlag.forfallodag`, ingen schemaändring. Passar kontantmetoden: fakturan bokförs när den betalas, och då kopplas underlaget och påminnelsen försvinner av sig själv. En leverantörsreskontra kan byggas ovanpå i Etapp 6 om det behövs |
+| V | Flera böcker, för en förening bredvid firman (2026-10-22) | **En databas per bok**, inte en bokkolumn på varje rad | Firmans befintliga bokföring flyttas inte och behöver ingen migrering. Böckerna kan inte blandas i rapporter, säkerhetskopior eller arkiv, och föreningens bok kan lämnas över hel till nästa kassör. En säkerhetskopia från en annan bok vägras. Se Etapp 10 |
 | S | Omföring av 20xx-kontona vid årsskiftet (2026-09-13) | **Ja, samma praxis som andra bokföringsprogram** | Årsbokslutet får ett steg som bokför årets resultat 8999 mot 2019 på årets sista dag; "för över balanser" bokför därefter en omföring av 2011-2019 mot 2010 som ett verifikat på det nya årets första dag. Ingen av delarna påverkar resultat eller R11/B10, som redan räknar rätt utan dem – de gör bara att kontona själva, och en huvudbok, visar samma sak. Byggs inte om det nya året inte kan bokföras än (inga framtida datum); knappen görs om nästa gång |
 
 ### Kvarstående
@@ -486,7 +501,7 @@ Tjugo frågor är besvarade och har arbetats in i planen. De kvarstående kan v�
 5. **Kan en nedladdning från den installerade PWA:n landa direkt i iCloud Drive** om Safaris förvalda nedladdningsmapp pekas dit under Inställningar, utan delningsarket i vägen? Skulle göra säkerhetskopian ett tryck snabbare, men går bara att testa på en riktig telefon — se Etapp 5.
 6. **Riktig xlsx, eller räcker CSV?** Exporterna skriver CSV som öppnas rätt i ett svenskt Excel, och SIE finns för det en revisor faktiskt vill ha. En äkta `.xlsx` är ett zip-baserat format, och zip-skrivaren från Etapp 5:s arkivpaket finns redan — kvar är bara OOXML-delen. Fortfarande bara värt det om någon mottagare kräver formatet. *Rekommendation: avvakta tills det efterfrågas.*
 7. **Kompletteringsregelns exakta årsräkning** (BFN K1, Etapp 7): att anskaffningsåret räknas som ett helt år oavsett när på året köpet skedde är väletablerad praxis, men gick inte att verifiera mot inkomstskattelagen 18 kap. 17 §:s lagtext direkt (skatteverket.se avvisade hämtning, lagen.nu för stor för hämtningsverktyget). Isolerad i en egen funktion (`kvarvarandeVardeEnligtKompletteringsregeln`) så den går att rätta utan att röra poolberäkningen om en djupare lagtextgenomgång skulle visa något annat.
-8. **Föreningsprofil.** Ska stöd för ideella föreningar (eget kapital för förening, projekt per konteringsrad, budget mot utfall) byggas som en profil i samma kodbas? Kräver beslut om var profilen bor och hur projekt lagras, innan något byggs.
+8. ~~**Föreningsprofil.**~~ Besvarad 2026-10-22: ja, i samma kodbas och som en egen bok per förening (beslut V). Profilen bor på boken. Hur projekt lagras är fortfarande öppet — se Etapp 10.
 
 ---
 

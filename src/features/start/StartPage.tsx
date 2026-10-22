@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { getOrCreateDeviceId } from '../../data/device';
-import { db } from '../../data/instance';
+import type { KonteraDatabase } from '../../data/db';
 import { latestSchemaVersion } from '../../data/schema';
 import { byggversion } from '../../platform/byggversion';
 import {
@@ -33,7 +33,7 @@ function formatBytes(bytes: number): string {
     : `${Math.round(megabytes)} MB`;
 }
 
-export function StartPage() {
+export function StartPage({ db }: { db: KonteraDatabase }) {
   const [status, setStatus] = useState<Status | undefined>();
   const [error, setError] = useState<string | undefined>();
 
@@ -68,7 +68,7 @@ export function StartPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [db]);
 
   return (
     <section aria-label="Status">
