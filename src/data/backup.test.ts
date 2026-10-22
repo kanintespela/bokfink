@@ -14,6 +14,7 @@ import {
   exportera,
   exporteraSomText,
   importera,
+  AnnanBokError,
   las,
   OlasbarSakerhetskopiaError,
   SkadadFilError,
@@ -24,6 +25,7 @@ import { dekryptera, harledNyckel, kryptera, nyttSalt } from '../platform/krypto
 import { tillBase64 } from './base64';
 import { arKrypterad, laspaket, paketera } from './kryptokopia';
 import { lasFil, sparaUnderlag } from './underlag';
+import { BOK_ID_NYCKEL, lasBokId, URSPRUNGLIG_BOK } from './bokidentitet';
 import { KonteraDatabase } from './db';
 import { forberedBokforing, GRUNDKONTON } from './uppstart';
 import { fastKlocka } from '../domain/tid/klocka';
@@ -419,5 +421,70 @@ describe('restoring onto a new device', () => {
     await importera(nya, kopia);
 
     expect((await lasTillstand(nya)).konton.has(kontonummer('6110'))).toBe(true);
+  });
+});
+
+describe('en säkerhetskopia från en annan bok', () => {
+  let firman: KonteraDatabase;
+
+  beforeEach(async () => {
+    firman = await nyDb();
+    await fyll(firman);
+  });
+
+  it('is refused by a book that already holds entries, which is left untouched', async () => {
+    const kopia = las(await exporteraSomText(firman));
+    const foreningen = await nyDb();
+    await foreningen.setMeta(BOK_ID_NYCKEL, 'foreningen');
+    await skrivKonto(
+      foreningen,
+      kontext,
+      skapaKonto({ nummer: '3890', namn: 'Medlemsavgifter' }),
+    );
+    const fore = await lasLogg(foreningen);
+
+    await expect(importera(foreningen, kopia)).rejects.toBeInstanceOf(AnnanBokError);
+    expect(await lasLogg(foreningen)).toEqual(fore);
+    expect(await lasBokId(foreningen)).toBe('foreningen');
+    expect(await foreningen.getMeta('momsperiod')).toBeUndefined();
+    foreningen.close();
+  });
+
+  it('is taken in whole by an empty database, which becomes that book', async () => {
+    await firman.setMeta(BOK_ID_NYCKEL, 'foreningen');
+    const kopia = las(await exporteraSomText(firman));
+    const nyEnhet = await nyDb();
+    await nyEnhet.setMeta(BOK_ID_NYCKEL, 'ny-bok');
+
+    await importera(nyEnhet, kopia);
+    expect(await lasBokId(nyEnhet)).toBe('foreningen');
+    expect(await lasLogg(nyEnhet)).toEqual(await lasLogg(firman));
+    nyEnhet.close();
+  });
+
+  it('is taken by a database holding nothing but its starter set', async () => {
+    const kopia = las(await exporteraSomText(firman));
+    const nyBok = await nyDb();
+    await nyBok.setMeta(BOK_ID_NYCKEL, 'ny-bok');
+    await forberedBokforing(nyBok, kontext, fastKlocka(datum('2026-09-13')));
+
+    await importera(nyBok, kopia);
+    expect(await lasBokId(nyBok)).toBe(URSPRUNGLIG_BOK);
+    nyBok.close();
+  });
+
+  it('is not what a copy of the same book is, whichever device took it', async () => {
+    // The phone and the computer have exchanged backups of the original book
+    // since before books had identities; neither copy may stop doing so.
+    const kopia = las(await exporteraSomText(firman));
+    const datorn = await nyDb();
+    await skrivKonto(
+      datorn,
+      kontext,
+      skapaKonto({ nummer: '6110', namn: 'Kontorsmateriel' }),
+    );
+
+    await expect(importera(datorn, kopia)).resolves.toBeDefined();
+    datorn.close();
   });
 });

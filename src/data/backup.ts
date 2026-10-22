@@ -5,6 +5,7 @@ import type { Uuid } from '../domain/id/uuidv7';
 import { sha256, type Sha256 } from '../domain/underlag/underlag';
 import { franBase64, tillBase64 } from './base64';
 import { lasLogg, tillampaAlla } from './bokforing';
+import { BOK_ID_NYCKEL, bokIdIMeta, lasBokId } from './bokidentitet';
 import type { KonteraDatabase } from './db';
 import {
   FIL_TABLE,
@@ -165,6 +166,17 @@ export class SkadadFilError extends Error {
   }
 }
 
+export class AnnanBokError extends Error {
+  constructor() {
+    super(
+      'Säkerhetskopian kommer från en annan bok än den som är öppen, och att läsa in ' +
+        'den här skulle blanda ihop två bokföringar. Byt till rätt bok och försök igen, ' +
+        'eller skapa en ny bok och läs in kopian i den.',
+    );
+    this.name = 'AnnanBokError';
+  }
+}
+
 export interface Importalternativ {
   /**
    * Hashes bytes, so a restore can check each file against its own address.
@@ -189,6 +201,24 @@ export async function importera(
   kopia: Sakerhetskopia,
   alternativ: Importalternativ = {},
 ): Promise<{ nyaHandelser: number; nyaFiler: number }> {
+  /*
+   * A restore merges, so a copy of another book's entries would be folded
+   * into this one for good - hard rule 5 leaves no way to take booked
+   * verifikat back out. Checked before anything is written.
+   *
+   * A database holding nothing yet, or nothing but its starter set, is where
+   * a book is restored onto a new device, and takes the copy's identity.
+   */
+  const kopiansBok = bokIdIMeta(kopia.meta);
+  if (kopiansBok !== (await lasBokId(db))) {
+    const tom =
+      (await lasLogg(db)).length === 0 || (await harEnbartOskickadStartdata(db));
+    if (!tom) {
+      throw new AnnanBokError();
+    }
+    await db.setMeta(BOK_ID_NYCKEL, kopiansBok);
+  }
+
   for (const rad of kopia.meta) {
     // The device identity is per installation and must not be overwritten by
     // a backup taken on another one.
