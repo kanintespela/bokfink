@@ -177,7 +177,10 @@ p {
   justify-content: center;
   gap: var(--rum-2);
   min-height: var(--tapp);
-  padding: 0 var(--rum-4);
+  /* Room above and below for a label that wraps to two lines on a phone. A
+     one-line button is still exactly the height of a thumb. */
+  padding: var(--rum-2) var(--rum-4);
+  text-align: center;
   border: 1px solid var(--line);
   border-radius: var(--rundning);
   background: var(--yta);
@@ -276,6 +279,11 @@ p {
   gap: var(--rum-2);
 }
 
+/* A choice followed by its fields needs the same air as one field after another. */
+.segment + .faltgrupp {
+  margin-top: var(--rum-4);
+}
+
 .segment button {
   /* Grow to fill the row, but never below what the label needs. */
   flex: 1 1 auto;
@@ -334,6 +342,9 @@ p {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  /* "1930 Företagskonto/checkkonto/affärskonto" is one word to the browser,
+     and without this it runs underneath the star beside it. */
+  overflow-wrap: anywhere;
 }
 
 .listrad__sekundar {

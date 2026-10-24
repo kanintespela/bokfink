@@ -999,16 +999,8 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
          */}
         {vy === 'installningar' && (
           <>
+            <Tillbaka onTillbaka={() => setVy('attgora')} />
             <h2>Inställningar</h2>
-            <p>
-              <button
-                type="button"
-                className="knapp knapp--text"
-                onClick={() => setVy('attgora')}
-              >
-                Tillbaka
-              </button>
-            </p>
 
             {(
               [
