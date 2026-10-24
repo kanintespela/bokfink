@@ -113,6 +113,27 @@ h1 {
 }
 
 /*
+ * The finch beside the name, framed like the icon on the home screen so the
+ * app and its launcher look like the same thing. The icon is drawn on the
+ * logo's own paper, which in the dark theme becomes a small light tile - the
+ * way any app icon sits on a dark home screen - rather than a picture with a
+ * hard white box around it.
+ */
+.varumarke {
+  display: flex;
+  align-items: center;
+  gap: var(--rum-3);
+}
+
+.varumarke__logga {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--line);
+  border-radius: var(--rundning);
+}
+
+/*
  * Which book is open, once there are several. Inked like the primary action
  * rather than muted like help text: it has to be seen without being looked
  * for, on every screen, by someone in a hurry.

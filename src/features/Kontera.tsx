@@ -167,6 +167,7 @@ import { Rapporter } from './handelser/Rapporter';
 import { Verifikatlista } from './verifikat/Verifikatlista';
 import { useVy, VYNAMN } from '../ui/vy';
 import { Tillbaka } from '../ui/Tillbaka';
+import { Varumarke } from '../ui/Varumarke';
 import { Vyval } from '../ui/Vyval';
 import { BokforUtgift } from './bokfor/BokforUtgift';
 import { Kvitton, type Kvittobild } from './underlag/Kvitton';
@@ -585,7 +586,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
   if (fel !== undefined) {
     return (
       <main>
-        <h1>Bokfink</h1>
+        <Varumarke />
         <p role="alert" data-testid="uppstart-fel">
           Bokfink kunde inte starta: {fel}
         </p>
@@ -596,7 +597,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
   if (laddat === undefined) {
     return (
       <main>
-        <h1>Bokfink</h1>
+        <Varumarke />
         <p>Läser bokföringen …</p>
       </main>
     );
@@ -764,7 +765,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
         )}
         {vy === 'attgora' && (
           <div className="rubrikrad">
-            <h1>Bokfink</h1>
+            <Varumarke />
             <button
               type="button"
               className="knapp knapp--text knapp--ikon"
