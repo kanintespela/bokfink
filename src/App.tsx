@@ -10,6 +10,7 @@ import {
 import { Kontera } from './features/Kontera';
 import { FilprefixContext } from './ui/bok';
 import { UpdateBanner } from './ui/UpdateBanner';
+import { Varumarke } from './ui/Varumarke';
 
 interface Bocker {
   readonly bocker: readonly Bok[];
@@ -51,7 +52,7 @@ export function App() {
       <>
         <UpdateBanner />
         <main>
-          <h1>Bokfink</h1>
+          <Varumarke />
           {fel === undefined ? (
             <p>Läser bokföringen …</p>
           ) : (

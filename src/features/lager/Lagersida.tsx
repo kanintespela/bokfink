@@ -250,9 +250,11 @@ export function Lagersida({
         />
       </div>
 
-      <button type="button" className="knapp" onClick={hamtaSkvPris}>
-        Hämta Skatteverkets pris för tacka/bagge
-      </button>
+      <p>
+        <button type="button" className="knapp" onClick={hamtaSkvPris}>
+          Hämta Skatteverkets pris för tacka/bagge
+        </button>
+      </p>
 
       {skvFel !== undefined && <p role="alert">{skvFel}</p>}
 

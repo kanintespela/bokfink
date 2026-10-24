@@ -79,7 +79,7 @@ export function Kontosida({ konton, onSpara }: Props) {
 
   return (
     <section aria-label="Konton">
-      <h2>Konton</h2>
+      <h2>Kontoplan</h2>
 
       <div className="faltgrupp">
         <label htmlFor="kontosok">Sök konto</label>
