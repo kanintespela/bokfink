@@ -98,3 +98,70 @@ bytas mot en dummare filhink utan att en enda regel går förlorad.
 PocketBase har inbyggd säkerhetskopiering i adminvyn. Den skyddar servern, inte
 bokföringen: enheterna äger bokföringen och servern är en brevlåda. Det som
 skyddar bokföringen är appens egen krypterade säkerhetskopia och arkivpaketet.
+
+## Uppdatera PocketBase
+
+Instansen har en egen kopia av programfilen i `/opt/kontera-pocketbase/`. Den
+uppdateras alltså inte när programfilen i `/opt/pocketbase` byts, och tvärtom.
+Kontrollera vilken version som körs:
+
+```sh
+/opt/kontera-pocketbase/pocketbase --version
+```
+
+Så uppdateras den:
+
+1. Välj en dag långt från en momsdeklaration (se riskhanteringen i
+   [utvecklingsplanen](../../docs/UTVECKLINGSPLAN.md)).
+2. Ta en säkerhetskopia i adminvyn, eller stoppa tjänsten och kopiera
+   `pb_data/`.
+3. Prova den nya versionen mot en **kopia** av `pb_data/` på en annan port,
+   och synka en testenhet mot den.
+4. Stoppa tjänsten, byt programfilen och starta igen:
+   `sudo systemctl restart kontera-pocketbase`.
+
+Läs releaseanteckningarna före varje uppdatering. Version v0.40 byter
+JSON-hanteringen och är enligt utvecklaren inte helt bakåtkompatibel.
+
+### PocketBase flyttar från GitHub
+
+Utvecklaren har meddelat att PocketBase flyttar från GitHub till en egen
+plattform på `ganigeorgiev.com/pocketbase/pocketbase`
+([meddelandet](https://github.com/pocketbase/pocketbase/discussions/7841),
+2026-09-12, läst 2026-10-24).
+
+**Läget 2026-10-24:** flytten har inte skett än. GitHub-repot är inte
+arkiverat, och v0.40.6 släpptes där 2026-10-23. Adressformatet för
+nedladdningar på den nya plattformen är inte publicerat.
+
+Det här ändras:
+
+- **Nya versioner** finns bara på den nya plattformen. Ingen spegel hålls
+  på GitHub.
+- **Gamla versioner** ligger kvar på GitHub, och länkarna dit fortsätter
+  fungera.
+- **Bevakningen flyttas inte.** Den som följer PocketBase på GitHub får
+  ingen varning om säkerhetsluckor efter flytten. Bevakningen måste göras om
+  på den nya plattformen.
+
+Appen påverkas inte. Den använder PocketBases webb-API direkt, inte
+JavaScript-biblioteket från npm, och ingenting i repot hämtar programfilen.
+
+Så ser du om flytten har skett:
+
+```sh
+gh api repos/pocketbase/pocketbase -q .archived   # true = flyttat
+```
+
+När den har skett:
+
+- [ ] Bevaka PocketBase på den nya plattformen.
+- [ ] Fyll i adresserna nedan när utvecklaren har publicerat dem.
+- [ ] Uppdatera *Läget* ovan.
+
+| Vad | Adress |
+|---|---|
+| Projektsida | `https://ganigeorgiev.com/pocketbase/pocketbase` ⚠️ verifiera |
+| Nedladdning av en version | ⚠️ [adressformat] |
+| Kontrollsummor | ⚠️ [adress] |
+| Releaselista i JSON eller RSS | ⚠️ [adress, om sådan finns] |
