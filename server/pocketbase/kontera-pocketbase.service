@@ -7,7 +7,8 @@ Type=simple
 User=pi
 Group=pi
 # Loopback only. Nås utifrån genom tailscale serve, aldrig direkt.
-ExecStart=/opt/kontera-pocketbase/pocketbase serve --http=127.0.0.1:8091 --dir=/opt/kontera-pocketbase/pb_data
+# Schemat i pb_migrations körs vid varje start; det som redan gjorts hoppas över.
+ExecStart=/opt/kontera-pocketbase/pocketbase serve --http=127.0.0.1:8091 --dir=/opt/kontera-pocketbase/pb_data --migrationsDir=/opt/kontera-pocketbase/pb_migrations
 Restart=always
 RestartSec=5
 

@@ -331,6 +331,7 @@ Detta är gränsen för när appen får användas skarpt.
 - ✅ **Att byta server tömmer markören och köar om hela loggen.** Utan det blir bytet en tyst nullåtgärd: kön håller bara det som aldrig skickats, så en enhet som synkat en gång hade loggat in på den nya servern, skickat ingenting och rapporterat framgång
 - ✅ Synkklienten bakom ett gränssnitt i `src/platform/` med fem metoder, vilket är det som gör påståendet i [3.2](#32-synkbackend-pocketbase) kontrollerbart: servern kan bytas mot en dummare filhink utan att en enda regel går förlorad
 - ✅ Synkstatus i gränssnittet: vad som väntar på att skickas, när det senast lyckades, och vilken enhet det här är. Serveruppsättningen ligger i [`server/pocketbase/`](../server/pocketbase/README.md)
+- ✅ **Serverns schema ligger i repot**, som PocketBase-migreringar i [`server/pocketbase/pb_migrations/`](../server/pocketbase/README.md#uppdatera-schemat) som servern själv kör vid start. Det första skriptet satte gränsen för en händelse till `0`, vilket PocketBase läser som standardgränsen 5 000 tecken och inte som obegränsat. En större händelse avvisades med en naken 400 och höll kvar allt bakom sig i kön (upptäckt 2026-10-28). Gränsen är nu 10 MB, samma som för en fil
 - Konfliktvy för de fall som inte kan avgöras automatiskt
 
 **Klart när:** hela databasen kan återskapas på en ny enhet från en säkerhetskopia, verifierat av ett automatiserat test; två enheter som bokfört var för sig i flygplansläge kan synkas utan att ett enda verifikat går förlorat eller dubbleras, verifierat av ett egenskapstest.

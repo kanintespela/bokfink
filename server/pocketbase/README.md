@@ -26,7 +26,16 @@ lyssnar på loopback — den nås utifrån genom `tailscale serve`, aldrig direk
 sudo mkdir -p /opt/kontera-pocketbase
 sudo chown pi:pi /opt/kontera-pocketbase
 cp /opt/pocketbase/pocketbase /opt/kontera-pocketbase/
+cp -r pb_migrations /opt/kontera-pocketbase/
 ```
+
+`pb_migrations/` är serverns schema. PocketBase kör det själv varje gång den
+startar och hoppar över det som redan är gjort, så samlingarna behöver aldrig
+skapas för hand. Där finns collection `handelser` med ett unikt index på
+`op_id` — det är det indexet som gör synken idempotent — och collection
+`filer` med ett unikt index på `sha256`. Användarens inloggning gäller i 30
+dagar och förnyas vid varje synk, så det är hur länge en enhet får ligga
+oanvänd innan den måste loggas in igen.
 
 Skapa en administratör och starta instansen en första gång:
 
@@ -34,15 +43,12 @@ Skapa en administratör och starta instansen en första gång:
 /opt/kontera-pocketbase/pocketbase superuser create DIN@EPOST hemligt-losenord \
   --dir=/opt/kontera-pocketbase/pb_data
 /opt/kontera-pocketbase/pocketbase serve --http=127.0.0.1:8091 \
-  --dir=/opt/kontera-pocketbase/pb_data
+  --dir=/opt/kontera-pocketbase/pb_data \
+  --migrationsDir=/opt/kontera-pocketbase/pb_migrations
 ```
 
-Kör sedan `./skapa-collections.sh http://127.0.0.1:8091 DIN@EPOST hemligt-losenord`
-i en annan terminal. Skriptet lägger upp collection `handelser` med ett unikt
-index på `op_id` — det är det indexet som gör synken idempotent — collection
-`filer` med ett unikt index på `sha256`, och appens användare. Användarens inloggning
-gäller i 30 dagar och förnyas vid varje synk, så det är hur länge en enhet får
-ligga oanvänd innan den måste loggas in igen.
+Kör sedan `./skapa-anvandare.sh http://127.0.0.1:8091 DIN@EPOST hemligt-losenord`
+i en annan terminal. Det skapar användaren som appen loggar in som.
 
 ## Som tjänst
 
@@ -92,6 +98,23 @@ det är inget underlag (bokföringslagen 7 kap. 1 §).
 Ingen domänlogik ligger på servern. Inga hooks räknar moms, validerar
 verifikat eller delar ut verifikationsnummer — det är det som gör att den kan
 bytas mot en dummare filhink utan att en enda regel går förlorad.
+
+## Uppdatera schemat
+
+När `pb_migrations/` har ändrats i repot:
+
+```sh
+cp pb_migrations/*.js /opt/kontera-pocketbase/pb_migrations/
+sudo systemctl restart kontera-pocketbase
+```
+
+PocketBase kör de nya filerna när den startar. Kontrollera med
+`journalctl -u kontera-pocketbase -n 20` att de kom med.
+
+Det är det här appen ber om när den säger att servern inte tar emot så stora
+händelser. Det första skriptet satte gränsen för en händelse till `0`, vilket
+PocketBase läser som standardgränsen 5 000 tecken och inte som obegränsat.
+Migreringen `…_payload_utan_tak.js` höjer den till 10 MB.
 
 ## Säkerhetskopiering
 

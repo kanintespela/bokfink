@@ -333,8 +333,8 @@ async function las(
     }
     throw new SynkfelError(
       svar.status === 404
-        ? `Servern saknar samlingen "${samling}". Den skapas med ` +
-            'server/pocketbase/skapa-collections.sh.'
+        ? `Servern saknar samlingen "${samling}". Den skapas av ` +
+            'server/pocketbase/pb_migrations/ när servern startar.'
         : `Servern svarade ${svar.status} när ${vad} skulle hämtas.`,
     );
   }
