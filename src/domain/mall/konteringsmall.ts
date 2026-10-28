@@ -59,6 +59,28 @@ export const MOMSSATSER = [0, 6, 12, 25] as const;
 /** BAS 3740, where a rounding difference of a few öre is booked. */
 export const ORESUTJAMNING = kontonummer('3740');
 
+/**
+ * The öresutjämning between what was paid and what the underlag adds up to.
+ *
+ * An invoice states its netto and its moms and then asks for a round sum:
+ * 199,00 + 49,75 and "Att betala 249,00". The 25 öre is real money and is
+ * booked on BAS 3740 Öres- och kronutjämning, so the moms deducted is the
+ * moms charged and the payment is the payment. Only below a krona: further
+ * off, the netto is a misread or the amount has been changed by hand, and
+ * then the figures are the person's, not the underlag's.
+ */
+export function oresutjamning(
+  betalat: Ore,
+  netto: Ore | undefined,
+  moms: Ore | undefined,
+): Ore | undefined {
+  if (netto === undefined || moms === undefined) {
+    return undefined;
+  }
+  const skillnad = subtract(betalat, add(netto, moms));
+  return skillnad === 0 || Math.abs(skillnad) >= 100 ? undefined : skillnad;
+}
+
 export interface Beloppsdelar {
   /** What was actually paid or received, VAT included. */
   readonly brutto: Ore;

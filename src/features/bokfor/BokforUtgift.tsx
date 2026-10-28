@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 
-import { formatKronor, kronorString, type Ore } from '../../domain/belopp/ore';
+import { formatKronor, kronorString, subtract, type Ore } from '../../domain/belopp/ore';
 import {
   allaLov,
   BESLUTSTRAD,
@@ -19,6 +19,7 @@ import {
   delaMedUnderlag,
   sokMallar,
   tillampaMall,
+  oresutjamning,
   type Konteringsmall,
 } from '../../domain/mall/konteringsmall';
 import type { Uuid } from '../../domain/id/uuidv7';
@@ -184,6 +185,8 @@ export function BokforUtgift({
    * changing the amount or the leaf drops it.
    */
   const [kvittomoms, setKvittomoms] = useState<Ore | undefined>();
+  /** The amount before moms the underlag states, for the öresutjämning. */
+  const [kvittonetto, setKvittonetto] = useState<Ore | undefined>();
   const [beskar, setBeskar] = useState<{ fil: File; url: string } | undefined>();
   const kamera = useRef<HTMLInputElement>(null);
 
@@ -239,13 +242,21 @@ export function BokforUtgift({
    * fields that must agree is one field too many.
    */
   const brutto = visaValuta ? vaxling?.sek : tolkaBelopp(belopp);
+  const avrundning =
+    brutto === undefined ? undefined : oresutjamning(brutto, kvittonetto, kvittomoms);
   const konteringar = (() => {
     if (mall === undefined || brutto === undefined || aktivtBetalkonto === undefined) {
       return undefined;
     }
     try {
       return tillampaMall(mall, {
-        brutto,
+        /*
+         * With an öresutjämning the purchase is netto + moms, and what was
+         * paid is the amount typed; tillampaMall books the difference on
+         * 3740. Without one they are the same figure.
+         */
+        brutto: avrundning === undefined ? brutto : subtract(brutto, avrundning),
+        ...(avrundning === undefined ? {} : { betalat: brutto }),
         betalkonto: aktivtBetalkonto,
         ...(kvittomoms === undefined ? {} : { moms: kvittomoms }),
       });
@@ -309,6 +320,7 @@ export function BokforUtgift({
           ? forslag.moms
           : undefined,
       );
+      setKvittonetto(forslag.netto);
     }
     if (forslag?.datum !== undefined) {
       setDatumtext(forslag.datum);
@@ -509,7 +521,11 @@ export function BokforUtgift({
       return undefined;
     }
     try {
-      return delaMedUnderlag(mall, brutto, kvittomoms);
+      return delaMedUnderlag(
+        mall,
+        avrundning === undefined ? brutto : subtract(brutto, avrundning),
+        kvittomoms,
+      );
     } catch {
       return undefined;
     }
@@ -740,6 +756,13 @@ export function BokforUtgift({
         <p data-testid="momsdelning">
           Varav moms {visaBelopp(delar.moms)}, netto {visaBelopp(delar.netto)}.
           {kvittomoms !== undefined && ' Momsen är hämtad från underlaget.'}
+        </p>
+      )}
+
+      {avrundning !== undefined && (
+        <p data-testid="oresutjamning">
+          Öresutjämning {visaBelopp(avrundning)} bokförs på 3740, så att verifikatet
+          stämmer med både underlaget och det som betalades.
         </p>
       )}
 

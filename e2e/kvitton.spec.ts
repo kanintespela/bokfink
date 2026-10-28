@@ -237,6 +237,45 @@ test('reads a PDF invoice and offers what it says', async ({ page }) => {
   await expect(page.getByTestId('momsdelning')).toContainText('100,00');
 });
 
+/*
+ * The öresutjämning, from the invoice to the verifikat without being typed:
+ * 199,00 + 49,75 is 248,75, the invoice asks for 249,00, and the 25 öre go
+ * on 3740 so that the moms deducted is the moms charged.
+ */
+test('books the öresutjämning an invoice states on 3740', async ({ page }) => {
+  test.setTimeout(120_000);
+
+  await page.goto('/#kvitton');
+  await page
+    .getByTestId('valj-underlag')
+    .setInputFiles('e2e/fixtures/faktura-avrundning.pdf');
+  await expect(page.getByTestId('kvitto-besked')).toContainText('sparades');
+  await page.getByRole('button', { name: 'Bokför kvittot' }).click();
+
+  const erbjudande = page.getByTestId('anvand-kvittot');
+  await expect(erbjudande).toContainText('249,00', { timeout: 60_000 });
+  await page.getByLabel('Sök').fill('program');
+  await page
+    .getByTestId('sokresultat')
+    .getByRole('button', { name: /Program och abonnemang/ })
+    .click();
+  await erbjudande.click();
+
+  await expect(page.getByLabel('Att betala')).toHaveValue('249,00');
+  await expect(page.getByTestId('momsdelning')).toContainText('49,75');
+  await expect(page.getByTestId('oresutjamning')).toContainText('0,25');
+  await page.locator('main').getByRole('button', { name: 'Bokför', exact: true }).click();
+  await expect(page.getByTestId('senast-bokfort')).toBeVisible();
+
+  await page.goto('/#verifikat');
+  await page.getByTestId('verifikatlista').getByRole('button').first().click();
+  const kontering = page.locator('[data-testid^="kontering-"]');
+  await expect(kontering).toContainText('199,00');
+  await expect(kontering).toContainText('49,75');
+  await expect(kontering).toContainText('3740');
+  await expect(kontering).toContainText('-249,00');
+});
+
 /**
  * Takes away what Safari on an iPhone does not have.
  *

@@ -7,6 +7,7 @@ import type { Uuid } from '../id/uuidv7';
 import {
   delaBelopp,
   delaNetto,
+  oresutjamning,
   sokMallar,
   tillampaMall,
   type Konteringsmall,
@@ -573,5 +574,48 @@ describe('tillampaMall med moms från underlaget', () => {
       { konto: kontonummer('4010'), belopp: oreFromKronor('1004.00') },
       { konto: kontonummer('1930'), belopp: oreFromKronor('-1004.00') },
     ]);
+  });
+});
+
+/*
+ * BAS 3740 Öres- och kronutjämning: what an invoice adds up to before its
+ * round total, and the total, differ by the öre it rounded.
+ */
+describe('oresutjamning', () => {
+  const kr = (text: string) => oreFromKronor(text);
+
+  it('is what was paid less netto and moms', () => {
+    expect(oresutjamning(kr('249'), kr('199'), kr('49.75'))).toBe(kr('0.25'));
+    expect(oresutjamning(kr('211'), kr('169'), kr('42.25'))).toBe(kr('-0.25'));
+  });
+
+  it('is nothing when the figures already add up', () => {
+    expect(oresutjamning(kr('155.88'), kr('124.70'), kr('31.18'))).toBeUndefined();
+  });
+
+  /* A krona or more is a misread or an amount changed by hand. */
+  it('is nothing from a krona and up, or without both parts', () => {
+    expect(oresutjamning(kr('250'), kr('199'), kr('49.75'))).toBeUndefined();
+    expect(oresutjamning(kr('249'), undefined, kr('49.75'))).toBeUndefined();
+    expect(oresutjamning(kr('249'), kr('199'), undefined)).toBeUndefined();
+  });
+
+  /* The whole entry, as the form builds it from the invoice. */
+  it('balances the entry with the rounding on 3740', () => {
+    const avrundning = oresutjamning(kr('249'), kr('199'), kr('49.75'))!;
+    const rader = tillampaMall(foder, {
+      brutto: ore(kr('249') - avrundning),
+      betalat: kr('249'),
+      moms: kr('49.75'),
+      betalkonto: kontonummer('1930'),
+    });
+
+    expect(rader).toEqual([
+      { konto: '4010', belopp: kr('199') },
+      { konto: '2640', belopp: kr('49.75') },
+      { konto: '1930', belopp: kr('-249') },
+      { konto: '3740', belopp: kr('0.25') },
+    ]);
+    expect(sum(rader.map((rad) => rad.belopp))).toBe(0);
   });
 });
