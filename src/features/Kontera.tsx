@@ -479,7 +479,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
    * on this device is simply absent from the map, and the list says so.
    */
   const underlagPerVerifikat = laddat?.underlagPerVerifikat;
-  const visarUnderlag = vy === 'verifikat' || vy === 'utkast';
+  const visarUnderlag = vy === 'verifikat' || vy === 'kvitton';
   useEffect(() => {
     if (!visarUnderlag) {
       return;
@@ -821,33 +821,8 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
             }}
             onMoms={() => setVy('moms')}
             onKvitton={() => setVy('kvitton')}
-            onUtkast={() => setVy('utkast')}
+            onUtkast={() => setVy('kvitton')}
             onVisaVerifikat={() => setVy('verifikat')}
-          />
-        )}
-
-        {vy === 'utkast' && (
-          <Utkastlista
-            utkast={laddat.utkast}
-            konton={laddat.konton}
-            underlag={laddat.underlagPerVerifikat}
-            underlagsbilder={underlagsbilder}
-            onTillbaka={() => setVy('attgora')}
-            onBokfor={async (utkast) => {
-              const verifikat = await bokforUtkast(
-                db,
-                await skrivkontext(db),
-                utkast,
-                verifikatserie(laddat.serie),
-                utkast.mall === undefined ? 'manuell' : 'mall',
-              );
-              setLaddat(await hamta());
-              return `Bokfört som ${beteckning(verifikat)}.`;
-            }}
-            onKassera={async (utkast) => {
-              await kasseraUtkast(db, await skrivkontext(db), utkast.id);
-              setLaddat(await hamta());
-            }}
           />
         )}
 
@@ -926,7 +901,29 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
                 : `${nya === 1 ? 'Kvittot sparades' : `${nya} kvitton sparades`}.` +
                     (fanns > 0 ? ` ${fanns} fanns redan.` : '');
             }}
-          />
+          >
+            <Utkastlista
+              utkast={laddat.utkast}
+              konton={laddat.konton}
+              underlag={laddat.underlagPerVerifikat}
+              underlagsbilder={underlagsbilder}
+              onBokfor={async (utkast) => {
+                const verifikat = await bokforUtkast(
+                  db,
+                  await skrivkontext(db),
+                  utkast,
+                  verifikatserie(laddat.serie),
+                  utkast.mall === undefined ? 'manuell' : 'mall',
+                );
+                setLaddat(await hamta());
+                return `Bokfört som ${beteckning(verifikat)}.`;
+              }}
+              onKassera={async (utkast) => {
+                await kasseraUtkast(db, await skrivkontext(db), utkast.id);
+                setLaddat(await hamta());
+              }}
+            />
+          </Kvitton>
         )}
 
         {vy === 'bank' && (
@@ -1764,7 +1761,11 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
       </main>
 
       {/* Outside main: navigation is a sibling of the page, not part of it. */}
-      <Vyval vy={vy} onValj={setVy} />
+      <Vyval
+        vy={vy}
+        onValj={setVy}
+        antal={{ kvitton: laddat.utkast.length + laddat.kvitton.length }}
+      />
     </>
   );
 }

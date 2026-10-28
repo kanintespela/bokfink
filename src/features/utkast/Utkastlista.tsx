@@ -5,7 +5,6 @@ import type { Uuid } from '../../domain/id/uuidv7';
 import type { Konto, Kontonummer } from '../../domain/konto/konto';
 import type { Underlag } from '../../domain/underlag/underlag';
 import type { Verifikatutkast } from '../../domain/verifikat/verifikat';
-import { Tillbaka } from '../../ui/Tillbaka';
 import { Underlagsvisning, type Visat } from '../../ui/Underlagsvisning';
 
 interface Props {
@@ -20,7 +19,6 @@ interface Props {
   readonly onBokfor: (utkast: Verifikatutkast) => Promise<string>;
   /** Throws the draft away; its receipts go back to waiting. */
   readonly onKassera: (utkast: Verifikatutkast) => Promise<void>;
-  readonly onTillbaka: () => void;
 }
 
 /**
@@ -42,7 +40,6 @@ export function Utkastlista({
   underlagsbilder,
   onBokfor,
   onKassera,
-  onTillbaka,
 }: Props) {
   const [arbetar, setArbetar] = useState(false);
   const [besked, setBesked] = useState<string | undefined>();
@@ -64,9 +61,17 @@ export function Utkastlista({
     }
   }
 
+  /*
+   * Part of the Kvitton tab, above the receipts. Nothing to say when there
+   * are no drafts - except right after the last one was dealt with, when
+   * the confirmation is the one thing worth showing.
+   */
+  if (utkast.length === 0 && besked === undefined) {
+    return null;
+  }
+
   return (
     <section aria-label="Utkast">
-      <Tillbaka onTillbaka={onTillbaka} />
       {visar !== undefined && (
         <Underlagsvisning underlag={visar} onStang={() => setVisar(undefined)} />
       )}

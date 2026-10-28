@@ -967,6 +967,21 @@ dd {
   touch-action: manipulation;
 }
 
+/* How many things wait behind a tab: small, beside the name, never wrapping it. */
+.vyval__antal {
+  display: inline-block;
+  min-width: 1.25rem;
+  margin-left: 0.25rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--yta);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  vertical-align: 0.1em;
+}
+
 .vyval button[aria-current='page'] {
   color: var(--ink);
   font-weight: 600;

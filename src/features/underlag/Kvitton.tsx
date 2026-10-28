@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 
 import type { Datum } from '../../domain/tid/datum';
 import type { Underlag } from '../../domain/underlag/underlag';
@@ -36,6 +36,8 @@ interface Props {
   ) => Promise<void>;
   /** The text read out of the file, reading it first when nobody has. */
   readonly onLasText: (kvitto: Kvittobild) => Promise<string>;
+  /** The drafts waiting for review, shown between the camera and the receipts. */
+  readonly children?: ReactNode;
 }
 
 /**
@@ -54,6 +56,7 @@ export function Kvitton({
   onTaBort,
   onForfallodag,
   onLasText,
+  children,
 }: Props) {
   const kamera = useRef<HTMLInputElement>(null);
   const filer = useRef<HTMLInputElement>(null);
@@ -142,12 +145,9 @@ export function Kvitton({
       {visar !== undefined && (
         <Underlagsvisning underlag={visar} onStang={() => setVisar(undefined)} />
       )}
-      <h2>Kvitton</h2>
+      <h2>Att bokföra</h2>
 
-      <p className="tomt">
-        Fotografera kvittot direkt, bokför det när du hinner. Bilden sparas bara på den
-        här enheten.
-      </p>
+      <p className="tomt">Fotografera kvittot direkt, bokför det när du hinner.</p>
 
       {/*
        * capture asks iOS for the camera rather than the photo library, which
@@ -202,7 +202,9 @@ export function Kvitton({
         </p>
       )}
 
-      <h2>Väntar på att bokföras</h2>
+      {children}
+
+      <h2>Kvitton som väntar</h2>
 
       {kvitton.length === 0 ? (
         <p className="tomt" data-testid="inga-kvitton">

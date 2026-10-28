@@ -15,7 +15,6 @@ export const FLIKAR = ['attgora', 'kvitton', 'bokfor', 'verifikat', 'mer'] as co
 export const VYER = [
   ...FLIKAR,
   'moms',
-  'utkast',
   'frikontering',
   'bank',
   'rapporter',
@@ -44,7 +43,6 @@ export const VYNAMN: Record<Vy, string> = {
   attgora: 'Översikt',
   kvitton: 'Kvitton',
   mer: 'Mer',
-  utkast: 'Utkast',
   frikontering: 'Fri kontering',
   bank: 'Stäm av kontoutdrag',
   bokfor: 'Bokför',
@@ -106,6 +104,8 @@ export function useVy(): [Vy, (vy: Vy) => void] {
  */
 const FLYTTADE: Readonly<Record<string, Vy>> = {
   installningar: 'mer',
+  // The drafts are part of the Kvitton tab, above the receipts.
+  utkast: 'kvitton',
 };
 
 function franHash(hash: string | undefined): Vy {
