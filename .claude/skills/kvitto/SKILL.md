@@ -125,9 +125,14 @@ lösenord eller lösenfras åt ägaren – ge kommandot och låt ägaren fylla i
   "url": "https://synkserverns-adress",
   "epost": "samma konto som appen loggar in med",
   "losenord": "...",
-  "losenfras": "samma lösenfras som i appen"
+  "losenfras": "samma lösenfras som i appen, eller utelämnad"
 }
 ```
+
+`losenfras` ska bara finnas om appen synkar med lösenfras. Utan den skickas
+utkasten okrypterade, som från en enhet utan lösenfras. Står den kvar när
+appen synkar utan lösenfras skickas utkasten krypterade, och en telefon utan
+lösenfras kan då inte läsa dem.
 
 Filen måste ha rättigheterna 600, annars vägrar verktyget att läsa den:
 
@@ -135,6 +140,6 @@ Filen måste ha rättigheterna 600, annars vägrar verktyget att läsa den:
 chmod 600 ~/.config/kontera/agent.json
 ```
 
-Lösenfrasen på samma maskin som synkservern betyder att den som kommer åt
-maskinen kan läsa bokföringen. Det är ett medvetet beslut, se
-`docs/UTVECKLINGSPLAN.md`.
+Den som kommer åt maskinen kan läsa bokföringen, med eller utan lösenfras i
+filen: den ligger på samma maskin som synkservern. Det är ett medvetet
+beslut, se beslut N och X i `docs/UTVECKLINGSPLAN.md`.

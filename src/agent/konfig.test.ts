@@ -21,8 +21,8 @@ describe('tolkaKonfig', () => {
   });
 
   /*
-   * The passphrase is the only thing between the server and the books. A
-   * file every account on the machine can read does not keep it.
+   * The file holds the login to the server, and perhaps the passphrase. A
+   * file every account on the machine can read keeps neither.
    */
   it('refuses a file others can read', () => {
     expect(() => tolkaKonfig('/k.json', { lage: 0o100644, text: TEXT })).toThrow(
@@ -36,7 +36,14 @@ describe('tolkaKonfig', () => {
   it('says which fields are missing', () => {
     expect(() =>
       tolkaKonfig('/k.json', { lage: 0o600, text: '{"url":"https://a.se"}' }),
-    ).toThrow('epost, losenord, losenfras');
+    ).toThrow('epost, losenord.');
+  });
+
+  /* Decision X: books that sync unencrypted have no passphrase to give. */
+  it('reads a file without a passphrase', () => {
+    const utan = JSON.stringify({ ...JSON.parse(TEXT), losenfras: undefined });
+
+    expect(tolkaKonfig('/k.json', { lage: 0o600, text: utan }).losenfras).toBeUndefined();
   });
 
   it('says when the file is not JSON', () => {
