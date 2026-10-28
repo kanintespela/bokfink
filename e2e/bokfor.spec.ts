@@ -1004,24 +1004,25 @@ test('locks the period from the momsdeklaration', async ({ page }) => {
 });
 
 test('follows the chosen reporting period', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/#foretag');
+  await page.getByLabel('Redovisningsperiod för moms').selectOption('manad');
   await tillMoms(page);
-
-  await page.getByLabel('Redovisningsperiod').selectOption('manad');
+  await expect(page.getByTestId('momsinstallning')).toContainText('Varje månad');
   await expect(page.getByLabel('Period', { exact: true })).toContainText('2026-01');
 
-  await page.getByLabel('Redovisningsperiod').selectOption('ar');
+  await page.goto('/#foretag');
+  await page.getByLabel('Redovisningsperiod för moms').selectOption('ar');
+  await tillMoms(page);
   await expect(page.getByLabel('Period', { exact: true })).toContainText('2026');
 });
 
 /*
  * The method decides when a verifikat is written, not how a written one is
- * read - so it is a setting the person makes, recorded where the declaration
- * that depends on it is.
+ * read - so it is a setting the person makes once, under Företaget, and the
+ * declaration that depends on it says which one it was made under.
  */
 test('records which accounting method is used', async ({ page }) => {
-  await page.goto('/');
-  await tillMoms(page);
+  await page.goto('/#foretag');
 
   await expect(page.getByLabel('Redovisningsmetod')).toHaveValue('kontantmetoden');
   await expect(page.getByTestId('metodbeskrivning')).toContainText('pengarna rör sig');
@@ -1030,8 +1031,9 @@ test('records which accounting method is used', async ({ page }) => {
   await expect(page.getByTestId('metodbeskrivning')).toContainText('fakturan skrivs');
 
   await page.reload();
-  await tillMoms(page);
   await expect(page.getByLabel('Redovisningsmetod')).toHaveValue('faktureringsmetoden');
+  await tillMoms(page);
+  await expect(page.getByTestId('momsinstallning')).toContainText('faktureringsmetoden');
 });
 
 /*

@@ -8,21 +8,12 @@ import {
   harEuForsaljning,
 } from '../../domain/moms/momsrapport';
 import { perioder, type Momsperiod } from '../../domain/moms/period';
-import {
-  METODBESKRIVNING,
-  METODNAMN,
-  type Redovisningsmetod,
-} from '../../domain/moms/redovisningsmetod';
+import { METODNAMN, type Redovisningsmetod } from '../../domain/moms/redovisningsmetod';
 import type { Rakenskapsar } from '../../domain/rakenskapsar/rakenskapsar';
 import type { Datum } from '../../domain/tid/datum';
 import { beteckning, type BokfortVerifikat } from '../../domain/verifikat/verifikat';
 import { inomIntervall } from '../../domain/tid/datum';
-
-const PERIODNAMN: Record<Momsperiod, string> = {
-  manad: 'Varje månad',
-  kvartal: 'Varje kvartal',
-  ar: 'En gång om året',
-};
+import { PERIODNAMN } from './namn';
 
 interface Props {
   /** Every fiscal year, so a period of last year can still be declared. */
@@ -30,9 +21,13 @@ interface Props {
   /** Every booked verifikat; the report picks the period's own. */
   readonly verifikat: readonly BokfortVerifikat[];
   readonly momsperiod: Momsperiod;
-  readonly onMomsperiod: (period: Momsperiod) => Promise<void>;
   readonly metod: Redovisningsmetod;
-  readonly onMetod: (metod: Redovisningsmetod) => Promise<void>;
+  /**
+   * Where the period and the method are changed. They are set once, when
+   * the firm is registered for moms, and showing them as two dropdowns at
+   * the top of every declaration invited changing them by accident.
+   */
+  readonly onInstallningar: () => void;
   readonly onLas: (ar: Rakenskapsar, tom: Datum) => Promise<void>;
   readonly onExportera: (fran: Datum, till: Datum) => Promise<void>;
   /** Books the period's momsredovisning and says what it was booked as. */
@@ -50,9 +45,8 @@ export function Momssida({
   rakenskapsar,
   verifikat,
   momsperiod,
-  onMomsperiod,
   metod,
-  onMetod,
+  onInstallningar,
   onLas,
   onExportera,
   onBokforMomsredovisning,
@@ -127,21 +121,12 @@ export function Momssida({
     <section aria-label="Moms">
       <h2>Momsdeklaration</h2>
 
-      <div className="faltgrupp">
-        <label htmlFor="momsperiod">Redovisningsperiod</label>
-        <select
-          id="momsperiod"
-          className="falt"
-          value={momsperiod}
-          onChange={(handelse) => void onMomsperiod(handelse.target.value as Momsperiod)}
-        >
-          {(Object.keys(PERIODNAMN) as Momsperiod[]).map((kandidat) => (
-            <option key={kandidat} value={kandidat}>
-              {PERIODNAMN[kandidat]}
-            </option>
-          ))}
-        </select>
-      </div>
+      <p className="hjalptext" data-testid="momsinstallning">
+        {PERIODNAMN[momsperiod]}, {METODNAMN[metod].toLowerCase()}.{' '}
+        <button type="button" className="knapp knapp--text" onClick={onInstallningar}>
+          Ändra under Företaget
+        </button>
+      </p>
 
       {rakenskapsar.length > 1 && (
         <div className="faltgrupp">
@@ -184,26 +169,6 @@ export function Momssida({
           ))}
         </select>
       </div>
-
-      <div className="faltgrupp">
-        <label htmlFor="metod">Redovisningsmetod</label>
-        <select
-          id="metod"
-          className="falt"
-          value={metod}
-          onChange={(handelse) =>
-            void onMetod(handelse.target.value as Redovisningsmetod)
-          }
-        >
-          {(Object.keys(METODNAMN) as Redovisningsmetod[]).map((kandidat) => (
-            <option key={kandidat} value={kandidat}>
-              {METODNAMN[kandidat]}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <p data-testid="metodbeskrivning">{METODBESKRIVNING[metod]}</p>
 
       <p className="kort" data-testid="momssumma">
         <strong className="belopp">

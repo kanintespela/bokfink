@@ -1150,6 +1150,16 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
                 await db.setMeta('organisationsnummer', nummer);
                 setLaddat(await hamta());
               }}
+              momsperiod={laddat.momsperiod}
+              onMomsperiod={async (period) => {
+                await db.setMeta('momsperiod', period);
+                setLaddat(await hamta());
+              }}
+              metod={laddat.metod}
+              onMetod={async (metod) => {
+                await db.setMeta('redovisningsmetod', metod);
+                setLaddat(await hamta());
+              }}
             />
           </>
         )}
@@ -1420,14 +1430,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
             verifikat={laddat.allaVerifikat}
             momsperiod={laddat.momsperiod}
             metod={laddat.metod}
-            onMetod={async (metod) => {
-              await db.setMeta('redovisningsmetod', metod);
-              setLaddat(await hamta());
-            }}
-            onMomsperiod={async (period) => {
-              await db.setMeta('momsperiod', period);
-              setLaddat(await hamta());
-            }}
+            onInstallningar={() => setVy('foretag')}
             onLas={async (ar, tom) => {
               await momslas(db, await skrivkontext(db), ar.id, tom);
               setLaddat(await hamta());
