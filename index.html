@@ -15,7 +15,13 @@
     <link rel="icon" href="/favicon.png" type="image/png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-title" content="Bokfink" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!--
+      default, not black-translucent: the page starts below the status bar
+      instead of behind it. Behind it, iOS blurs the top edge of the page
+      under the clock and the battery, and the first line of the app - the
+      book bar when there is more than one book - was unreadable there.
+    -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   </head>
   <body>
     <div id="root"></div>
