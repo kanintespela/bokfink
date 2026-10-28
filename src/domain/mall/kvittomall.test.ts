@@ -81,4 +81,18 @@ describe('foreslaMallForText', () => {
     expect(foreslaMallForText(MALLAR, '')).toBeUndefined();
     expect(foreslaMallForText([], 'Kraftfoder')).toBeUndefined();
   });
+
+  /*
+   * 2026-10-28: a farm-shop receipt for salt licks was offered as "Fått
+   * tillbaka moms", because the leaf's keyword "moms" is on every receipt.
+   */
+  it('does not match words every receipt prints', () => {
+    const tillbaka = mall('Fått tillbaka moms', ['moms', 'skatteverket']);
+    const text = 'Exenpel Lantbruk\nSaltsten 79,00\nTotalt inkl. moms 156,00\nKort';
+
+    expect(foreslaMallForText([tillbaka], text)).toBeUndefined();
+    expect(foreslaMallForText([tillbaka], 'Skatteverket återbetalning')?.mall).toBe(
+      tillbaka,
+    );
+  });
 });

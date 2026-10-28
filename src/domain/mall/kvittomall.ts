@@ -24,6 +24,39 @@ import type { Konteringsmall } from './konteringsmall';
  */
 const MINSTA_ORD = 4;
 
+/**
+ * Words printed on nearly every receipt, which therefore say nothing about
+ * what was bought.
+ *
+ * The case that showed it: "Fått tillbaka moms" has the keyword "moms", and
+ * every Swedish receipt says "Totalt inkl. moms". A receipt for salt licks
+ * from a farm shop was offered as a moms refund from Skatteverket, because
+ * nothing on it matched better. A keyword here still works where it means
+ * something - typed into the search, or on a bank line - but not on a
+ * receipt's text.
+ */
+const KVITTOORD = new Set([
+  'moms',
+  'totalt',
+  'summa',
+  'kvitto',
+  'betala',
+  'betalat',
+  'kort',
+  'kassa',
+  'butik',
+  'artikel',
+  'antal',
+  'pris',
+  'rabatt',
+  'retur',
+  'debit',
+  'kredit',
+  'kontant',
+  'kund',
+  'order',
+]);
+
 export interface Mallforslag {
   readonly mall: Konteringsmall;
   /** The word on the receipt that matched, so the interface can say why. */
@@ -53,7 +86,7 @@ export function foreslaMallForText(
   for (const mall of mallar) {
     const ord = [mall.namn, ...mall.sokord]
       .map(normalisera)
-      .filter((kandidat) => kandidat.length >= MINSTA_ORD);
+      .filter((kandidat) => kandidat.length >= MINSTA_ORD && !KVITTOORD.has(kandidat));
 
     for (const kandidat of ord) {
       if (!innehallerOrd(kvitto, kandidat)) {
