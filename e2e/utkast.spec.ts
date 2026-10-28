@@ -99,7 +99,7 @@ test('books a draft with its receipt attached', async ({ page }) => {
   await lasInUtkast(page);
 
   await page.goto('/');
-  await page.getByTestId('utkast-vantar').click();
+  await page.getByTestId('att-bokfora-vantar').click();
 
   const utkast = page.getByTestId(`utkast-${UTKAST}`);
   await expect(utkast).toContainText('Foder, Lantmännen');

@@ -664,6 +664,13 @@ p {
   padding-top: var(--rum-3);
 }
 
+/* Inside a card the card is the frame, so no rule above and less below. */
+.nyckeltal.lagesbild {
+  border-top: 0;
+  padding-top: 0;
+  margin-bottom: var(--rum-2);
+}
+
 .nyckeltal dt {
   padding: 0;
   color: var(--muted);

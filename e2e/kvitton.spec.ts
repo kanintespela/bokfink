@@ -80,7 +80,7 @@ test('shows waiting receipts on the start view', async ({ page }) => {
   await expect(page.getByTestId('kvitto-besked')).toBeVisible();
 
   await page.goto('/');
-  await expect(page.getByTestId('kvitton-vantar')).toContainText('Ett kvitto');
+  await expect(page.getByTestId('att-bokfora-vantar')).toContainText('Ett kvitto');
 });
 
 /*

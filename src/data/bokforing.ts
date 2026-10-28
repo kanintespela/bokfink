@@ -395,9 +395,18 @@ export async function senastBokfort(
   db: KonteraDatabase,
   poster: readonly Verifikatpost[],
 ): Promise<Verifikatpost | undefined> {
+  return (await senastBokforda(db, poster, 1))[0];
+}
+
+/** The last `antal` booked among `poster`, the latest first. See senastBokfort. */
+export async function senastBokforda(
+  db: KonteraDatabase,
+  poster: readonly Verifikatpost[],
+  antal: number,
+): Promise<Verifikatpost[]> {
   const perId = new Map(poster.map((post) => [post.verifikat.id, post]));
-  if (perId.size === 0) {
-    return undefined;
+  if (perId.size === 0 || antal <= 0) {
+    return [];
   }
 
   const bokforingar = await db
@@ -406,20 +415,22 @@ export async function senastBokfort(
     .equals('verifikat.bokfort')
     .toArray();
 
-  let senaste: { handelseId: Uuid; post: Verifikatpost } | undefined;
+  const traffar: { handelseId: Uuid; post: Verifikatpost }[] = [];
   for (const handelse of bokforingar) {
     if (handelse.typ !== 'verifikat.bokfort') {
       continue;
     }
     const post = perId.get(handelse.verifikat.id);
-    if (
-      post !== undefined &&
-      (senaste === undefined || handelse.id > senaste.handelseId)
-    ) {
-      senaste = { handelseId: handelse.id, post };
+    if (post !== undefined) {
+      traffar.push({ handelseId: handelse.id, post });
     }
   }
-  return senaste?.post;
+  return traffar
+    .sort((a, b) =>
+      a.handelseId < b.handelseId ? 1 : a.handelseId > b.handelseId ? -1 : 0,
+    )
+    .slice(0, antal)
+    .map(({ post }) => post);
 }
 
 function senastForst(a: Verifikatpost, b: Verifikatpost): number {

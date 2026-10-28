@@ -19,6 +19,7 @@ import {
   OforanderligtVerifikatError,
   OkantRakenskapsarError,
   senastBokfort,
+  senastBokforda,
   skyddaBokfordaVerifikat,
   tillampa,
   tillampaAlla,
@@ -412,5 +413,21 @@ describe('senastBokfort', () => {
 
   it('finds nothing when nothing is booked', async () => {
     expect(await senastBokfort(db, [])).toBeUndefined();
+  });
+
+  /* The overview shows a few, latest first, by the same rule. */
+  it('lists the last few booked, the latest first', async () => {
+    const forsta = verifikatHandelse('A', 50, '2026-03-01');
+    const andra = verifikatHandelse('ACHR', 1, '2026-09-01');
+    const tredje = verifikatHandelse('ACHR', 2, '2026-08-15');
+    for (const handelse of [forsta, andra, tredje]) {
+      await tillampa(db, handelse);
+    }
+
+    const senaste = await senastBokforda(db, await lasVerifikat(db, AR_2026), 2);
+    expect(senaste.map((post) => post.verifikat.id)).toEqual([
+      tredje.verifikat.id,
+      andra.verifikat.id,
+    ]);
   });
 });

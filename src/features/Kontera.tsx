@@ -26,7 +26,7 @@ import type { Uuid } from '../domain/id/uuidv7';
 import {
   lasVerifikat,
   lasTillstand,
-  senastBokfort,
+  senastBokforda,
   type Verifikatpost,
 } from '../data/bokforing';
 import type { KonteraDatabase } from '../data/db';
@@ -193,7 +193,7 @@ interface Laddat {
   readonly serie: string;
   readonly poster: readonly Verifikatpost[];
   /** The verifikat in this year booked last, which is not poster[0]. */
-  readonly senaste: Verifikatpost | undefined;
+  readonly senaste: readonly Verifikatpost[];
   /** Every year's verifikat, newest year first, for the verifikationslista. */
   readonly allaPoster: readonly Verifikatpost[];
   /** Oldest first, which is the order they should be dealt with in. */
@@ -346,7 +346,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
       konton: tillstand.konton,
       serie: sparadSerie ?? 'A',
       poster,
-      senaste: await senastBokfort(db, poster),
+      senaste: await senastBokforda(db, poster, 3),
       allaPoster: (
         await Promise.all(
           [...tillstand.rakenskapsar.values()]
@@ -789,6 +789,9 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
           <AttGoraSida
             idag={idag}
             senaste={laddat.senaste}
+            verifikat={laddat.allaVerifikat}
+            rakenskapsar={laddat.rakenskapsar}
+            onRapporter={() => setVy('rapporter')}
             utkast={laddat.utkast.length}
             kvitton={laddat.kvitton.length}
             dagarSedanBackup={laddat.dagarSedanBackup}

@@ -5,8 +5,14 @@ import type { VantandeMomsdeklaration } from '../../domain/moms/deklarationsdag'
 import type { VantandeFaktura } from '../../domain/underlag/forfallodag';
 import { tolkaKvitto } from '../../domain/underlag/kvittotolkning';
 import type { Datum } from '../../domain/tid/datum';
-import { beteckning, omslutning } from '../../domain/verifikat/verifikat';
+import {
+  beteckning,
+  omslutning,
+  type BokfortVerifikat,
+} from '../../domain/verifikat/verifikat';
 import type { Verifikatpost } from '../../data/bokforing';
+import type { Rakenskapsar } from '../../domain/rakenskapsar/rakenskapsar';
+import { Lagesbild } from './Lagesbild';
 
 /**
  * How many days a backup may age before the warning shows.
@@ -20,8 +26,11 @@ const GAMMAL_BACKUP_GRANS = 30;
 
 interface Props {
   readonly idag: Datum;
-  /** The one booked last, by when it was booked rather than its number. */
-  readonly senaste: Verifikatpost | undefined;
+  /** The last few booked, by when they were booked rather than their number. */
+  readonly senaste: readonly Verifikatpost[];
+  /** The year's figures are worked out from these. */
+  readonly verifikat: readonly BokfortVerifikat[];
+  readonly rakenskapsar: readonly Rakenskapsar[];
   readonly utkast: number;
   /** Receipts photographed but not booked yet. */
   readonly kvitton: number;
@@ -41,6 +50,7 @@ interface Props {
   readonly onKvitton: () => void;
   readonly onUtkast: () => void;
   readonly onVisaVerifikat: () => void;
+  readonly onRapporter: () => void;
 }
 
 /**
@@ -56,6 +66,8 @@ interface Props {
 export function AttGoraSida({
   idag,
   senaste,
+  verifikat,
+  rakenskapsar,
   utkast,
   kvitton,
   dagarSedanBackup,
@@ -66,6 +78,7 @@ export function AttGoraSida({
   onKvitton,
   onUtkast,
   onVisaVerifikat,
+  onRapporter,
 }: Props) {
   const backupGammal =
     dagarSedanBackup === undefined || dagarSedanBackup > GAMMAL_BACKUP_GRANS;
@@ -96,32 +109,36 @@ export function AttGoraSida({
 
       <h2>Att göra</h2>
 
-      {utkast > 0 && (
+      {/*
+       * One card for everything waiting in the Kvitton tab. Drafts first in
+       * the wording, since they are the ones already worked out and only
+       * waiting for a look.
+       */}
+      {utkast + kvitton > 0 && (
         <button
           type="button"
           className="kort listrad"
-          data-testid="utkast-vantar"
-          onClick={onUtkast}
+          data-testid="att-bokfora-vantar"
+          onClick={utkast > 0 ? onUtkast : onKvitton}
         >
           <span className="listrad__text">
             <strong>
-              {utkast === 1 ? 'Ett utkast' : `${utkast} utkast`} väntar på att bokföras.
-            </strong>
-          </span>
-        </button>
-      )}
-
-      {kvitton > 0 && (
-        <button
-          type="button"
-          className="kort listrad"
-          data-testid="kvitton-vantar"
-          onClick={onKvitton}
-        >
-          <span className="listrad__text">
-            <strong>
-              {kvitton === 1 ? 'Ett kvitto' : `${kvitton} kvitton`} väntar på att
-              bokföras.
+              {[
+                utkast === 0
+                  ? undefined
+                  : utkast === 1
+                    ? 'Ett utkast'
+                    : `${utkast} utkast`,
+                kvitton === 0
+                  ? undefined
+                  : kvitton === 1
+                    ? 'ett kvitto'
+                    : `${kvitton} kvitton`,
+              ]
+                .filter((del) => del !== undefined)
+                .join(' och ')
+                .replace(/^./, (forsta) => forsta.toUpperCase())}{' '}
+              väntar på att bokföras.
             </strong>
           </span>
         </button>
@@ -215,35 +232,44 @@ export function AttGoraSida({
       {utkast === 0 &&
         kvitton === 0 &&
         momsdeklarationer.length === 0 &&
+        fakturor.length === 0 &&
         !backupGammal && (
           <p className="tomt" data-testid="inget-att-gora">
             Ingenting väntar just nu.
           </p>
         )}
 
+      <Lagesbild
+        verifikat={verifikat}
+        rakenskapsar={rakenskapsar}
+        idag={idag}
+        onRapporter={onRapporter}
+      />
+
       <h2>Senast bokfört</h2>
 
-      {senaste === undefined ? (
+      {senaste.length === 0 ? (
         <p className="tomt" data-testid="inget-bokfort">
           Inget är bokfört i det här räkenskapsåret ännu.
         </p>
       ) : (
-        <button
-          type="button"
-          className="kort listrad"
-          data-testid="senaste-verifikat"
-          onClick={onVisaVerifikat}
-        >
-          <span className="listrad__text">
-            <span>{beteckning(senaste.verifikat)}</span>
-            <span className="listrad__sekundar">
-              {senaste.verifikat.datum}
-              {senaste.verifikat.beskrivning.length > 0 &&
-                ` · ${senaste.verifikat.beskrivning}`}
-            </span>
-          </span>
-          <span className="belopp">{formatKronor(omslutning(senaste.verifikat))}</span>
-        </button>
+        <ul className="lista" data-testid="senaste-verifikat">
+          {senaste.map((post) => (
+            <li key={post.verifikat.id}>
+              <button type="button" className="listrad" onClick={onVisaVerifikat}>
+                <span className="listrad__text">
+                  <span>{beteckning(post.verifikat)}</span>
+                  <span className="listrad__sekundar">
+                    {post.verifikat.datum}
+                    {post.verifikat.beskrivning.length > 0 &&
+                      ` · ${post.verifikat.beskrivning}`}
+                  </span>
+                </span>
+                <span className="belopp">{formatKronor(omslutning(post.verifikat))}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
     </section>
   );
