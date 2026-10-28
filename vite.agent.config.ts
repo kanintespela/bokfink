@@ -11,6 +11,12 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   // The app's public folder holds the OCR engine; none of it belongs here.
   publicDir: false,
+  /*
+   * Everything bundled into the one file, dependencies included. The
+   * receipt watcher runs it from a directory of its own on the server, not
+   * from a checkout whose node_modules an `npm ci` can pull from under it.
+   */
+  ssr: { noExternal: true },
   build: {
     ssr: 'src/agent/main.ts',
     outDir: 'dist-agent',

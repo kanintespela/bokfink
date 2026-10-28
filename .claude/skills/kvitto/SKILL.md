@@ -122,12 +122,16 @@ lösenord eller lösenfras åt ägaren – ge kommandot och låt ägaren fylla i
 
 ```json
 {
-  "url": "https://synkserverns-adress",
+  "url": "http://127.0.0.1:8091",
   "epost": "samma konto som appen loggar in med",
   "losenord": "...",
   "losenfras": "samma lösenfras som i appen, eller utelämnad"
 }
 ```
+
+`url` ska vara Bokfinks egen synkserver, på samma maskin `http://127.0.0.1:8091`.
+Maskinen kör fler PocketBase-instanser, och fram till 2026-10-28 pekade filen
+på en annan av dem, där bara en gammal kopia av bokföringen fanns.
 
 `losenfras` ska bara finnas om appen synkar med lösenfras. Utan den skickas
 utkasten okrypterade, som från en enhet utan lösenfras. Står den kvar när

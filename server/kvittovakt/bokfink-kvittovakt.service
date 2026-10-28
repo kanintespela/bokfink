@@ -1,0 +1,12 @@
+[Unit]
+Description=Bokfink - läs nya kvitton med Claude via Hermes och lämna utkast
+After=network-online.target
+
+[Service]
+Type=oneshot
+# Hermes ligger i ~/.local/bin; magick och pdftoppm i /usr/bin.
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/bin/node %h/kontera-drift/bin/kontera-agent.mjs las-nya
+# En körning som hänger ska inte blockera nästa: fyra minuter per fråga,
+# två frågor per kvitto, högst tre kvitton.
+TimeoutStartSec=30min

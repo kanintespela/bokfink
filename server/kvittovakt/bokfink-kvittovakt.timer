@@ -1,0 +1,10 @@
+[Unit]
+Description=Bokfink - leta efter nya kvitton varannan minut
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=2min
+Unit=bokfink-kvittovakt.service
+
+[Install]
+WantedBy=timers.target
