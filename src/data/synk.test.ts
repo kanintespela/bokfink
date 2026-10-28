@@ -395,6 +395,42 @@ describe('synka', () => {
    * is refused rather than stored, and counted rather than thrown - one bad
    * file must not stop the rest of the sync.
    */
+  /*
+   * Without a passphrase a file goes up as its own bytes (decision X), and
+   * nothing marks it as such: the address does. A device with a passphrase
+   * still reads it, since a server holds a mix while devices move over.
+   */
+  it('carries a file sent without encryption, to either kind of device', async () => {
+    const klartext: Krypto = {
+      kryptera: async (text) => text,
+      dekryptera: async (text) => text,
+      krypteraFil: async (data) => data,
+      dekrypteraFil: async () => {
+        throw new Error('ska inte behövas för en okrypterad fil');
+      },
+    };
+    await grundlagg(telefonen, 'telefonen');
+    const data = new TextEncoder().encode('kvitto utan lösenfras');
+    const adress = await hasha(data);
+    await sparaUnderlag(telefonen, kontext('telefonen'), {
+      sha256: adress,
+      mime: 'image/jpeg',
+      filnamn: 'kvitto.jpg',
+      data,
+    });
+    await synka(telefonen, server.transport, klartext, 'telefonen', { hasha });
+    expect(server.filer.get(adress)).toEqual(data);
+
+    const tredje = await nyDb();
+    await synka(datorn, server.transport, klartext, 'datorn', { hasha });
+    // Reads plain entries as the real one does; its files are locked.
+    const medNyckel: Krypto = { ...klartext, dekrypteraFil: krypto.dekrypteraFil };
+    await synka(tredje, server.transport, medNyckel, 'tredje', { hasha });
+
+    expect((await lasFil(datorn, adress))?.data).toEqual(data);
+    expect((await lasFil(tredje, adress))?.data).toEqual(data);
+  });
+
   it('refuses a file that does not match its address', async () => {
     await grundlagg(telefonen, 'telefonen');
     const data = new TextEncoder().encode('rätt kvitto');

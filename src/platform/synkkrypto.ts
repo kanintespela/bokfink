@@ -3,7 +3,20 @@ import type { Krypto } from '../data/synk';
 import { dekryptera, harledNyckel, ITERATIONER, IV_BYTES, kryptera } from './krypto';
 
 /**
- * The key the sync payloads are locked with.
+ * How the sync payloads are written, and read back.
+ *
+ * With a passphrase they are locked with a key derived from it. Without one
+ * they travel as they are, to the owner's own server over the owner's own
+ * tailnet (decision X, 2026-10-28): the passphrase already lies in a file on
+ * that same machine for the receipt assistant, so against the server it
+ * protected less than it cost every time a device was set up.
+ *
+ * Either way, both kinds are read. An entry is JSON and always starts with
+ * a brace, which base64 never contains, so a plain entry and an envelope
+ * cannot be mistaken for each other - and a server that holds some of each,
+ * while devices move from one to the other, is read in full by a device
+ * with the passphrase. A device without it is told what is missing rather
+ * than handed something it cannot open.
  *
  * Derived from the passphrase with a fixed salt rather than a random one:
  * both devices have to arrive at the same key from the same words, and there
@@ -14,9 +27,29 @@ import { dekryptera, harledNyckel, ITERATIONER, IV_BYTES, kryptera } from './kry
  * default, or it derives a different key and reads nothing.
  */
 export async function synkkrypto(
-  losenfras: string,
+  losenfras: string | undefined,
   iterationer: number = ITERATIONER,
 ): Promise<Krypto> {
+  if (losenfras === undefined) {
+    return {
+      kryptera: async (klartext) => klartext,
+      dekryptera: async (text) => {
+        if (arKlartext(text)) {
+          return text;
+        }
+        throw new Error(KRYPTERAT_UTAN_FRAS);
+      },
+      krypteraFil: async (data) => data,
+      /*
+       * Only reached for a file that did not match its address as it was,
+       * which for a device without a key means it was locked by one with.
+       */
+      dekrypteraFil: async () => {
+        throw new Error(KRYPTERAT_UTAN_FRAS);
+      },
+    };
+  }
+
   const nyckel = await harledNyckel(losenfras, SYNKSALT, iterationer);
   return {
     kryptera: async (klartext) => {
@@ -24,6 +57,9 @@ export async function synkkrypto(
       return `${tillBase64(iv)}.${tillBase64(chiffer)}`;
     },
     dekryptera: async (text) => {
+      if (arKlartext(text)) {
+        return text;
+      }
       const [iv, chiffer] = text.split('.');
       if (iv === undefined || chiffer === undefined) {
         throw new Error('En händelse från servern gick inte att läsa.');
@@ -70,6 +106,15 @@ async function lasUpp(dekryptering: () => Promise<Uint8Array>): Promise<Uint8Arr
     );
   }
 }
+
+/** An entry written without a passphrase: JSON, which base64 never starts like. */
+function arKlartext(text: string): boolean {
+  return text.startsWith('{');
+}
+
+const KRYPTERAT_UTAN_FRAS =
+  'Servern har bokföring som är krypterad med en lösenfras. Skriv in den under ' +
+  'Synk för att kunna läsa den.';
 
 /** Constant, and not a secret. See synkkrypto. */
 const SYNKSALT = new TextEncoder().encode('kontera-synk-v1.');

@@ -57,4 +57,42 @@ describe('synkkrypto', () => {
       'En händelse från servern gick inte att läsa.',
     );
   });
+
+  /*
+   * Decision X: without a passphrase the entries go as they are. What
+   * matters is that both kinds of device read both kinds of entry, since a
+   * server holds a mix while devices move from one to the other.
+   */
+  it('writes entries and files as they are without a passphrase', async () => {
+    const krypto = await synkkrypto(undefined);
+    const fil = new Uint8Array([1, 2, 3]);
+
+    expect(await krypto.kryptera('{"typ":"konto.skapat"}')).toBe(
+      '{"typ":"konto.skapat"}',
+    );
+    expect(await krypto.dekryptera('{"typ":"konto.skapat"}')).toBe(
+      '{"typ":"konto.skapat"}',
+    );
+    expect(await krypto.krypteraFil(fil)).toBe(fil);
+  });
+
+  it('reads an entry written without a passphrase when it has one', async () => {
+    const krypto = await synkkrypto(LOSENFRAS, 1000);
+
+    expect(await krypto.dekryptera('{"typ":"konto.skapat"}')).toBe(
+      '{"typ":"konto.skapat"}',
+    );
+  });
+
+  it('asks for the passphrase when the server holds encrypted books', async () => {
+    const lasare = await synkkrypto(undefined);
+    const skrivare = await synkkrypto(LOSENFRAS, 1000);
+
+    await expect(lasare.dekryptera(await skrivare.kryptera('{"a":1}'))).rejects.toThrow(
+      'krypterad med en lösenfras',
+    );
+    await expect(
+      lasare.dekrypteraFil(await skrivare.krypteraFil(new Uint8Array([1]))),
+    ).rejects.toThrow('krypterad med en lösenfras');
+  });
 });

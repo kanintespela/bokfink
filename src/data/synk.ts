@@ -278,7 +278,13 @@ async function synkaFiler(
     if (chiffer === undefined) {
       continue;
     }
-    const data = await krypto.dekrypteraFil(chiffer);
+    /*
+     * A file sent without a passphrase is its own bytes, and hashes to its
+     * address as it is; one that does not is an envelope. The address
+     * settles it, so no marker has to travel with the file.
+     */
+    const data =
+      (await hasha(chiffer)) === adress ? chiffer : await krypto.dekrypteraFil(chiffer);
     if ((await hasha(data)) !== adress) {
       filerAvvisade += 1;
       continue;
