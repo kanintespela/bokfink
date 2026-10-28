@@ -232,7 +232,12 @@ async function synkaMed(db: KonteraDatabase, beroenden: Agentberoenden): Promise
     ...beroenden.transport,
     hamtaFil: async () => undefined,
   };
-  await synka(db, transport, beroenden.krypto, beroenden.enhet, {
+  const resultat = await synka(db, transport, beroenden.krypto, beroenden.enhet, {
     hasha: beroenden.hasha,
   });
+  // A draft the server turned away has not reached the app, and saying it
+  // was sent would be the one lie this tool must not tell.
+  if (resultat.avvisade > 0) {
+    throw new Error(resultat.avvisningsorsak ?? 'Servern avvisade en händelse.');
+  }
 }

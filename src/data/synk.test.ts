@@ -25,6 +25,7 @@ import { fastKlocka } from '../domain/tid/klocka';
 import { sha256, type Sha256 } from '../domain/underlag/underlag';
 import { lasFil, sparaUnderlag } from './underlag';
 import {
+  AvvisadError,
   glomServern,
   osankta,
   synka,
@@ -228,6 +229,66 @@ describe('synka', () => {
   });
 
   /*
+   * October 2026: one entry over the server's size limit was refused, and
+   * because the round stopped at the first refusal, nothing queued behind
+   * it went either - nor did anything come in from the other device. A
+   * refusal is about one entry; the rest of the round goes on.
+   */
+  it('sends and receives the rest when the server refuses one entry', async () => {
+    await grundlagg(datorn, 'datorn');
+    await synka(datorn, server.transport, krypto, 'datorn', { hasha });
+
+    await grundlagg(telefonen, 'telefonen');
+    const [vagrad] = (await lasLogg(telefonen)).map((post) => post.id).slice(-1);
+    const kinkig: Synktransport = {
+      ...server.transport,
+      skicka: async (poster) => {
+        if (poster.some((post) => post.op_id === vagrad)) {
+          throw new AvvisadError('för stor');
+        }
+        await server.transport.skicka(poster);
+      },
+    };
+
+    const resultat = await synka(telefonen, kinkig, krypto, 'telefonen', { hasha });
+
+    expect(resultat.skickade).toBe(2);
+    expect(resultat.avvisade).toBe(1);
+    expect(resultat.avvisningsorsak).toBe('för stor');
+    expect(resultat.mottagna).toBeGreaterThan(0);
+    // The refused one waits for a server that will take it.
+    expect(await osankta(telefonen)).toBe(1);
+    await synka(telefonen, server.transport, krypto, 'telefonen', { hasha });
+    expect(await osankta(telefonen)).toBe(0);
+  });
+
+  /*
+   * A lost connection is not a refusal: every other entry would fail the
+   * same way, so the round stops. What did reach the server is off the
+   * queue already, and is not sent again.
+   */
+  it('keeps what got through when the connection drops halfway', async () => {
+    await grundlagg(telefonen, 'telefonen');
+    let svar = 0;
+    const avbruten: Synktransport = {
+      ...server.transport,
+      skicka: async (poster) => {
+        svar += 1;
+        if (svar > 1) {
+          throw new Error('nätverket dog');
+        }
+        await server.transport.skicka(poster);
+      },
+    };
+
+    await expect(
+      synka(telefonen, avbruten, krypto, 'telefonen', { hasha }),
+    ).rejects.toThrow('nätverket dog');
+    expect(await osankta(telefonen)).toBe(2);
+    expect(server.poster).toHaveLength(1);
+  });
+
+  /*
    * Moving to a new server. The queue only holds what has never been sent, so
    * a device that has synced once would log in somewhere new, send nothing
    * and call it a success - with both devices believing they were in step
@@ -276,6 +337,7 @@ describe('synka', () => {
       filerSkickade: 0,
       filerMottagna: 0,
       filerAvvisade: 0,
+      avvisade: 0,
     });
   });
 

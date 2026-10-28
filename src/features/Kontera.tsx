@@ -564,6 +564,20 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
         : ` ${resultat.filerAvvisade} underlag stämde inte mot sin ` +
           'kontrollsumma och lämnades kvar på servern.';
 
+    /*
+     * Thrown only now, after the round has been recorded and the screen
+     * refreshed: everything else went through, and what is shown should say
+     * so. But thrown, so the automatic round reports it like any other
+     * failure instead of calling the round a success (hard rule 11).
+     */
+    if (resultat.avvisade > 0) {
+      throw new Error(
+        `${resultat.avvisade} ${resultat.avvisade === 1 ? 'händelse' : 'händelser'} ` +
+          `kunde inte skickas och försöks igen vid nästa synk. ` +
+          `${resultat.avvisningsorsak ?? ''} Allt annat är synkat.`,
+      );
+    }
+
     return (
       `${resultat.skickade} skickade, ${resultat.mottagna} hämtade` +
       (resultat.nya === 0

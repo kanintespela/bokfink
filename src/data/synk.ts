@@ -106,6 +106,32 @@ export interface Synkresultat {
    * match its own checksum is not evidence of anything.
    */
   readonly filerAvvisade: number;
+  /**
+   * Entries the server turned away, which stay queued for the next round.
+   *
+   * Counted rather than thrown for the same reason as filerAvvisade: one
+   * entry the server will not take must not hold up every other one, nor
+   * stop this device from receiving what the other one booked. It was the
+   * other way round until 2026-10-28, when a single entry over the server's
+   * size limit stopped a phone from sending anything at all.
+   */
+  readonly avvisade: number;
+  /** What the server said about the first of them, for the person to read. */
+  readonly avvisningsorsak?: string;
+}
+
+/**
+ * A transport's way of saying the server answered, and said no to this one.
+ *
+ * Distinct from a failure to reach the server. An unreachable server stops
+ * the round, since every other entry would fail the same way; a refusal is
+ * about one entry, and the rest are still worth sending.
+ */
+export class AvvisadError extends Error {
+  constructor(meddelande: string) {
+    super(meddelande);
+    this.name = 'AvvisadError';
+  }
 }
 
 const MARKOR_NYCKEL = 'synkmarkor';
@@ -126,10 +152,22 @@ export async function synka(
   { hasha }: { hasha: (data: Uint8Array) => Promise<Sha256> },
 ): Promise<Synkresultat> {
   await slappOrordStartdata(db, transport, krypto);
-  const skickade = await skickaKon(db, transport, krypto, enhet);
+  const { skickade, avvisade, avvisningsorsak } = await skickaKon(
+    db,
+    transport,
+    krypto,
+    enhet,
+  );
   const { mottagna, nya } = await hamtaNya(db, transport, krypto);
   const filer = await synkaFiler(db, transport, krypto, hasha);
-  return { skickade, mottagna, nya, ...filer };
+  return {
+    skickade,
+    mottagna,
+    nya,
+    ...filer,
+    avvisade,
+    ...(avvisningsorsak === undefined ? {} : { avvisningsorsak }),
+  };
 }
 
 /**
@@ -294,14 +332,17 @@ async function skickaKon(
   transport: Synktransport,
   krypto: Krypto,
   enhet: string,
-): Promise<number> {
+): Promise<Pick<Synkresultat, 'skickade' | 'avvisade' | 'avvisningsorsak'>> {
   const kade = await db.table<{ id: Uuid }, Uuid>(SYNKKO_TABLE).toArray();
   if (kade.length === 0) {
-    return 0;
+    return { skickade: 0, avvisade: 0 };
   }
 
   const logg = new Map((await lasLogg(db)).map((post) => [post.id, post]));
-  const poster: Fjarrpost[] = [];
+  let skickade = 0;
+  let avvisade = 0;
+  let avvisningsorsak: string | undefined;
+
   for (const { id } of kade) {
     const handelse = logg.get(id);
     if (handelse === undefined) {
@@ -310,20 +351,39 @@ async function skickaKon(
       await db.table(SYNKKO_TABLE).delete(id);
       continue;
     }
-    poster.push({
-      op_id: handelse.id,
-      device: enhet,
-      payload: await krypto.kryptera(JSON.stringify(handelse)),
-      created: '',
-    });
+
+    /*
+     * One at a time, and off the queue as soon as the server has it. A round
+     * cut short by a lost connection then costs only what it did not reach,
+     * rather than resending everything - which the unique index would turn
+     * into no-ops, but only after paying for every request.
+     */
+    try {
+      await transport.skicka([
+        {
+          op_id: handelse.id,
+          device: enhet,
+          payload: await krypto.kryptera(JSON.stringify(handelse)),
+          created: '',
+        },
+      ]);
+    } catch (orsak) {
+      if (!(orsak instanceof AvvisadError)) {
+        throw orsak;
+      }
+      avvisade += 1;
+      avvisningsorsak ??= orsak.message;
+      continue;
+    }
+    await db.table(SYNKKO_TABLE).delete(id);
+    skickade += 1;
   }
 
-  await transport.skicka(poster);
-  // Only after the server has taken them. A failure above leaves the queue
-  // as it was, and the next attempt sends the same entries - which the
-  // server's unique index turns into a no-op.
-  await db.table(SYNKKO_TABLE).bulkDelete(poster.map((post) => post.op_id));
-  return poster.length;
+  return {
+    skickade,
+    avvisade,
+    ...(avvisningsorsak === undefined ? {} : { avvisningsorsak }),
+  };
 }
 
 async function hamtaNya(

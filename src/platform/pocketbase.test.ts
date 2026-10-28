@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { fornyaInloggning, pocketbaseTransport } from './pocketbase';
+import { AvvisadError } from '../data/synk';
+import { avvisning, fornyaInloggning, pocketbaseTransport } from './pocketbase';
 
 const inloggning = { url: 'https://synk.example', token: 't', epost: 'a@example.se' };
 
@@ -42,6 +43,51 @@ describe('pocketbaseTransport', () => {
     await expect(transport.hamta(undefined)).rejects.toThrow(
       'Servern svarade 500 när händelser skulle hämtas.',
     );
+  });
+
+  /*
+   * The server that turned a phone's entries away in October 2026 said
+   * exactly this. A refusal is about the one entry, so it is an
+   * AvvisadError the sync can step past - and its message points at the
+   * server, which is where the fix is.
+   */
+  it('reports an entry the server refuses as a refusal, with the reason', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(
+            '{"data":{"payload":{"code":"validation_max_text_constraint",' +
+              '"message":"Must be no more than 5000 character(s).","params":{"max":5000}}},' +
+              '"message":"Failed to create record.","status":400}',
+            { status: 400 },
+          ),
+      ),
+    );
+    const skickat = pocketbaseTransport(inloggning).skicka([
+      { op_id: 'x' as never, device: 'd', payload: 'p', created: '' },
+    ]);
+
+    await expect(skickat).rejects.toBeInstanceOf(AvvisadError);
+    await expect(skickat).rejects.toThrow('tar inte emot så stora händelser');
+  });
+
+  it('still treats an entry already on the server as sent', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response('{"data":{"op_id":{"code":"validation_not_unique"}}}', {
+            status: 400,
+          }),
+      ),
+    );
+
+    await expect(
+      pocketbaseTransport(inloggning).skicka([
+        { op_id: 'x' as never, device: 'd', payload: 'p', created: '' },
+      ]),
+    ).resolves.toBeUndefined();
   });
 
   it('asks for a new login when the token is no longer accepted', async () => {
@@ -211,5 +257,22 @@ describe('skickaFil', () => {
     FalskXhr.senaste!.onerror?.();
 
     await expect(klart).rejects.toThrow('Servern svarar inte');
+  });
+});
+
+describe('avvisning', () => {
+  it('passes on what the server objected to when it is not a known case', () => {
+    expect(
+      avvisning('{"data":{"device":{"code":"x","message":"Cannot be blank."}}}'),
+    ).toBe('Servern avvisade en händelse (device: Cannot be blank.).');
+  });
+
+  it('says so when the server gave no reason', () => {
+    expect(avvisning('inte json')).toBe(
+      'Servern avvisade en händelse utan att säga varför.',
+    );
+    expect(avvisning('{"data":{}}')).toBe(
+      'Servern avvisade en händelse utan att säga varför.',
+    );
   });
 });

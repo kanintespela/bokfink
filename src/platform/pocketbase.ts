@@ -1,4 +1,9 @@
-import type { Fjarrpost, Markor, Synktransport } from '../data/synk';
+import {
+  AvvisadError,
+  type Fjarrpost,
+  type Markor,
+  type Synktransport,
+} from '../data/synk';
 
 /**
  * The sync server, spoken to over its REST API.
@@ -185,8 +190,19 @@ export function pocketbaseTransport(inloggning: Inloggning): Synktransport {
          * what makes sending idempotent, so a retry after a half-finished
          * send is exactly the case this is here to allow.
          */
-        if (svar.status === 400 && (await svar.text()).includes('op_id')) {
+        const kropp = await svar.text();
+        if (svar.status === 400 && kropp.includes('op_id')) {
           continue;
+        }
+
+        /*
+         * Any other 400 is the server turning this one entry down - the
+         * rest may well go through, so it is a refusal and not a failure.
+         * What it objected to is in the body, and is the difference between
+         * a fix and a guess.
+         */
+        if (svar.status === 400) {
+          throw new AvvisadError(avvisning(kropp));
         }
 
         throw new SynkfelError(
@@ -300,6 +316,41 @@ export function pocketbaseTransport(inloggning: Inloggning): Synktransport {
       return new Uint8Array(await fil.arrayBuffer());
     },
   };
+}
+
+/**
+ * Why PocketBase turned an entry down, in words that point at the fix.
+ *
+ * Its body names each field it objected to, with a message in English. The
+ * one case met in practice gets a sentence of its own, since its fix is on
+ * the server and nothing on the device will help; anything else is passed on
+ * as the server put it.
+ */
+export function avvisning(kropp: string): string {
+  let falt: Record<string, { code?: string; message?: string }> = {};
+  try {
+    const data = (JSON.parse(kropp) as { data?: typeof falt }).data;
+    if (data !== null && typeof data === 'object') {
+      falt = data;
+    }
+  } catch {
+    // Not JSON, so there is nothing to read; the general message stands.
+  }
+
+  const payload = falt['payload'];
+  if (payload?.code === 'validation_max_text_constraint') {
+    return (
+      'Servern tar inte emot så stora händelser. Den behöver uppdateras: ' +
+      'se "Uppdatera schemat" i server/pocketbase/README.md.'
+    );
+  }
+
+  const beskrivning = Object.entries(falt)
+    .map(([namn, { message }]) => `${namn}: ${message ?? 'ogiltigt'}`)
+    .join(', ');
+  return beskrivning === ''
+    ? 'Servern avvisade en händelse utan att säga varför.'
+    : `Servern avvisade en händelse (${beskrivning}).`;
 }
 
 interface Filpost {
