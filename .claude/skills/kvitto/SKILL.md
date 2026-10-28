@@ -7,7 +7,7 @@ description: Använd när ägaren skickar en bild eller PDF på ett kvitto eller
 
 Ägaren skickar ett foto eller en PDF i Claude-appen. Du föreslår hur det ska
 bokföras, och när ägaren svarat ja skickar du ett **utkast** med underlaget
-kopplat. Utkastet dyker upp under Att göra i appen, där ägaren granskar och
+kopplat. Utkastet dyker upp under fliken Kvitton i appen, där ägaren granskar och
 trycker Bokför. Verktyget kan inte bokföra, och det är avsiktligt (hård regel
 10 i `CLAUDE.md`).
 
@@ -98,7 +98,7 @@ npm run -s agent -- utkast /sökväg/till/forslag.json
 
 `--prova` kontrollerar allt och skickar ingenting. Visar den en varning om ett
 bokfört verifikat med samma datum och belopp: fråga innan du skickar. Svara
-sedan med en rad om att utkastet ligger under Att göra.
+sedan med en rad om att utkastet ligger under fliken Kvitton.
 
 Bilder konverteras till JPEG med längsta sida 2000 px, precis som appens
 kamera gör, och platsinformation i EXIF tas bort. PDF:er skickas oförändrade.
