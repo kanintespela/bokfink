@@ -534,8 +534,10 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
   const korSynk = useCallback(async () => {
     const lagrad = laddat?.synk.inloggning;
     const fras = await db.getMeta<string>('synk.losenfras');
-    if (laddat === undefined || lagrad === undefined || fras === undefined) {
-      throw new Error('Logga in och sätt en lösenfras först.');
+    // The passphrase is optional (decision X); without one the entries go
+    // to the server as they are.
+    if (laddat === undefined || lagrad === undefined) {
+      throw new Error('Logga in mot servern först.');
     }
 
     // Renewed every round, so the login lasts as long as the app is used
@@ -591,7 +593,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
   const [autosynkfel, setAutosynkfel] = useState<string | undefined>();
 
   useAutosynk({
-    aktiv: laddat?.synk.inloggning !== undefined && laddat.synk.harLosenfras === true,
+    aktiv: laddat?.synk.inloggning !== undefined,
     osankta: laddat?.synk.osankta ?? 0,
     synka: korSynk,
     onFel: setAutosynkfel,

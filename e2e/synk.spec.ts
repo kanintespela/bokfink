@@ -27,20 +27,22 @@ test('refuses to sync without a server and says why', async ({ page }) => {
 });
 
 /*
- * The passphrase is the key the server never gets. Without it there is
- * nothing to sync with, and the button stays out of reach rather than
- * failing when pressed.
+ * Decision X: the passphrase is optional and folded away, and the sync is
+ * unencrypted until one is set. The screen says which it is.
  */
-test('keeps the sync button out of reach until there is a passphrase', async ({
-  page,
-}) => {
+test('says the sync is unencrypted until a passphrase is set', async ({ page }) => {
   await page.goto('/#enhet');
 
-  await expect(page.getByTestId('synka-nu')).toBeHidden();
+  await page.getByText('Kryptering (valfritt)').click();
+  await expect(page.getByTestId('synk-kryptering')).toContainText('inte krypterad');
   await page.getByLabel('Lösenfras för synken').fill('en delad lösenfras');
   await page.getByTestId('spara-synklosenfras').click();
 
   await expect(page.getByTestId('synk-besked')).toContainText('sparades');
+  await expect(page.getByTestId('synk-kryptering')).toContainText('krypteras');
+
+  await page.getByTestId('ta-bort-synklosenfras').click();
+  await expect(page.getByTestId('synk-kryptering')).toContainText('inte krypterad');
 });
 
 /*
@@ -54,6 +56,7 @@ test('trims a passphrase before saving it, and refuses one that is only spaces',
   page,
 }) => {
   await page.goto('/#enhet');
+  await page.getByText('Kryptering (valfritt)').click();
 
   const falt = page.getByLabel('Lösenfras för synken');
   const spara = page.getByTestId('spara-synklosenfras');

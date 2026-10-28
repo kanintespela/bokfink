@@ -759,6 +759,8 @@ p {
   cursor: pointer;
 }
 
+/* A section folded away until wanted, like the sync's optional encryption. */
+.faltgrupp > summary,
 .diagram__siffror summary {
   display: flex;
   align-items: center;

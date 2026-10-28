@@ -22,7 +22,8 @@ interface Props {
   readonly onLoggaIn: (url: string, epost: string, losenord: string) => Promise<string>;
   readonly onLoggaUt: () => Promise<void>;
   readonly onSynka: () => Promise<string>;
-  readonly onLosenfras: (losenfras: string) => Promise<void>;
+  /** Undefined takes the passphrase away, and the sync goes unencrypted. */
+  readonly onLosenfras: (losenfras: string | undefined) => Promise<void>;
 }
 
 /**
@@ -87,8 +88,8 @@ export function Synk({
       <h2>Synk mellan enheter</h2>
 
       <p className="tomt">
-        Enheterna byter krypterade händelser genom en egen server. Servern kan aldrig läsa
-        bokföringen — den lagrar kuvert och lämnar tillbaka dem i ankomstordning.
+        Enheterna byter bokföringen genom din egen server. Logga in med samma konto på
+        alla enheter, så sköter synken sig själv.
       </p>
 
       <dl>
@@ -112,7 +113,7 @@ export function Synk({
             <button
               type="button"
               className="knapp knapp--primar"
-              disabled={arbetar || !harLosenfras}
+              disabled={arbetar}
               data-testid="synka-nu"
               onClick={() => void kor(onSynka)}
             >
@@ -191,7 +192,26 @@ export function Synk({
         </div>
       )}
 
-      <div className="faltgrupp">
+      {/*
+       * Optional, and folded away until wanted (decision X). Without it the
+       * books go to the owner's own server as they are; the passphrase is
+       * for an owner who does not want even that server able to read them,
+       * at the price of typing it on every device.
+       */}
+      <details className="faltgrupp" open={harLosenfras}>
+        <summary>Kryptering (valfritt)</summary>
+        <p className="hjalptext" data-testid="synk-kryptering">
+          {harLosenfras
+            ? 'Synken krypteras med en lösenfras på den här enheten. Samma lösenfras ' +
+              'måste finnas på alla enheter, annars kan de inte läsa varandras ' +
+              'bokföring.'
+            : 'Synken är inte krypterad. Bokföringen går till din egen server över ' +
+              'en krypterad anslutning, men den som kommer åt servern kan läsa den. ' +
+              'Med en lösenfras kan inte ens servern det — men den måste då skrivas ' +
+              'in på varje enhet, och utan den är det som ligger där obrukbart, ' +
+              'också för dig.'}
+        </p>
+
         <label htmlFor="synklosenfras">Lösenfras för synken</label>
         <input
           id="synklosenfras"
@@ -201,12 +221,6 @@ export function Synk({
           value={losenfras}
           onChange={(handelse) => setLosenfras(handelse.target.value)}
         />
-        <p className="hjalptext">
-          {harLosenfras
-            ? 'En lösenfras är satt på den här enheten. Skriv samma på den andra.'
-            : 'Samma lösenfras måste anges på båda enheterna. Den är nyckeln servern ' +
-              'aldrig får — utan den är det som ligger där obrukbart, också för dig.'}
-        </p>
         <p>
           <button
             type="button"
@@ -224,7 +238,30 @@ export function Synk({
             Spara lösenfras
           </button>
         </p>
-      </div>
+
+        {harLosenfras && (
+          <p>
+            <button
+              type="button"
+              className="knapp knapp--text"
+              disabled={arbetar}
+              data-testid="ta-bort-synklosenfras"
+              onClick={() =>
+                void kor(async () => {
+                  await onLosenfras(undefined);
+                  return (
+                    'Lösenfrasen är borttagen. Det som skickas härifrån går okrypterat, ' +
+                    'och det som redan är krypterat på servern går inte längre att ' +
+                    'läsa på den här enheten.'
+                  );
+                })
+              }
+            >
+              Ta bort lösenfrasen
+            </button>
+          </p>
+        )}
+      </details>
 
       {autosynkfel !== undefined && (
         <p className="hjalptext" data-testid="autosynk-fel">
