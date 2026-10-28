@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { skaSynkas, type Synklage } from './autosynk';
+import { skaSynkas, vantetidEfterFel, type Synklage } from './autosynk';
 
 const lage = (overstyr: Partial<Synklage> = {}): Synklage => ({
   aktiv: true,
@@ -22,6 +22,12 @@ describe('skaSynkas', () => {
     expect(skaSynkas(lage({ anledning: 'natet-tillbaka' }))).toBe(true);
   });
 
+  /* A retry is about the server coming back, so it asks whatever the queue holds. */
+  it('tries again after a failure whether or not anything is queued', () => {
+    expect(skaSynkas(lage({ anledning: 'nytt-forsok', osankta: 0 }))).toBe(true);
+    expect(skaSynkas(lage({ anledning: 'nytt-forsok', aktiv: false }))).toBe(false);
+  });
+
   /* A change made here is only worth a round when there is one to send. */
   it('only sends a change of its own when there is something to send', () => {
     expect(skaSynkas(lage({ anledning: 'ny-handelse', osankta: 0 }))).toBe(false);
@@ -38,6 +44,7 @@ describe('skaSynkas', () => {
       'synlig',
       'natet-tillbaka',
       'ny-handelse',
+      'nytt-forsok',
     ] as const) {
       expect(skaSynkas(lage({ aktiv: false, osankta: 5, anledning }))).toBe(false);
     }
@@ -60,5 +67,23 @@ describe('skaSynkas', () => {
     expect(skaSynkas(lage({ pagar: true, anledning: 'ny-handelse', osankta: 9 }))).toBe(
       false,
     );
+  });
+});
+
+/*
+ * The server is a computer at home that restarts now and then. The first
+ * retry should catch one that has just finished booting; after that the
+ * waits level off, so a server gone for the evening is asked rarely.
+ */
+describe('vantetidEfterFel', () => {
+  it('waits longer after each failure, up to five minutes', () => {
+    expect(vantetidEfterFel(1)).toBe(15_000);
+    expect(vantetidEfterFel(2)).toBe(60_000);
+    expect(vantetidEfterFel(3)).toBe(300_000);
+    expect(vantetidEfterFel(40)).toBe(300_000);
+  });
+
+  it('treats a count below one as the first failure', () => {
+    expect(vantetidEfterFel(0)).toBe(15_000);
   });
 });

@@ -99,6 +99,14 @@ Ingen domänlogik ligger på servern. Inga hooks räknar moms, validerar
 verifikat eller delar ut verifikationsnummer — det är det som gör att den kan
 bytas mot en dummare filhink utan att en enda regel går förlorad.
 
+## Efter en omstart
+
+Ingenting behöver göras. Tjänsten är aktiverad och startar med maskinen,
+`tailscale serve --bg` minns sin inställning, och appen försöker själv igen
+medan den är öppen: efter 15 sekunder, efter en minut och sedan var femte
+minut tills servern svarar. Det som bokförts under tiden ligger i kön på
+telefonen och går iväg vid första lyckade runda.
+
 ## Uppdatera schemat
 
 När `pb_migrations/` har ändrats i repot:

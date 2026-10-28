@@ -19,12 +19,21 @@ import { useEffect, useRef } from 'react';
  * - something was booked here, after a pause long enough that a burst of
  *   entries becomes one round rather than five.
  *
+ * And one more, which is a timer but only of a kind that cannot wake
+ * anything: after a round that failed, while the app is on screen. The
+ * server is a computer at home, and computers restart; a phone that tried
+ * while it was booting should not wait for the next time it is put away and
+ * taken out to try again. The waits grow, so a server that is gone for the
+ * evening costs one question every few minutes, and a hidden app asks
+ * nothing at all - it tries again when it is next shown.
+ *
  * Nothing happens until sync is set up: a server, a login and a passphrase
  * are three deliberate acts, and until all three are done the app makes no
  * network traffic at all (hard rule 7).
  */
 
-export type Anledning = 'start' | 'synlig' | 'natet-tillbaka' | 'ny-handelse';
+export type Anledning =
+  'start' | 'synlig' | 'natet-tillbaka' | 'ny-handelse' | 'nytt-forsok';
 
 export interface Synklage {
   /** Logged in to a server and holding a passphrase. */
@@ -58,6 +67,18 @@ export function skaSynkas(lage: Synklage): boolean {
 /** How long a burst of bookings is allowed to gather before it is sent. */
 const DROJSMAL_MS = 4000;
 
+/**
+ * How long to wait before trying again after the n:th failure in a row.
+ *
+ * Quick at first, since the common cause is a server that is starting and
+ * will answer in a minute; then every five minutes, for as long as it takes.
+ */
+const FORSOK_MS = [15_000, 60_000, 300_000] as const;
+
+export function vantetidEfterFel(misslyckade: number): number {
+  return FORSOK_MS[Math.min(Math.max(misslyckade, 1), FORSOK_MS.length) - 1]!;
+}
+
 interface Props {
   readonly aktiv: boolean;
   readonly osankta: number;
@@ -78,6 +99,8 @@ export function useAutosynk({ aktiv, osankta, synka, onFel }: Props): void {
    * every finished round would schedule the next one.
    */
   const pagar = useRef(false);
+  /** Failed rounds in a row, which sets how long the next wait is. */
+  const misslyckade = useRef(0);
   const senaste = useRef({ synka, onFel });
   senaste.current = { synka, onFel };
 
@@ -88,6 +111,7 @@ export function useAutosynk({ aktiv, osankta, synka, onFel }: Props): void {
 
     let avbruten = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let forsok: ReturnType<typeof setTimeout> | undefined;
 
     async function kor(anledning: Anledning): Promise<void> {
       const online = globalThis.navigator?.onLine ?? true;
@@ -95,15 +119,33 @@ export function useAutosynk({ aktiv, osankta, synka, onFel }: Props): void {
         return;
       }
 
+      if (
+        anledning === 'nytt-forsok' &&
+        globalThis.document?.visibilityState === 'hidden'
+      ) {
+        // Shown again later, it is asked through 'synlig' instead.
+        return;
+      }
+
       pagar.current = true;
+      if (forsok !== undefined) {
+        clearTimeout(forsok);
+        forsok = undefined;
+      }
       try {
         await senaste.current.synka();
+        misslyckade.current = 0;
         if (!avbruten) {
           senaste.current.onFel(undefined);
         }
       } catch (orsak) {
+        misslyckade.current += 1;
         if (!avbruten) {
           senaste.current.onFel(orsak instanceof Error ? orsak.message : String(orsak));
+          forsok = setTimeout(
+            () => void kor('nytt-forsok'),
+            vantetidEfterFel(misslyckade.current),
+          );
         }
       } finally {
         pagar.current = false;
@@ -130,6 +172,9 @@ export function useAutosynk({ aktiv, osankta, synka, onFel }: Props): void {
       avbruten = true;
       if (timer !== undefined) {
         clearTimeout(timer);
+      }
+      if (forsok !== undefined) {
+        clearTimeout(forsok);
       }
       globalThis.removeEventListener?.('online', online);
       globalThis.document?.removeEventListener('visibilitychange', nar);
