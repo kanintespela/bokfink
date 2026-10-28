@@ -69,6 +69,11 @@ import {
 import type { Underlag } from '../domain/underlag/underlag';
 import { tolkaKvitto, type Kvittoforslag } from '../domain/underlag/kvittotolkning';
 import { foreslaMallForText } from '../domain/mall/kvittomall';
+import {
+  foreslaFranTidigare,
+  tidigareKop,
+  type TidigareKop,
+} from '../domain/mall/leverantorsminne';
 import { exporteraSomText, importera, las } from '../data/backup';
 import { arKrypterad, laspaket, paketera } from '../data/kryptokopia';
 import { glomServern, osankta, synka } from '../data/synk';
@@ -206,6 +211,8 @@ interface Laddat {
   readonly metod: Redovisningsmetod;
   readonly kvitton: readonly Underlag[];
   readonly underlagPerVerifikat: ReadonlyMap<Uuid, readonly Underlag[]>;
+  /** Booked purchases with a read receipt, for remembering suppliers. */
+  readonly tidigareKop: readonly TidigareKop[];
   /** Every booked verifikat, across every year, for the reports. */
   readonly allaVerifikat: readonly BokfortVerifikat[];
   /** The fiscal years a removal would accept. Empty in the normal case. */
@@ -298,7 +305,14 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
    */
   const [valtKvitto, setValtKvitto] = useState<Uuid | undefined>();
   const [forslag, setForslag] = useState<Kvittoforslag | undefined>();
-  const [forslagsmall, setForslagsmall] = useState<Uuid | undefined>();
+  /*
+   * The leaf a receipt or a bank line points at, and why - said beside the
+   * suggestion, because a suggestion without its reason is one nobody can
+   * tell is wrong until it is booked.
+   */
+  const [forslagsmall, setForslagsmall] = useState<
+    { readonly mall: Uuid; readonly skal: string } | undefined
+  >();
   /** A booking from the questions carried over to be changed by hand. */
   const [friStart, setFriStart] = useState<Friforslag | undefined>();
   const [ocr, setOcr] = useState<{ laser: boolean; fel?: string }>({ laser: false });
@@ -366,6 +380,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
         (await db.getMeta<Redovisningsmetod>('redovisningsmetod')) ?? 'kontantmetoden',
       kvitton,
       underlagPerVerifikat,
+      tidigareKop: tidigareKop(tillstand.underlag.values(), tillstand.verifikat, idag),
       allaVerifikat: [...tillstand.verifikat.values()],
       borttagbaraAr: await borttagbaraRakenskapsar(db),
       dagarSedanBackup:
@@ -632,7 +647,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
     }
   }
   const foreslagetLov =
-    forslagsmall === undefined ? undefined : lovForMallId(forslagsmall);
+    forslagsmall === undefined ? undefined : lovForMallId(forslagsmall.mall);
   /*
    * The leaves as templates at today's rates, for matching a receipt's words.
    * The receipt suggests what it is; the rate is settled in the form.
@@ -663,6 +678,39 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
   // "laddat is loaded" narrowing into a function declaration.
   const { anvandning } = laddat;
 
+  /**
+   * The leaf a receipt points at, strongest signal first.
+   *
+   * How the same supplier was booked last time beats any word on the
+   * receipt: a farm shop's receipt says "moms", "kort" and the name of each
+   * product, but who it is from says what it was. Failing that, the words
+   * the receipt shares with the leaves, ranked by use on this device.
+   */
+  function foreslaMall(
+    tolkat: Kvittoforslag,
+    text: string,
+  ): { mall: Uuid; skal: string } | undefined {
+    const minne = foreslaFranTidigare(tolkat, laddat?.tidigareKop ?? []);
+    if (minne !== undefined) {
+      const vem = tolkat.leverantor ?? 'samma leverantör';
+      return {
+        mall: minne.mall,
+        skal: `så bokfördes förra kvittot från ${vem}, ${minne.forebild.datum}`,
+      };
+    }
+    return ordforslag(text, 'kvittot');
+  }
+
+  function ordforslag(
+    text: string,
+    vad: 'kvittot' | 'bankraden',
+  ): { mall: Uuid; skal: string } | undefined {
+    const traff = foreslaMallForText(lovmallar, text, anvandning);
+    return traff === undefined
+      ? undefined
+      : { mall: traff.mall.id, skal: `${vad} nämner ”${traff.traff}”` };
+  }
+
   function tolka(text: string, sakerhet: number | undefined): void {
     /*
      * A reading this poor is not a reading. Offering the figures it found
@@ -682,10 +730,9 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
       return;
     }
 
-    setForslag(tolkaKvitto(text, idag));
-    // The rule engine: which template the receipt's own words point at,
-    // ranked by how often each has been used on this device.
-    setForslagsmall(foreslaMallForText(lovmallar, text, anvandning)?.mall.id);
+    const tolkat = tolkaKvitto(text, idag);
+    setForslag(tolkat);
+    setForslagsmall(foreslaMall(tolkat, text));
     setOcr({
       laser: false,
       ...(sakerhet !== undefined && sakerhet < OSAKER_SAKERHET
@@ -959,9 +1006,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
                     : transaktion.belopp,
                 leverantor: transaktion.text,
               });
-              setForslagsmall(
-                foreslaMallForText(lovmallar, transaktion.text, anvandning)?.mall.id,
-              );
+              setForslagsmall(ordforslag(transaktion.text, 'bankraden'));
               setVy('bokfor');
             }}
           />
@@ -1329,7 +1374,9 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
               idag={idag}
               {...(bankrad === undefined ? {} : { forvaltBetalkonto: FORETAGSKONTO })}
               {...(forslag === undefined ? {} : { forslag })}
-              {...(foreslagetLov === undefined ? {} : { foreslagetLov })}
+              {...(foreslagetLov === undefined
+                ? {}
+                : { foreslagetLov, forslagsskal: forslagsmall?.skal ?? '' })}
               {...(halvtPbb === undefined ? {} : { halvtPrisbasbelopp: halvtPbb })}
               {...(valtBild === undefined
                 ? {}

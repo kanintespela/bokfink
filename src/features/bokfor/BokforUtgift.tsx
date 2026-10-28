@@ -80,6 +80,8 @@ interface Props {
   readonly forslag?: Kvittoforslag;
   /** The leaf the receipt's own words point at, when they point at one. */
   readonly foreslagetLov?: Lov;
+  /** Why that leaf, in a few words: "kvittot nämner ”saltsten”". */
+  readonly forslagsskal?: string;
   readonly ocrLaser?: boolean;
   readonly ocrFel?: string;
   /** This year's halvt prisbasbelopp, for the question that needs it. */
@@ -134,6 +136,7 @@ export function BokforUtgift({
   onFotografera,
   forslag,
   foreslagetLov,
+  forslagsskal,
   ocrLaser,
   ocrFel,
   halvtPrisbasbelopp,
@@ -391,6 +394,16 @@ export function BokforUtgift({
           forslag={forslag}
           namn={foreslagetLov?.namn}
           onFyllI={fyllFranKvitto}
+          {...(foreslagetLov === undefined
+            ? {}
+            : {
+                varfor: [
+                  `Konto ${foreslagetLov.konto} ${konton.get(foreslagetLov.konto)?.namn ?? ''}`.trim(),
+                  forslagsskal,
+                ]
+                  .filter((del) => del !== undefined && del !== '')
+                  .join(', '),
+              })}
         />
 
         {stig.length === 0 && sok.trim() === '' && genvagar.length > 0 && (
@@ -988,10 +1001,13 @@ function Forslagsknapp({
   forslag,
   namn,
   onFyllI,
+  varfor,
 }: {
   readonly forslag: Kvittoforslag | undefined;
   readonly namn: string | undefined;
   readonly onFyllI: () => void;
+  /** Which account it books on and why that one was picked. */
+  readonly varfor?: string;
 }) {
   const text = beskrivForslag(forslag, namn);
   if (text.length === 0) {
@@ -1007,6 +1023,14 @@ function Forslagsknapp({
       >
         Fyll i {text}
       </button>
+      {varfor !== undefined && (
+        <>
+          <br />
+          <span className="hjalptext" data-testid="forslag-varfor">
+            {varfor.charAt(0).toUpperCase() + varfor.slice(1)}.
+          </span>
+        </>
+      )}
     </p>
   );
 }

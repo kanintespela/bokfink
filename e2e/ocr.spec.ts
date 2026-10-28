@@ -100,6 +100,10 @@ test('reads a receipt and offers what it says', async ({ page }) => {
   // The receipt says "Kraftfoder", which is a word the feed answer knows,
   // so the offer picks what it is too and one tap fills the whole form.
   await expect(erbjudande).toContainText('Foder och strö');
+  // And says which account and why, so a wrong pick is visible before it is
+  // booked rather than after.
+  await expect(page.getByTestId('forslag-varfor')).toContainText('Konto 4000');
+  await expect(page.getByTestId('forslag-varfor')).toContainText('”kraftfoder”');
 
   await erbjudande.click();
   await expect(page.getByLabel('Att betala')).toHaveValue('520,31');
