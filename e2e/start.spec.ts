@@ -5,11 +5,14 @@ test('shows the start page with real database status', async ({ page }) => {
 
   await expect(page.getByRole('heading', { name: 'Bokfink', level: 1 })).toBeVisible();
 
-  // The database status lives with the other registers rather than on the
-  // start view, which is about what needs doing. Settings is a menu, and the
-  // status belongs to this installation.
-  await page.getByRole('button', { name: 'Inställningar' }).click();
-  await page.getByRole('button', { name: 'Den här enheten' }).click();
+  // The database status lives with the settings under Mer rather than on
+  // the start view, which is about what needs doing. It belongs to this
+  // installation.
+  await page
+    .getByRole('navigation', { name: 'Vyer' })
+    .getByRole('button', { name: 'Mer' })
+    .click();
+  await page.getByRole('button', { name: 'Synk och den här enheten' }).click();
 
   /*
    * Proves the database opened in the browser, not just under Vitest. The
@@ -44,9 +47,11 @@ test('opens with no network at all', async ({ page, context }) => {
   await page.reload();
 
   await expect(page.getByRole('heading', { name: 'Bokfink', level: 1 })).toBeVisible();
-  // The whole app, not just a cached shell: the templates come from the
-  // database, which had to open offline for them to be there at all.
-  await expect(
-    page.locator('main').getByRole('button', { name: 'Bokför', exact: true }),
-  ).toBeVisible();
+  // The whole app, not just a cached shell: the booking questions come from
+  // the database, which had to open offline for them to be there at all.
+  await page
+    .getByRole('navigation', { name: 'Vyer' })
+    .getByRole('button', { name: 'Bokför', exact: true })
+    .click();
+  await expect(page.getByTestId('tradfraga')).toBeVisible();
 });

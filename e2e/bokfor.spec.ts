@@ -31,10 +31,10 @@ function bokforKnapp(page: Page) {
   return page.locator('main').getByRole('button', { name: 'Bokför', exact: true });
 }
 
-/** The start view is "Att göra"; booking is a step away from it. */
+/** The start view is the overview; booking is a tab away from it. */
 async function tillBokfor(page: Page): Promise<void> {
   await page.goto('/');
-  await bokforKnapp(page).click();
+  await vyval(page).getByRole('button', { name: 'Bokför', exact: true }).click();
 }
 
 async function tillVerifikat(page: Page): Promise<void> {
@@ -76,12 +76,14 @@ async function tillHandelser(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Händelser', exact: true }).click();
 }
 
+/** Moms is done a few times a year, so it lives under Mer. */
 async function tillMoms(page: Page): Promise<void> {
-  await vyval(page).getByRole('button', { name: 'Moms' }).click();
+  await vyval(page).getByRole('button', { name: 'Mer' }).click();
+  await page.getByRole('button', { name: 'Moms', exact: true }).click();
 }
 
 async function tillAttGora(page: Page): Promise<void> {
-  await vyval(page).getByRole('button', { name: 'Att göra' }).click();
+  await vyval(page).getByRole('button', { name: 'Översikt' }).click();
 }
 
 /*
@@ -331,19 +333,19 @@ test('finds a verifikat by number or by what it says', async ({ page }) => {
  * Opening straight into the booking questions assumes the answer is always
  * "book something", and often the question is "have I missed anything?".
  */
-test('starts on Att göra and reaches booking in one tap', async ({ page }) => {
+test('starts on the overview and reaches booking in one tap', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Att göra' })).toBeVisible();
   await expect(page.getByTestId('tradfraga')).toBeHidden();
 
-  await bokforKnapp(page).click();
+  await vyval(page).getByRole('button', { name: 'Bokför', exact: true }).click();
   await expect(page.getByTestId('tradfraga')).toBeVisible();
 });
 
 /* On a phone, back has to go back rather than leave the app. */
 test('goes back a view with the browser back button', async ({ page }) => {
   await page.goto('/');
-  await bokforKnapp(page).click();
+  await vyval(page).getByRole('button', { name: 'Bokför', exact: true }).click();
   await expect(page.getByTestId('tradfraga')).toBeVisible();
 
   await page.goBack();

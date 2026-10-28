@@ -3,7 +3,6 @@ import { useRef, useState } from 'react';
 import type { Datum } from '../../domain/tid/datum';
 import type { Underlag } from '../../domain/underlag/underlag';
 import type { Forberedelse } from '../../platform/bild';
-import { Tillbaka } from '../../ui/Tillbaka';
 import { Underlagsvisning, type Visat } from '../../ui/Underlagsvisning';
 import { Beskar } from './Beskar';
 import { Forfallodag } from './Forfallodag';
@@ -37,7 +36,6 @@ interface Props {
   ) => Promise<void>;
   /** The text read out of the file, reading it first when nobody has. */
   readonly onLasText: (kvitto: Kvittobild) => Promise<string>;
-  readonly onTillbaka: () => void;
 }
 
 /**
@@ -56,7 +54,6 @@ export function Kvitton({
   onTaBort,
   onForfallodag,
   onLasText,
-  onTillbaka,
 }: Props) {
   const kamera = useRef<HTMLInputElement>(null);
   const filer = useRef<HTMLInputElement>(null);
@@ -142,7 +139,6 @@ export function Kvitton({
 
   return (
     <section aria-label="Kvitton">
-      <Tillbaka onTillbaka={onTillbaka} />
       {visar !== undefined && (
         <Underlagsvisning underlag={visar} onStang={() => setVisar(undefined)} />
       )}

@@ -3,7 +3,10 @@ import { expect, test, type Page } from '@playwright/test';
 /** Books one expense and one sale, so both reports have something to show. */
 async function bokforNagot(page: Page): Promise<void> {
   await page.goto('/');
-  await page.locator('main').getByRole('button', { name: 'Bokför' }).click();
+  await page
+    .getByRole('navigation', { name: 'Vyer' })
+    .getByRole('button', { name: 'Bokför', exact: true })
+    .click();
 
   await page.getByLabel('Sök').fill('lamm');
   await page

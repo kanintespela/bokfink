@@ -1,28 +1,29 @@
 import { useEffect, useState } from 'react';
 
-/** The views along the bottom bar. */
-export const FLIKAR = ['attgora', 'bokfor', 'moms', 'verifikat'] as const;
-
 /**
- * Everything reachable, including what is not a tab.
+ * The views along the bottom bar.
  *
- * Four tabs is what a phone holds along the bottom without the labels
- * shrinking past reading. Registers and settings are reached from Att göra
- * instead - they are visited rarely and never in a hurry.
+ * The same five the bookkeeping apps people know settle on: an overview,
+ * what is waiting to be booked, booking, what has been booked, and "Mer"
+ * for everything done quarterly, yearly or once. Moms was a tab before, for
+ * something done four times a year, while receipts - photographed every
+ * week - were a link at the bottom of the start view.
  */
+export const FLIKAR = ['attgora', 'kvitton', 'bokfor', 'verifikat', 'mer'] as const;
+
+/** Everything reachable, including what is not a tab. */
 export const VYER = [
   ...FLIKAR,
-  'kvitton',
+  'moms',
   'utkast',
   'frikontering',
   'bank',
   'rapporter',
   /*
-   * Inställningar is a menu, and each of these is one short screen under it.
-   * They were one page once, and the kontoplan's three hundred rows meant
-   * everything else began five screens down.
+   * Each of these is one short screen under Mer. The settings were one page
+   * once, and the kontoplan's three hundred rows meant everything else began
+   * five screens down.
    */
-  'installningar',
   'bocker',
   'konton',
   'filer',
@@ -40,28 +41,28 @@ export const VYER = [
 export type Vy = (typeof VYER)[number];
 
 export const VYNAMN: Record<Vy, string> = {
-  attgora: 'Att göra',
+  attgora: 'Översikt',
   kvitton: 'Kvitton',
+  mer: 'Mer',
   utkast: 'Utkast',
   frikontering: 'Fri kontering',
-  bank: 'Bankimport',
+  bank: 'Stäm av kontoutdrag',
   bokfor: 'Bokför',
   moms: 'Moms',
   rapporter: 'Rapporter',
   verifikat: 'Verifikat',
-  installningar: 'Inställningar',
   bocker: 'Böcker',
   konton: 'Kontoplan',
   filer: 'Filer, import och export',
   sakerhetskopia: 'Säkerhetskopia',
   rakenskapsar: 'Räkenskapsår',
-  enhet: 'Den här enheten',
+  enhet: 'Synk och den här enheten',
   foretag: 'Företaget',
   anlaggning: 'Anläggningar',
   lager: 'Djurlager',
   periodisering: 'Obetalda fakturor och periodisering',
   egetkapital: 'Eget kapital',
-  arsbokslut: 'Årsbokslut',
+  arsbokslut: 'Förenklat årsbokslut',
   nebilaga: 'NE-bilaga',
 };
 
@@ -99,7 +100,19 @@ export function useVy(): [Vy, (vy: Vy) => void] {
   ];
 }
 
+/**
+ * Addresses that moved, so a bookmark or a home-screen shortcut still lands
+ * where it meant to.
+ */
+const FLYTTADE: Readonly<Record<string, Vy>> = {
+  installningar: 'mer',
+};
+
 function franHash(hash: string | undefined): Vy {
   const namn = (hash ?? '').replace(/^#/, '');
+  const flyttad = FLYTTADE[namn];
+  if (flyttad !== undefined) {
+    return flyttad;
+  }
   return (VYER as readonly string[]).includes(namn) ? (namn as Vy) : 'attgora';
 }

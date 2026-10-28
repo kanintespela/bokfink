@@ -424,7 +424,10 @@ test('warns about a picture unlikely to be readable', async ({ page }) => {
 /** Books a purchase with no receipt, the mistake the next tests repair. */
 async function bokforUtanKvitto(page: Page): Promise<void> {
   await page.goto('/');
-  await page.locator('main').getByRole('button', { name: 'Bokför', exact: true }).click();
+  await page
+    .getByRole('navigation', { name: 'Vyer' })
+    .getByRole('button', { name: 'Bokför', exact: true })
+    .click();
   await page.getByLabel('Sök').fill('foder');
   await page
     .getByTestId('sokresultat')

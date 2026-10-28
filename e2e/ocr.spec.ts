@@ -115,7 +115,10 @@ test('reads a receipt and offers what it says', async ({ page }) => {
  */
 test('photographs the receipt from inside the booking form', async ({ page }) => {
   await page.goto('/');
-  await page.locator('main').getByRole('button', { name: 'Bokför' }).click();
+  await page
+    .getByRole('navigation', { name: 'Vyer' })
+    .getByRole('button', { name: 'Bokför', exact: true })
+    .click();
 
   await page.getByLabel('Sök').fill('foder');
   await page

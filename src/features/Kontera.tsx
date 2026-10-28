@@ -165,7 +165,8 @@ import { Foretagsinstallningar } from './data/Foretagsinstallningar';
 import { Sakerhetskopia } from './data/Sakerhetskopia';
 import { Rapporter } from './handelser/Rapporter';
 import { Verifikatlista } from './verifikat/Verifikatlista';
-import { useVy, VYNAMN } from '../ui/vy';
+import { useVy } from '../ui/vy';
+import { Mer } from './mer/Mer';
 import { Tillbaka } from '../ui/Tillbaka';
 import { Varumarke } from '../ui/Varumarke';
 import { Vyval } from '../ui/Vyval';
@@ -782,22 +783,11 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
         {vy === 'attgora' && (
           <div className="rubrikrad">
             <Varumarke />
-            <button
-              type="button"
-              className="knapp knapp--text knapp--ikon"
-              aria-label="Inställningar"
-              onClick={() => setVy('installningar')}
-            >
-              <span aria-hidden="true" style={{ fontSize: '1.25rem' }}>
-                ⚙
-              </span>
-            </button>
           </div>
         )}
         {vy === 'attgora' && (
           <AttGoraSida
             idag={idag}
-            antal={laddat.poster.length}
             senaste={laddat.senaste}
             utkast={laddat.utkast.length}
             kvitton={laddat.kvitton.length}
@@ -829,40 +819,10 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
                 ? `${vad} delades.`
                 : `${vad} sparades som ${namn}.`;
             }}
-            onBokfor={() => setVy('bokfor')}
             onMoms={() => setVy('moms')}
-            onKalender={async () => {
-              const poster = paminnelser({
-                rakenskapsar: laddat.rakenskapsar,
-                momsperiod: laddat.momsperiod,
-                underlag: laddat.kvitton,
-                idag,
-              });
-              if (poster.length === 0) {
-                return 'Det finns inga kommande datum att lägga in.';
-              }
-              const namn = `${filprefix}-datum.ics`;
-              const utfall = await delaEllerSpara(
-                namn,
-                skrivIcs(poster, new Date().toISOString()),
-                'text/calendar',
-              );
-              const antal = poster.length === 1 ? 'Ett datum' : `${poster.length} datum`;
-              return utfall === 'delad'
-                ? `${antal} delades. Välj Kalender för att lägga in dem.`
-                : `${antal} sparades som ${namn}. Öppna filen för att lägga in dem i kalendern.`;
-            }}
             onKvitton={() => setVy('kvitton')}
             onUtkast={() => setVy('utkast')}
-            onBank={() => setVy('bank')}
             onVisaVerifikat={() => setVy('verifikat')}
-            onRapporter={() => setVy('rapporter')}
-            onAnlaggning={() => setVy('anlaggning')}
-            onLager={() => setVy('lager')}
-            onPeriodisering={() => setVy('periodisering')}
-            onEgetKapital={() => setVy('egetkapital')}
-            onArsbokslut={() => setVy('arsbokslut')}
-            onNebilaga={() => setVy('nebilaga')}
           />
         )}
 
@@ -903,7 +863,6 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
               setVy('bokfor');
               void lasKvitto(kvitto.underlag);
             }}
-            onTillbaka={() => setVy('attgora')}
             onForfallodag={async (kvitto, forfallodag) => {
               await sparaForfallodag(
                 db,
@@ -972,7 +931,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
 
         {vy === 'bank' && (
           <Bankimport
-            onTillbaka={() => setVy('attgora')}
+            onTillbaka={() => setVy('mer')}
             onLasFil={async (fil) => {
               const text = avkodaText(new Uint8Array(await fil.arrayBuffer()));
               const transaktioner = lasKontoutdrag(text);
@@ -1014,38 +973,36 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
          * import, the backup and the fiscal years all began five screens
          * down - on the phone this is used from.
          */}
-        {vy === 'installningar' && (
-          <>
-            <Tillbaka onTillbaka={() => setVy('attgora')} />
-            <h2>Inställningar</h2>
-
-            {(
-              [
-                'bocker',
-                'filer',
-                'sakerhetskopia',
-                'rakenskapsar',
-                'konton',
-                'enhet',
-                'foretag',
-              ] as const
-            ).map((mal) => (
-              <p key={mal}>
-                <button
-                  type="button"
-                  className="knapp knapp--text"
-                  onClick={() => setVy(mal)}
-                >
-                  {VYNAMN[mal]}
-                </button>
-              </p>
-            ))}
-          </>
+        {vy === 'mer' && (
+          <Mer
+            onValj={setVy}
+            onKalender={async () => {
+              const poster = paminnelser({
+                rakenskapsar: laddat.rakenskapsar,
+                momsperiod: laddat.momsperiod,
+                underlag: laddat.kvitton,
+                idag,
+              });
+              if (poster.length === 0) {
+                return 'Det finns inga kommande datum att lägga in.';
+              }
+              const namn = `${filprefix}-datum.ics`;
+              const utfall = await delaEllerSpara(
+                namn,
+                skrivIcs(poster, new Date().toISOString()),
+                'text/calendar',
+              );
+              const antal = poster.length === 1 ? 'Ett datum' : `${poster.length} datum`;
+              return utfall === 'delad'
+                ? `${antal} delades. Välj Kalender för att lägga in dem.`
+                : `${antal} sparades som ${namn}. Öppna filen för att lägga in dem i kalendern.`;
+            }}
+          />
         )}
 
         {vy === 'konton' && (
           <>
-            <Tillbaka onTillbaka={() => setVy('installningar')} />
+            <Tillbaka onTillbaka={() => setVy('mer')} />
             <Kontosida
               konton={laddat.konton}
               onSpara={async (konto, fanns) => {
@@ -1058,7 +1015,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
 
         {vy === 'filer' && (
           <>
-            <Tillbaka onTillbaka={() => setVy('installningar')} />
+            <Tillbaka onTillbaka={() => setVy('mer')} />
             <Filhantering
               rakenskapsar={laddat.rakenskapsar}
               onImportera={async (filer) => {
@@ -1129,7 +1086,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
 
         {vy === 'sakerhetskopia' && (
           <>
-            <Tillbaka onTillbaka={() => setVy('installningar')} />
+            <Tillbaka onTillbaka={() => setVy('mer')} />
             <Sakerhetskopia
               onArKrypterad={onArKrypteradText}
               onBackupTagen={async () => {
@@ -1186,7 +1143,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
 
         {vy === 'foretag' && (
           <>
-            <Tillbaka onTillbaka={() => setVy('installningar')} />
+            <Tillbaka onTillbaka={() => setVy('mer')} />
             <Foretagsinstallningar
               organisationsnummer={laddat.organisationsnummer}
               onOrganisationsnummer={async (nummer) => {
@@ -1199,7 +1156,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
 
         {vy === 'enhet' && (
           <>
-            <Tillbaka onTillbaka={() => setVy('installningar')} />
+            <Tillbaka onTillbaka={() => setVy('mer')} />
             <Enhetsinstallningar
               serie={laddat.serie}
               onSerie={async (nytt) => {
@@ -1214,7 +1171,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
           </>
         )}
 
-        {vy === 'rakenskapsar' && <Tillbaka onTillbaka={() => setVy('installningar')} />}
+        {vy === 'rakenskapsar' && <Tillbaka onTillbaka={() => setVy('mer')} />}
 
         {vy === 'rakenskapsar' && (
           <Rakenskapsarsida
@@ -1288,7 +1245,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
 
         {vy === 'bocker' && (
           <>
-            <Tillbaka onTillbaka={() => setVy('installningar')} />
+            <Tillbaka onTillbaka={() => setVy('mer')} />
             <Bocker {...bokval} />
           </>
         )}
@@ -1445,7 +1402,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
 
         {vy === 'rapporter' && (
           <Rapporter
-            onTillbaka={() => setVy('attgora')}
+            onTillbaka={() => setVy('mer')}
             konton={laddat.konton}
             verifikat={laddat.poster.map((post) => post.verifikat)}
             ingaendeBalanser={laddat.ingaendeBalanser}
@@ -1456,6 +1413,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
           />
         )}
 
+        {vy === 'moms' && <Tillbaka onTillbaka={() => setVy('mer')} />}
         {vy === 'moms' && (
           <Momssida
             rakenskapsar={laddat.rakenskapsar}
@@ -1571,7 +1529,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
 
         {vy === 'anlaggning' && (
           <Anlaggningssida
-            onTillbaka={() => setVy('attgora')}
+            onTillbaka={() => setVy('mer')}
             rakenskapsar={laddat.rakenskapsar}
             anlaggningar={laddat.anlaggningar}
             fastigheter={laddat.fastigheter}
@@ -1668,7 +1626,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
 
         {vy === 'lager' && (
           <Lagersida
-            onTillbaka={() => setVy('attgora')}
+            onTillbaka={() => setVy('mer')}
             inventeringar={laddat.djurlagerinventeringar}
             idag={idag}
             onRegistrera={async (uppgifter) => {
@@ -1695,7 +1653,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
 
         {vy === 'periodisering' && (
           <Bokslutspostsida
-            onTillbaka={() => setVy('attgora')}
+            onTillbaka={() => setVy('mer')}
             rakenskapsar={laddat.rakenskapsar}
             konton={laddat.konton}
             idag={idag}
@@ -1719,7 +1677,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
 
         {vy === 'egetkapital' && (
           <Egetkapitalsida
-            onTillbaka={() => setVy('attgora')}
+            onTillbaka={() => setVy('mer')}
             rakenskapsar={laddat.rakenskapsar}
             idag={idag}
             onHamtaSammanstallning={(ar, uttagInsattningKonton) =>
@@ -1750,7 +1708,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
 
         {vy === 'arsbokslut' && (
           <Arsbokslutsida
-            onTillbaka={() => setVy('attgora')}
+            onTillbaka={() => setVy('mer')}
             rakenskapsar={laddat.rakenskapsar}
             verifikat={laddat.allaVerifikat}
             konton={laddat.konton}
@@ -1786,7 +1744,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
 
         {vy === 'nebilaga' && (
           <Nebilagasida
-            onTillbaka={() => setVy('attgora')}
+            onTillbaka={() => setVy('mer')}
             rakenskapsar={laddat.rakenskapsar}
             verifikat={laddat.allaVerifikat}
             rutval={laddat.rutval}

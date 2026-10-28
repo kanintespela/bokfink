@@ -3,7 +3,10 @@ import { expect, test, type Page } from '@playwright/test';
 /** One sale and one purchase through the company account. */
 async function bokforNagot(page: Page): Promise<void> {
   await page.goto('/');
-  await page.locator('main').getByRole('button', { name: 'Bokför' }).click();
+  await page
+    .getByRole('navigation', { name: 'Vyer' })
+    .getByRole('button', { name: 'Bokför', exact: true })
+    .click();
 
   await page.getByLabel('Sök').fill('lamm');
   await page
@@ -38,7 +41,7 @@ async function bokforNagot(page: Page): Promise<void> {
 test('sorts the year into the boxes of the förenklat årsbokslut', async ({ page }) => {
   await bokforNagot(page);
 
-  await page.goto('/#attgora');
+  await page.goto('/#mer');
   await page.getByRole('button', { name: 'Förenklat årsbokslut' }).click();
 
   await expect(page.getByTestId('ruta-B9')).toContainText('6 250,00');
@@ -74,7 +77,7 @@ test('remembers which box an öresutjämning goes to', async ({ page }) => {
   await page.getByTestId('bokfor-egetkapital').click();
   await expect(page.getByTestId('egetkapital-besked')).toContainText('bokfört');
 
-  await page.goto('/#attgora');
+  await page.goto('/#mer');
   await page.getByRole('button', { name: 'Förenklat årsbokslut' }).click();
   await expect(page.getByTestId('arsbokslut-resultatdifferens')).toBeVisible();
   await page.getByTestId('valj-ruta-3740').getByRole('button', { name: /R1/ }).click();
@@ -99,7 +102,7 @@ test('remembers which box an öresutjämning goes to', async ({ page }) => {
 test('works out the NE-bilaga and keeps what was entered', async ({ page }) => {
   await bokforNagot(page);
 
-  await page.goto('/#attgora');
+  await page.goto('/#mer');
   await page.getByRole('button', { name: 'NE-bilaga' }).click();
 
   await expect(page.getByTestId('ne-R11')).toContainText('5 000,00');
@@ -160,7 +163,10 @@ test('offers to move a momsfordran off the skuldkontot', async ({ page }) => {
  */
 test('suggests the previous year underskott as R24', async ({ page }) => {
   await page.goto('/');
-  await page.locator('main').getByRole('button', { name: 'Bokför' }).click();
+  await page
+    .getByRole('navigation', { name: 'Vyer' })
+    .getByRole('button', { name: 'Bokför', exact: true })
+    .click();
   await page.getByLabel('Sök').fill('foder');
   await page
     .getByTestId('sokresultat')

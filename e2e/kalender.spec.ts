@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test';
 test('hands over the coming deadlines as a calendar file', async ({ page }) => {
   await page.clock.install({ time: new Date('2026-10-04T10:00:00+02:00') });
   await page.clock.resume();
-  await page.goto('/');
+  await page.goto('/#mer');
 
   const nedladdning = page.waitForEvent('download');
   await page.getByTestId('exportera-kalender').click();

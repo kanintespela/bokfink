@@ -14,7 +14,10 @@ async function bokforEtt(page: Page, beskrivning: string) {
 
 async function oppnaBocker(page: Page) {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Inställningar' }).click();
+  await page
+    .getByRole('navigation', { name: 'Vyer' })
+    .getByRole('button', { name: 'Mer' })
+    .click();
   await page.getByRole('button', { name: 'Böcker' }).click();
 }
 

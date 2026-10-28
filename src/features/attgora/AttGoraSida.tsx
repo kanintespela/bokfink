@@ -20,8 +20,6 @@ const GAMMAL_BACKUP_GRANS = 30;
 
 interface Props {
   readonly idag: Datum;
-  /** How many verifikat the year has. */
-  readonly antal: number;
   /** The one booked last, by when it was booked rather than its number. */
   readonly senaste: Verifikatpost | undefined;
   readonly utkast: number;
@@ -39,35 +37,24 @@ interface Props {
    * decides where the copy goes, and so whether it needs a lock.
    */
   readonly onSnabbBackup: (losenfras?: string) => Promise<string>;
-  readonly onBokfor: () => void;
   readonly onMoms: () => void;
-  /** Shares the coming deadlines as a calendar file and says what happened. */
-  readonly onKalender: () => Promise<string>;
   readonly onKvitton: () => void;
   readonly onUtkast: () => void;
-  readonly onBank: () => void;
   readonly onVisaVerifikat: () => void;
-  readonly onRapporter: () => void;
-  readonly onAnlaggning: () => void;
-  readonly onLager: () => void;
-  readonly onPeriodisering: () => void;
-  readonly onEgetKapital: () => void;
-  readonly onArsbokslut: () => void;
-  readonly onNebilaga: () => void;
 }
 
 /**
- * The start view: what needs doing, and one way to start doing it.
+ * The start view: what needs doing, and nothing else to choose between.
  *
  * Deliberately not the entry form. Opening straight into a list of templates
  * assumes the answer is always "book something", and most times the app is
- * opened the question is really "is there anything I have missed?". The
- * booking is one tap away, which is the right price for the common case
- * without making it the only case.
+ * opened the question is really "is there anything I have missed?". Booking
+ * is a tab away. The registers, the year-end and the settings used to be
+ * listed here too, under the to-do list; they live under Mer now, so this
+ * view stays short enough to answer its question at a glance.
  */
 export function AttGoraSida({
   idag,
-  antal,
   senaste,
   utkast,
   kvitton,
@@ -75,20 +62,10 @@ export function AttGoraSida({
   momsdeklarationer,
   fakturor,
   onSnabbBackup,
-  onBokfor,
   onMoms,
-  onKalender,
   onKvitton,
   onUtkast,
-  onBank,
   onVisaVerifikat,
-  onRapporter,
-  onAnlaggning,
-  onLager,
-  onPeriodisering,
-  onEgetKapital,
-  onArsbokslut,
-  onNebilaga,
 }: Props) {
   const backupGammal =
     dagarSedanBackup === undefined || dagarSedanBackup > GAMMAL_BACKUP_GRANS;
@@ -97,23 +74,6 @@ export function AttGoraSida({
   const [backupArbetar, setBackupArbetar] = useState(false);
   const [backupBesked, setBackupBesked] = useState<string | undefined>();
   const [backupFel, setBackupFel] = useState<string | undefined>();
-  const [kalenderArbetar, setKalenderArbetar] = useState(false);
-  const [kalenderBesked, setKalenderBesked] = useState<string | undefined>();
-  const [kalenderFel, setKalenderFel] = useState<string | undefined>();
-
-  async function exporteraKalender() {
-    setKalenderArbetar(true);
-    setKalenderBesked(undefined);
-    setKalenderFel(undefined);
-    try {
-      setKalenderBesked(await onKalender());
-    } catch (orsak) {
-      // Hard rule 11: shown, not swallowed.
-      setKalenderFel(orsak instanceof Error ? orsak.message : String(orsak));
-    } finally {
-      setKalenderArbetar(false);
-    }
-  }
 
   async function taSnabbBackup(krypterad: boolean) {
     setBackupArbetar(true);
@@ -133,10 +93,6 @@ export function AttGoraSida({
   return (
     <section aria-label="Att göra">
       <p>{idag}</p>
-
-      <button type="button" className="knapp knapp--primar" onClick={onBokfor}>
-        Bokför
-      </button>
 
       <h2>Att göra</h2>
 
@@ -289,98 +245,6 @@ export function AttGoraSida({
           <span className="belopp">{formatKronor(omslutning(senaste.verifikat))}</span>
         </button>
       )}
-
-      <p>
-        <button type="button" className="knapp knapp--text" onClick={onVisaVerifikat}>
-          Visa alla {antal} verifikat
-        </button>
-      </p>
-
-      <h3>Löpande</h3>
-
-      <p>
-        <button type="button" className="knapp knapp--text" onClick={onKvitton}>
-          Kvitton och underlag
-        </button>
-      </p>
-
-      <p>
-        <button type="button" className="knapp knapp--text" onClick={onBank}>
-          Stäm av kontoutdrag
-        </button>
-      </p>
-
-      <p>
-        <button type="button" className="knapp knapp--text" onClick={onRapporter}>
-          Händelser och huvudbok
-        </button>
-      </p>
-
-      <p>
-        <button
-          type="button"
-          className="knapp knapp--text"
-          disabled={kalenderArbetar}
-          data-testid="exportera-kalender"
-          onClick={() => void exporteraKalender()}
-        >
-          Lägg in datumen i kalendern
-        </button>
-      </p>
-      <p className="hjalptext">
-        Moms, inkomstdeklaration och fakturor som ska betalas, med påminnelse en vecka
-        före. Gör det igen när något nytt har tillkommit.
-      </p>
-      {kalenderBesked !== undefined && (
-        <p className="hjalptext" role="status" data-testid="kalender-besked">
-          {kalenderBesked}
-        </p>
-      )}
-      {kalenderFel !== undefined && (
-        <p role="alert" data-testid="kalender-fel">
-          {kalenderFel}
-        </p>
-      )}
-
-      <h3>Register</h3>
-
-      <p>
-        <button type="button" className="knapp knapp--text" onClick={onAnlaggning}>
-          Anläggningar
-        </button>
-      </p>
-
-      <p>
-        <button type="button" className="knapp knapp--text" onClick={onLager}>
-          Djurlager
-        </button>
-      </p>
-
-      <h3>Bokslut</h3>
-
-      <p>
-        <button type="button" className="knapp knapp--text" onClick={onPeriodisering}>
-          Obetalda fakturor och periodisering
-        </button>
-      </p>
-
-      <p>
-        <button type="button" className="knapp knapp--text" onClick={onEgetKapital}>
-          Eget kapital
-        </button>
-      </p>
-
-      <p>
-        <button type="button" className="knapp knapp--text" onClick={onArsbokslut}>
-          Förenklat årsbokslut
-        </button>
-      </p>
-
-      <p>
-        <button type="button" className="knapp knapp--text" onClick={onNebilaga}>
-          NE-bilaga
-        </button>
-      </p>
     </section>
   );
 }
