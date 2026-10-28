@@ -1,8 +1,13 @@
 # Konteras synkserver
 
-Kontera synkar mellan telefon och dator genom att byta krypterade
-händelseloggar över en PocketBase-instans. Servern är en brevlåda: den lagrar
-kuvert, lämnar tillbaka dem i ankomstordning och kan aldrig läsa bokföringen.
+Kontera synkar mellan telefon och dator genom att byta händelseloggar över en
+PocketBase-instans. Servern är en brevlåda: den lagrar händelser och lämnar
+tillbaka dem i ankomstordning, utan att veta något om bokföring.
+
+Med en lösenfras i appen krypteras allt innan det skickas, och servern kan
+inte läsa bokföringen. Utan lösenfras, som är standard sedan
+[beslut X](../../docs/UTVECKLINGSPLAN.md#9-öppna-beslut), kan den som kommer åt
+servern läsa den.
 
 Enligt [öppet beslut F](../../docs/UTVECKLINGSPLAN.md#9-öppna-beslut) körs en
 **egen instans**, skild från andra tjänster på samma server, med eget schema
@@ -79,7 +84,7 @@ En rad per händelse:
 |---|---|
 | `op_id` | Händelsens UUIDv7. Unikt index — en dubblett avvisas i stället för att skapa en kopia |
 | `device` | Vilken enhet som skrev den |
-| `payload` | Händelsen, krypterad med AES-GCM. Servern har ingen nyckel |
+| `payload` | Händelsen som JSON, eller krypterad med AES-GCM om enheten har en lösenfras. Servern har aldrig nyckeln |
 | `created` | Serverns egen tidsstämpel, som är markören för inkrementell hämtning |
 
 Och en rad per underlag:
@@ -87,7 +92,7 @@ Och en rad per underlag:
 | Fält | Innehåll |
 |---|---|
 | `sha256` | Filens innehållsadress. Unikt index — samma fil skickas aldrig två gånger |
-| `data` | Filen, krypterad med AES-GCM och med nonce först. Servern har ingen nyckel |
+| `data` | Filen som den är, eller krypterad med AES-GCM och med nonce först om enheten har en lösenfras |
 | `created` | Serverns egen tidsstämpel |
 
 Underlagen ligger i en egen collection eftersom de är olika saker: en händelse
@@ -124,6 +129,31 @@ Det är det här appen ber om när den säger att servern inte tar emot så stor
 händelser. Det första skriptet satte gränsen för en händelse till `0`, vilket
 PocketBase läser som standardgränsen 5 000 tecken och inte som obegränsat.
 Migreringen `…_payload_utan_tak.js` höjer den till 10 MB.
+
+## Gå över till synk utan lösenfras
+
+Det som redan ligger på servern är krypterat, och posterna där går inte att
+ändra. En enhet utan lösenfras kan inte läsa dem, så servern töms och en enhet
+som har hela bokföringen skickar den på nytt, okrypterad.
+
+1. På en enhet med hela bokföringen och lösenfrasen, till exempel datorn:
+   öppna **Synk**, tryck **Synka nu** och kontrollera att *Väntar på att
+   skickas* säger **Ingenting**.
+2. Ta en säkerhetskopia i appen.
+3. Ta bort `losenfras` ur `~/.config/kontera/agent.json` om kvittoassistenten
+   används.
+4. Töm servern i adminvyn (`https://<maskin>.<tailnet>.ts.net:8444/_/`): för
+   samlingarna `handelser` och `filer`, öppna samlingens inställningar och välj
+   **Truncate**. Användarna rörs inte.
+5. På samma enhet som i steg 1: **Ta bort lösenfrasen** under *Kryptering*,
+   **Logga ut från servern** och logga in igen. Utloggningen köar hela loggen,
+   så nästa runda skickar allt, okrypterat, med underlagen.
+6. På de andra enheterna: **Ta bort lösenfrasen**. De hämtar det som kommer och
+   hoppar över det de redan har.
+
+Hoppas steg 4 över blir det en blandning på servern. Det som skickas efteråt
+är läsbart för alla, men det gamla krypterade kräver fortfarande lösenfrasen,
+och en ny enhet utan den får ett besked om det i stället för bokföringen.
 
 ## Säkerhetskopiering
 
