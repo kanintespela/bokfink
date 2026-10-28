@@ -1,4 +1,4 @@
-import { oreFromKronor, type Ore } from '../belopp/ore';
+import { ore, oreFromKronor, type Ore } from '../belopp/ore';
 import { datumAv, type Datum } from '../tid/datum';
 
 /**
@@ -16,9 +16,23 @@ import { datumAv, type Datum } from '../tid/datum';
  */
 export interface Kvittoforslag {
   readonly datum?: Datum;
-  /** What was paid, VAT included. */
+  /**
+   * What was paid, VAT included - what left the account.
+   *
+   * On a card payment that is the amount the card was charged, which can be
+   * a few öre off the printed total: rounding to whole kronor applies to
+   * cash, and a card is charged the exact sum (see hittaKortbelopp).
+   */
   readonly brutto?: Ore;
   readonly moms?: Ore;
+  /**
+   * The amount before moms, when the receipt states it.
+   *
+   * With the moms it says what the purchase came to before any rounding, so
+   * brutto − netto − moms is the öresutjämning to book on 3740 - which is
+   * the reason it is read at all.
+   */
+  readonly netto?: Ore;
   /** Whole percent, when the receipt states it. */
   readonly momssats?: number;
   readonly leverantor?: string;
@@ -74,13 +88,37 @@ const TOTALORD: readonly (readonly string[])[] = [
 const INTE_TOTALORD = ['exkl', 'exklusive', 'netto', 'avrundning', 'oresutjamning'];
 
 /**
+ * Words that contain a total label without being one.
+ *
+ * "DELSUMMA 1 050,00" over "SUMMA 1 312,50" is the net over the total, and
+ * "summa" alone would take either.
+ */
+const SKEN_TOTALORD = ['delsumma'];
+
+/**
  * Labels that carry an amount which is not the total.
  *
  * Cash tendered is larger than the total, and change is what came back. A
  * receipt paid with a 500 note for a 320 kronor purchase would otherwise
  * suggest 500.
  */
-const INTE_TOTAL = ['kontant', 'vaxel', 'mottaget', 'tillbaka', 'dricks'];
+const INTE_TOTAL = [
+  'kontant',
+  'vaxel',
+  'mottaget',
+  'tillbaka',
+  'dricks',
+  /*
+   * An invoice paid through a credit company offers to take part of it now
+   * - "Lägsta belopp att betala 160,00" - and states what a credit would
+   * cost in total. Neither is the purchase.
+   */
+  'lagsta',
+  'lagst ',
+  'delbetal',
+  'totala kostnaden',
+  'effektiva rantan',
+];
 
 /**
  * How many digits an amount may have before the decimal point.
@@ -115,7 +153,7 @@ const RADER_UNDER_ETIKETT = 2;
 
 /** An amount as a receipt prints it: 1 234,56 or 1234.56 or 320. */
 const BELOPP =
-  /(?<![\d,.])(\d{1,3}(?:[ \u00a0\u202f]\d{3})+|\d+)(?:[.,](\d{2}))?(?![\d])/g;
+  /(?<![\d,.])(\d{1,3}(?:[ \u00a0\u202f]\d{3})+|\d{1,3}(?:,\d{3})+(?=\.\d{2})|\d+)(?:[.,](\d{2}))?(?![\d])/g;
 
 const ISO_DATUM = /\b(20\d{2})[-/.](\d{1,2})[-/.](\d{1,2})\b/;
 const SVENSKT_DATUM = /\b(\d{1,2})[-/.](\d{1,2})[-/.](20\d{2})\b/;
@@ -144,6 +182,7 @@ export function tolkaKvitto(text: string, idag: Datum): Kvittoforslag {
     datum?: Datum;
     brutto?: Ore;
     moms?: Ore;
+    netto?: Ore;
     momssats?: number;
     leverantor?: string;
     orgnr?: string;
@@ -167,6 +206,17 @@ export function tolkaKvitto(text: string, idag: Datum): Kvittoforslag {
   }
   if (moms?.sats !== undefined) {
     forslag.momssats = moms.sats;
+  }
+
+  const delar = hittaDelar(rader, total, forslag.moms);
+  if (delar.betalat !== undefined) {
+    forslag.brutto = delar.betalat;
+  }
+  if (delar.moms !== undefined) {
+    forslag.moms = delar.moms;
+  }
+  if (delar.netto !== undefined) {
+    forslag.netto = delar.netto;
   }
 
   const leverantor = hittaLeverantor(rader);
@@ -416,6 +466,9 @@ interface Totalsumma {
  * throw away both.
  */
 function etikett(text: string): { niva: number; kolumn: number } | undefined {
+  if (SKEN_TOTALORD.some((ord) => text.includes(ord))) {
+    return undefined;
+  }
   for (const [niva, ord] of TOTALORD.entries()) {
     for (const etikett of ord) {
       const index = text.indexOf(etikett);
@@ -502,6 +555,246 @@ function beloppEfterEtikett(
     }
   }
   return undefined;
+}
+
+/**
+ * Labels in front of the amount before moms, compared without diacritics.
+ *
+ * From the user's own invoices: "Summa exkl moms", "Totalt exkl. moms",
+ * "Nettobelopp". Plain "netto" only as a word on its own - it is also the
+ * end of "30 dagar netto", which is a payment term.
+ */
+const NETTOORD = [
+  'delsumma',
+  'summa exkl',
+  'totalt exkl',
+  'total exkl',
+  'belopp exkl',
+  'exkl. moms',
+  'exkl moms',
+  'exklusive moms',
+  'nettobelopp',
+];
+const INTE_NETTO = ['dagar netto', 'dgr netto', 'netto dagar'];
+
+/** "Öresavrundning", "Öresutjämning", "Avrundning". */
+const AVRUNDNINGSORD = ['oresavrundning', 'oresutjamning', 'avrundning'];
+
+/**
+ * Words on the line where a card terminal states what it charged.
+ *
+ * "card" rather than "mastercard", because OCR read MASTERCARD as
+ * HASTERCARD on a real receipt and the tail is what survives.
+ */
+const KORTORD = ['card', 'bankkort', 'kontokort', 'kort ', 'visa', 'maestro', 'amex'];
+
+/**
+ * The most a total may differ from its parts and still be the same sum.
+ *
+ * Öresutjämning rounds to the nearest krona, so the gap is at most 50 öre;
+ * one krona leaves room for a supplier who rounds down only.
+ */
+const STORSTA_AVRUNDNING = 100;
+
+/**
+ * Where the total came from: what was paid, the VAT and the amount before
+ * it, each when the receipt supports it.
+ *
+ * Read so that the öresutjämning can be booked without anyone typing it.
+ * The rule the figures must obey is the one an invoice prints: netto + moms
+ * + avrundning = att betala, the avrundning below a krona. Anything that
+ * does not add up that way is dropped rather than half-used - a netto that
+ * is off by more than a krona is a misread, and booking it would move money
+ * between the cost and 3740 for no reason.
+ *
+ * 2026-10-28: a farm shop's receipt printed "Totalt inkl. moms 156,00" and
+ * "Öresavrundning -0,12", and the card slip below it charged 155,88. The
+ * card amount is what was paid. Rounding to whole kronor applies to cash
+ * (lag 1970:1029 om avrundning av vissa öresbelopp, for payment in coin);
+ * a card is charged the exact amount, and booking 156,00 would put twelve
+ * öre into the books that never left the account.
+ */
+function hittaDelar(
+  rader: readonly string[],
+  total: Totalsumma | undefined,
+  lastMoms: Ore | undefined,
+): { betalat?: Ore; moms?: Ore; netto?: Ore } {
+  if (total === undefined || !total.markt) {
+    return {};
+  }
+  const normaliserade = rader.map(normalisera);
+  const kort = hittaKortbelopp(rader, normaliserade, total.belopp);
+  const betalat = kort ?? total.belopp;
+
+  let netto = etikettbelopp(rader, normaliserade, NETTOORD, INTE_NETTO);
+  let moms = lastMoms;
+
+  // No moms read, but the net and what was paid say it: it must be a
+  // Swedish rate of the net, or it is not the moms.
+  if (moms === undefined && netto !== undefined) {
+    const skillnad = betalat - netto;
+    if (arMomsAv(netto, skillnad)) {
+      moms = ore(skillnad);
+    }
+  }
+
+  /*
+   * No net labelled as such: one of the amounts on the page is it, if it is
+   * the one that adds up. Netto + moms + avrundning = what was paid, with
+   * the moms a Swedish rate of the netto to the öre, is a tight enough lock
+   * that an amount passing it by accident is not a worry - and only a single
+   * amount passing it is taken. "Summa: 211,60 / Öresutjämning: 0,50 / Total
+   * SUMMA: 265,00" is how one supplier's invoices read, with the moms left
+   * for the reader to work out.
+   */
+  const avrundning = etikettbelopp(rader, normaliserade, AVRUNDNINGSORD, []);
+
+  // Moms and avrundning printed, netto not: it is what is left, on whichever
+  // side of the rounding makes the moms a Swedish rate of it.
+  if (netto === undefined && moms !== undefined && avrundning !== undefined) {
+    const kanda = moms;
+    const kandidater = [
+      betalat - kanda - avrundning,
+      betalat - kanda + avrundning,
+    ].filter((kandidat) => avrundning < STORSTA_AVRUNDNING && arMomsAv(kandidat, kanda));
+    if (kandidater.length === 1) {
+      netto = ore(kandidater[0]!);
+    }
+  }
+  /*
+   * Only with something on the receipt vouching for it - a moms figure to
+   * match, or an avrundning line. A receipt with no moms, items of 100,00
+   * and 25,00 and a total of 125,00 would otherwise read as 100 plus 25 %.
+   */
+  if (netto === undefined && (moms !== undefined || avrundning !== undefined)) {
+    const skillnader =
+      avrundning === undefined || avrundning >= STORSTA_AVRUNDNING
+        ? [0]
+        : [avrundning, -avrundning];
+    const passar = new Map<Ore, Ore>();
+    for (const rad of rader) {
+      for (const { belopp, harDecimaler } of beloppPa(rad)) {
+        if (!harDecimaler || belopp <= 0 || belopp >= betalat) {
+          continue;
+        }
+        for (const skillnad of skillnader) {
+          const kandidat = betalat - belopp - skillnad;
+          if (arMomsAv(belopp, kandidat) && (moms === undefined || kandidat === moms)) {
+            passar.set(belopp, ore(kandidat));
+          }
+        }
+      }
+    }
+    const [enda, ...fler] = passar.entries();
+    if (enda !== undefined && fler.length === 0) {
+      [netto, moms] = enda;
+    }
+  }
+
+  const utfall: { betalat?: Ore; moms?: Ore; netto?: Ore } = {};
+  if (kort !== undefined) {
+    utfall.betalat = kort;
+  }
+  if (moms !== undefined && moms !== lastMoms) {
+    utfall.moms = moms;
+  }
+  if (
+    netto !== undefined &&
+    moms !== undefined &&
+    netto > 0 &&
+    Math.abs(betalat - netto - moms) < STORSTA_AVRUNDNING
+  ) {
+    utfall.netto = netto;
+  }
+  return utfall;
+}
+
+/**
+ * Whether `moms` is a Swedish rate of `netto`, to the öre.
+ *
+ * The check that keeps an inferred figure honest: 31,18 on 124,70 is 25 %
+ * rounded, 31,50 is not anything. A receipt that charged moms per line can
+ * be an öre off the rate of the sum, which is allowed for.
+ */
+function arMomsAv(netto: number, moms: number): boolean {
+  if (netto <= 0 || moms <= 0) {
+    return false;
+  }
+  return [25, 12, 6].some((sats) => Math.abs(netto * sats - moms * 100) <= 100);
+}
+
+/**
+ * The amount a card was charged, when the receipt shows it beside the card.
+ *
+ * Only an amount within a krona of the total and different from it: that is
+ * the exact sum a total rounded for cash was charged as. Equal to the total
+ * says nothing new, and further off it is a different figure - a balance, a
+ * limit, a terminal number.
+ */
+function hittaKortbelopp(
+  rader: readonly string[],
+  normaliserade: readonly string[],
+  totalt: Ore,
+): Ore | undefined {
+  for (const [index, text] of normaliserade.entries()) {
+    if (!KORTORD.some((ord) => `${text} `.includes(ord))) {
+      continue;
+    }
+    for (const kandidat of beloppPa(rader[index] ?? '')) {
+      const skillnad = Math.abs(kandidat.belopp - totalt);
+      if (kandidat.harDecimaler && skillnad > 0 && skillnad < STORSTA_AVRUNDNING) {
+        return kandidat.belopp;
+      }
+    }
+  }
+  return undefined;
+}
+
+/**
+ * The amount after the first of `etiketter` on a line, or under it.
+ *
+ * After it on the same line - "Summa exkl moms 169,00" - or in its column on
+ * one of the two lines below, which is how an invoice prints a row of
+ * headings over a row of figures: "Nettobelopp  Momsbelopp  Avrundning".
+ * Öre required: these are money, and the rows around them carry quantities.
+ */
+function etikettbelopp(
+  rader: readonly string[],
+  normaliserade: readonly string[],
+  etiketter: readonly string[],
+  uteslut: readonly string[],
+): Ore | undefined {
+  let funnet: Ore | undefined;
+  for (const [index, text] of normaliserade.entries()) {
+    if (uteslut.some((ord) => text.includes(ord))) {
+      continue;
+    }
+    const kolumn = Math.min(
+      ...etiketter.map((ord) => text.indexOf(ord)).filter((plats) => plats >= 0),
+    );
+    if (!Number.isFinite(kolumn)) {
+      continue;
+    }
+
+    const efter = beloppPa(rader[index] ?? '').find(
+      (post) => post.harDecimaler && post.kolumn > kolumn,
+    );
+    if (efter !== undefined) {
+      funnet = efter.belopp;
+      continue;
+    }
+    for (let steg = 1; steg <= RADER_UNDER_ETIKETT; steg += 1) {
+      const under = beloppPa(rader[index + steg] ?? '')
+        .filter((post) => post.harDecimaler)
+        .find((post) => Math.abs(post.kolumn - kolumn) <= KOLUMNGLAPP);
+      if (under !== undefined) {
+        funnet = under.belopp;
+        break;
+      }
+    }
+  }
+  // The last one, as for the total: a summary sits at the foot.
+  return funnet;
 }
 
 /**
@@ -628,7 +921,12 @@ function rimligMoms(moms: Ore, total: Totalsumma | undefined): boolean {
   if (total === undefined || !total.markt) {
     return true;
   }
-  return moms <= Math.round(total.belopp * HOGSTA_MOMSANDEL) + 1;
+  /*
+   * Plus up to a krona: a total rounded down to whole kronor makes the moms
+   * a hair over a fifth of it - 42,25 on 211,00 - while a misread net is
+   * far over.
+   */
+  return moms <= Math.round(total.belopp * HOGSTA_MOMSANDEL) + STORSTA_AVRUNDNING;
 }
 
 /** The amounts on the line under a heading that carried none itself. */
@@ -722,7 +1020,9 @@ interface Beloppskandidat {
 function beloppPa(rad: string): Beloppskandidat[] {
   const funna: Beloppskandidat[] = [];
   for (const match of rad.matchAll(BELOPP)) {
-    const heltal = (match[1] ?? '').replace(/[ \u00a0\u202f]/g, '');
+    // Spaces group thousands the Swedish way; commas do it the English way,
+    // "SEK 2,599.00", which BELOPP only lets through before a decimal point.
+    const heltal = (match[1] ?? '').replace(/[ \u00a0\u202f,]/g, '');
     const decimaler = match[2];
     if (heltal.length > MAX_HELTALSSIFFROR) {
       continue;

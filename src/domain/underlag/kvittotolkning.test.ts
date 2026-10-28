@@ -551,3 +551,143 @@ describe('hittaForfallodag', () => {
     expect(hittaForfallodag('Förfaller 2020-01-31')).toBe('2020-01-31');
   });
 });
+
+/*
+ * The four figures an invoice adds up with: netto + moms + avrundning = att
+ * betala. Read so that the öresutjämning can be booked on 3740 without being
+ * typed. The layouts are those of real invoices measured on 2026-10-28, with
+ * the names and numbers made up.
+ */
+describe('tolkaKvitto, netto and öresutjämning', () => {
+  const kr = (text: string) => oreFromKronor(text);
+
+  it('reads a labelled netto beside the moms and the rounded total', () => {
+    const forslag = tolkaKvitto(
+      [
+        'Momsunderlag 25 %   169,00   Summa exkl moms     169,00',
+        '                             Moms                 42,25',
+        '                             Öresutjämning        -0,25',
+        'Bankgiro 1234-5678           Summa att betala    211,00',
+      ].join('\n'),
+      IDAG,
+    );
+
+    expect(forslag.brutto).toBe(kr('211'));
+    expect(forslag.moms).toBe(kr('42.25'));
+    expect(forslag.netto).toBe(kr('169'));
+  });
+
+  /* A row of headings over a row of figures, each figure in its column. */
+  it('reads the figures under a row of headings', () => {
+    const forslag = tolkaKvitto(
+      [
+        'Nettobelopp   Momsbelopp   Momssats %   Avrundning   Totalt att betala',
+        '199,00        49,75        25,00        0,25         249,00',
+      ].join('\n'),
+      IDAG,
+    );
+
+    expect(forslag.brutto).toBe(kr('249'));
+    expect(forslag.netto).toBe(kr('199'));
+  });
+
+  /*
+   * "Summa" here is the netto and the moms is not printed; netto, rate and
+   * avrundning together leave only one way for the figures to add up.
+   */
+  it('works out the moms when only the netto and the avrundning are printed', () => {
+    const forslag = tolkaKvitto(
+      [
+        'Betalningsvillkor:  15 dgr netto',
+        '                         Summa:              211,60',
+        '                         Öresutjämning:        0,50',
+        '                         Total SUMMA:        265,00',
+      ].join('\n'),
+      IDAG,
+    );
+
+    expect(forslag.brutto).toBe(kr('265'));
+    expect(forslag.netto).toBe(kr('211.60'));
+    expect(forslag.moms).toBe(kr('52.90'));
+  });
+
+  /*
+   * 2026-10-28: the total was printed rounded for cash, the card was charged
+   * the exact sum, and the exact sum is what left the account. Rounding to
+   * whole kronor applies to cash (lag 1970:1029); a card pays the öre.
+   */
+  it('takes what the card was charged over a total rounded for cash', () => {
+    const forslag = tolkaKvitto(
+      [
+        'Totalt exkl. moms 124,70',
+        'Öresavrundning: -0,12',
+        'Totalt inkl. moms 156,00',
+        'Kortbetalning DEBIT',
+        'MASTERCARD 155,88',
+      ].join('\n'),
+      IDAG,
+    );
+
+    expect(forslag.brutto).toBe(kr('155.88'));
+    expect(forslag.netto).toBe(kr('124.70'));
+    expect(forslag.moms).toBe(kr('31.18'));
+  });
+
+  it('does not take a delsumma for the total', () => {
+    const forslag = tolkaKvitto(
+      ['DELSUMMA   1 050,00 kr', 'MOMS         262,50 kr', 'SUMMA      1 312,50 kr'].join(
+        '\n',
+      ),
+      IDAG,
+    );
+
+    expect(forslag.brutto).toBe(kr('1312.50'));
+    expect(forslag.netto).toBe(kr('1050'));
+  });
+
+  /* An invoice through a credit company offers to take part of it now. */
+  it('ignores the smallest payment and the cost of credit', () => {
+    const forslag = tolkaKvitto(
+      [
+        'Lägsta belopp att betala:   160,00 kr',
+        'den totala kostnaden 6 378,00 kr och den effektiva räntan 72,04 %.',
+        'Öresavrundning                 0,25 kr',
+        'Totalt belopp              2 889,00 kr',
+        'Varav moms                   577,75 kr',
+        'Lägst att betala             160,00 kr',
+      ].join('\n'),
+      IDAG,
+    );
+
+    expect(forslag.brutto).toBe(kr('2889'));
+    expect(forslag.moms).toBe(kr('577.75'));
+    expect(forslag.netto).toBe(kr('2311'));
+  });
+
+  it('reads an amount written the English way', () => {
+    expect(tolkaKvitto('Order totalt   SEK   2,599.00', IDAG).brutto).toBe(kr('2599'));
+  });
+
+  /*
+   * Nothing on this receipt vouches for a netto: no moms line and no
+   * avrundning. That 100 + 25 % happens to be 125 is not evidence.
+   */
+  it('does not guess a netto from amounts that merely add up', () => {
+    const forslag = tolkaKvitto(
+      ['Vara A 100,00', 'Vara B 25,00', 'Totalt 125,00'].join('\n'),
+      IDAG,
+    );
+
+    expect(forslag.brutto).toBe(kr('125'));
+    expect(forslag.netto).toBeUndefined();
+  });
+
+  it('leaves out a netto that does not add up to within a krona', () => {
+    const forslag = tolkaKvitto(
+      ['Summa exkl moms 150,00', 'Moms 50,00', 'Att betala 250,00'].join('\n'),
+      IDAG,
+    );
+
+    expect(forslag.netto).toBeUndefined();
+  });
+});
