@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { tolkaKonfig } from './konfig';
+import { tolkaKonfig, tolkaVaktkonfig } from './konfig';
 
 const TEXT = JSON.stringify({
   url: 'https://raspberrypi.example.ts.net',
@@ -50,5 +50,21 @@ describe('tolkaKonfig', () => {
     expect(() => tolkaKonfig('/k.json', { lage: 0o600, text: 'url=x' })).toThrow(
       'inte giltig JSON',
     );
+  });
+});
+
+describe('tolkaVaktkonfig', () => {
+  it('fills in the limits that are left out', () => {
+    expect(tolkaVaktkonfig('/v.json', '{"fran": "2026-10-28"}')).toEqual({
+      fran: '2026-10-28',
+      maxPerKorning: 3,
+      maxPerDygn: 20,
+      hermes: 'hermes',
+    });
+  });
+
+  it('says what is wrong with the file', () => {
+    expect(() => tolkaVaktkonfig('/v.json', '{"fran": "28 okt"}')).toThrow('ÅÅÅÅ-MM-DD');
+    expect(() => tolkaVaktkonfig('/v.json', 'fran=x')).toThrow('inte giltig JSON');
   });
 });

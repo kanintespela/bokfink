@@ -8,9 +8,18 @@
 import 'fake-indexeddb/auto';
 
 import { execFile } from 'node:child_process';
-import { readFile, stat } from 'node:fs/promises';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
+import {
+  chmod,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  stat,
+  writeFile,
+} from 'node:fs/promises';
+import { homedir, tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 
 import { KonteraDatabase } from '../data/db';
 import { newIdentifier } from '../data/id';
@@ -20,7 +29,9 @@ import { loggaIn, pocketbaseTransport } from '../platform/pocketbase';
 import { synkkrypto } from '../platform/synkkrypto';
 import { korAgent, tolkaKommando } from './agent';
 import type { Bildkodare } from './fil';
-import { tolkaKonfig } from './konfig';
+import { tolkaKonfig, tolkaVaktkonfig, type Vaktkonfig } from './konfig';
+import type { Kvittovakt, Vaktminne } from './vakt';
+import { datum } from '../domain/tid/datum';
 
 const KONFIG =
   process.env['KONTERA_AGENT_KONFIG'] ??
@@ -38,6 +49,10 @@ async function main(): Promise<void> {
     },
   );
   const konfig = tolkaKonfig(KONFIG, { lage: info.mode, text });
+  const vaktkonfig = await readFile(VAKTKONFIG, 'utf8').then(
+    (vakttext) => tolkaVaktkonfig(VAKTKONFIG, vakttext),
+    () => undefined,
+  );
 
   const inloggning = await loggaIn(konfig.url, konfig.epost, konfig.losenord);
   const utdata = await korAgent(new KonteraDatabase('kontera-agent'), kommando, {
@@ -51,6 +66,7 @@ async function main(): Promise<void> {
     lasFil: async (sokvag) => new Uint8Array(await readFile(sokvag)),
     lasText: (sokvag) => readFile(sokvag, 'utf8'),
     kodaBild: magick,
+    ...(vaktkonfig === undefined ? {} : { vakt: kvittovakt(vaktkonfig) }),
   });
   process.stdout.write(utdata);
 }
@@ -93,6 +109,138 @@ const magick: Bildkodare = (sokvag, { maxKant, kvalitet }) =>
       },
     );
   });
+
+const VAKTKONFIG =
+  process.env['KONTERA_KVITTOVAKT_KONFIG'] ??
+  join(homedir(), '.config', 'kontera', 'kvittovakt.json');
+
+/** Where the watcher remembers what it has tried; readable by the owner only. */
+const VAKTMINNE =
+  process.env['KONTERA_KVITTOVAKT_MINNE'] ??
+  join(homedir(), '.local', 'state', 'bokfink', 'kvittovakt.json');
+
+/** How long one question may take before the reading is counted as failed. */
+const HERMES_TIDSGRANS_MS = 4 * 60 * 1000;
+
+function kvittovakt(installning: Vaktkonfig): Kvittovakt {
+  return {
+    fran: datum(installning.fran),
+    maxPerKorning: installning.maxPerKorning,
+    maxPerDygn: installning.maxPerDygn,
+    las: (fraga, bild) => fragaHermes(installning.hermes, fraga, bild),
+    minne: {
+      hamta: async () => {
+        try {
+          return JSON.parse(await readFile(VAKTMINNE, 'utf8')) as Vaktminne;
+        } catch {
+          return { forsok: {} };
+        }
+      },
+      spara: async (minne) => {
+        await mkdir(dirname(VAKTMINNE), { recursive: true, mode: 0o700 });
+        await writeFile(VAKTMINNE, JSON.stringify(minne, null, 1), { mode: 0o600 });
+      },
+    },
+    meddela: async (text) => {
+      if (installning.avisering !== undefined) {
+        await kommando(installning.hermes, [
+          'send',
+          '-q',
+          '-t',
+          installning.avisering,
+          text,
+        ]);
+      }
+    },
+  };
+}
+
+/**
+ * One question to Claude, through the owner's Hermes.
+ *
+ * One-shot, with Hermes' own memory and instructions left out (--ignore-rules)
+ * and no tool but looking at the picture (-t vision). A receipt is text
+ * someone else wrote, and an agent that can run commands should not be the
+ * one reading it; this one can only answer, and the answer is checked.
+ */
+async function fragaHermes(
+  hermes: string,
+  fraga: string,
+  bild?: { readonly data: Uint8Array; readonly mime: string },
+): Promise<string> {
+  const katalog = await mkdtemp(join(tmpdir(), 'bokfink-kvitto-'));
+  try {
+    await chmod(katalog, 0o700);
+    const fragefil = join(katalog, 'fraga.txt');
+    await writeFile(fragefil, fraga, { mode: 0o600 });
+    const argv = ['chat', '--oneshot', '-Q', '--ignore-rules', '-t', 'vision'];
+    argv.push('--query-file', fragefil);
+    if (bild !== undefined) {
+      argv.push('--image', await somBild(katalog, bild));
+    }
+    return await kommando(hermes, argv);
+  } finally {
+    await rm(katalog, { recursive: true, force: true });
+  }
+}
+
+/**
+ * The receipt as one picture: a photo turned upright and kept below 2000 px,
+ * a PDF's first two pages stacked into one image.
+ */
+async function somBild(
+  katalog: string,
+  { data, mime }: { readonly data: Uint8Array; readonly mime: string },
+): Promise<string> {
+  const original = join(katalog, mime === 'application/pdf' ? 'kvitto.pdf' : 'kvitto');
+  await writeFile(original, data, { mode: 0o600 });
+  const bild = join(katalog, 'kvitto.png');
+  if (mime === 'application/pdf') {
+    await kommando('pdftoppm', [
+      '-r',
+      '150',
+      '-png',
+      '-f',
+      '1',
+      '-l',
+      '2',
+      original,
+      join(katalog, 'sida'),
+    ]);
+    const sidor = (await readdir(katalog))
+      .filter((namn) => namn.startsWith('sida') && namn.endsWith('.png'))
+      .sort()
+      .map((namn) => join(katalog, namn));
+    await kommando('magick', [...sidor, '-append', bild]);
+  } else {
+    await kommando('magick', [original, '-auto-orient', '-resize', '2000x2000>', bild]);
+  }
+  return bild;
+}
+
+/** Runs a program and gives back what it printed, or says why it failed. */
+function kommando(program: string, argv: readonly string[]): Promise<string> {
+  return new Promise((losa, avvisa) => {
+    execFile(
+      program,
+      argv,
+      { timeout: HERMES_TIDSGRANS_MS, maxBuffer: 16 * 1024 * 1024 },
+      (fel, utdata, felutdata) => {
+        if (fel !== null) {
+          avvisa(
+            new Error(
+              (fel as NodeJS.ErrnoException).code === 'ENOENT'
+                ? `Programmet ${program} saknas på den här datorn.`
+                : `${program} misslyckades: ${String(felutdata).trim() || fel.message}`,
+            ),
+          );
+          return;
+        }
+        losa(String(utdata));
+      },
+    );
+  });
+}
 
 main().catch((orsak: unknown) => {
   process.stderr.write(`${orsak instanceof Error ? orsak.message : String(orsak)}\n`);

@@ -13,6 +13,7 @@ import { kopplaUnderlag, sparaUnderlag } from '../data/underlag';
 import { forberedUnderlag, underlagsnamn, type Bildkodare } from './fil';
 import { granskaForslag, type GranskatForslag } from './forslag';
 import { beskrivLage, sok } from './lage';
+import { lasNyaKvitton, type Kvittovakt } from './vakt';
 
 /**
  * A device with no screen, run by the assistant on the owner's own machine.
@@ -39,18 +40,23 @@ export interface Agentberoenden {
   readonly lasFil: (sokvag: string) => Promise<Uint8Array>;
   readonly lasText: (sokvag: string) => Promise<string>;
   readonly kodaBild: Bildkodare;
+  /** The receipt watcher's reader, limits and memory; set only where it runs. */
+  readonly vakt?: Kvittovakt;
 }
 
 export type Agentkommando =
   | { readonly typ: 'lage' }
   | { readonly typ: 'sok'; readonly fraga: string }
-  | { readonly typ: 'utkast'; readonly sokvag: string; readonly prova: boolean };
+  | { readonly typ: 'utkast'; readonly sokvag: string; readonly prova: boolean }
+  | { readonly typ: 'las-nya'; readonly prova: boolean };
 
 export const ANVANDNING = `Användning:
   kontera-agent lage                     bokföringen i korthet: år, frågornas svar, konton, senaste verifikat
   kontera-agent sok <ord>                verifikat vars beskrivning innehåller orden
   kontera-agent utkast --prova <fil>     kontrollera ett förslag utan att skicka något
   kontera-agent utkast <fil>             skicka förslaget som utkast, med underlag, till appen
+  kontera-agent las-nya --prova          låt Hermes läsa nya kvitton och visa förslagen
+  kontera-agent las-nya                  läs nya kvitton och skicka dem som utkast till appen
 `;
 
 export function tolkaKommando(argv: readonly string[]): Agentkommando {
@@ -60,6 +66,12 @@ export function tolkaKommando(argv: readonly string[]): Agentkommando {
   }
   if (kommando === 'sok' && resten.length > 0) {
     return { typ: 'sok', fraga: resten.join(' ') };
+  }
+  if (kommando === 'las-nya') {
+    const ovrigt = resten.filter((del) => del !== '--prova');
+    if (ovrigt.length === 0) {
+      return { typ: 'las-nya', prova: resten.includes('--prova') };
+    }
   }
   if (kommando === 'utkast') {
     const prova = resten.includes('--prova');
@@ -87,6 +99,20 @@ export async function korAgent(
       return sok(bocker, kommando.fraga);
     case 'utkast':
       return skickaUtkast(db, bocker, kommando, beroenden);
+    case 'las-nya': {
+      const { vakt } = beroenden;
+      if (vakt === undefined) {
+        throw new Error(
+          'Kvittovakten är inte inställd: ~/.config/kontera/kvittovakt.json saknas. ' +
+            'Se server/kvittovakt/README.md.',
+        );
+      }
+      return lasNyaKvitton(db, bocker, kommando.prova, {
+        ...beroenden,
+        vakt,
+        synka: () => synkaMed(db, beroenden),
+      });
+    }
   }
 }
 

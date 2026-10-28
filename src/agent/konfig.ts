@@ -61,3 +61,42 @@ export function tolkaKonfig(sokvag: string, fil: Konfigfil): Agentkonfig {
   }
   return tolkat.data;
 }
+
+/**
+ * The receipt watcher's settings (beslut Y), in a file of their own.
+ *
+ * Apart from agent.json because they hold no secret and are meant to be
+ * edited - the start day, the limits, where the news goes - and a file with
+ * the login in it is one to open as rarely as possible. Without this file
+ * las-nya refuses to start, and nothing is sent anywhere.
+ */
+const vaktschema = z.object({
+  /** Only receipts added on or after this day, YYYY-MM-DD. */
+  fran: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'fran ska vara ett datum, ÅÅÅÅ-MM-DD'),
+  maxPerKorning: z.number().int().positive().default(3),
+  maxPerDygn: z.number().int().positive().default(20),
+  /** Where Hermes sends the news, e.g. "discord"; none when left out. */
+  avisering: z.string().min(1).optional(),
+  /** The Hermes command, if it is not on the PATH. */
+  hermes: z.string().min(1).default('hermes'),
+});
+
+export type Vaktkonfig = z.infer<typeof vaktschema>;
+
+export function tolkaVaktkonfig(sokvag: string, text: string): Vaktkonfig {
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    throw new Error(`${sokvag} är inte giltig JSON.`);
+  }
+  const tolkat = vaktschema.safeParse(json);
+  if (!tolkat.success) {
+    throw new Error(
+      `${sokvag} har fel på: ${tolkat.error.issues
+        .map((fel) => `${fel.path.join('.')} (${fel.message})`)
+        .join(', ')}.`,
+    );
+  }
+  return tolkat.data;
+}
