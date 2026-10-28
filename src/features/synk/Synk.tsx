@@ -1,5 +1,7 @@
 import { useState } from 'react';
 
+import { foreslagenServer } from './serveradress';
+
 interface Props {
   readonly url: string;
   readonly epost: string;
@@ -46,7 +48,9 @@ export function Synk({
   onSynka,
   onLosenfras,
 }: Props) {
-  const [adress, setAdress] = useState(url);
+  const [adress, setAdress] = useState(
+    () => url || foreslagenServer(globalThis.location ?? { protocol: '', hostname: '' }),
+  );
   const [minEpost, setMinEpost] = useState(epost);
   const [losenord, setLosenord] = useState('');
   const [losenfras, setLosenfras] = useState('');

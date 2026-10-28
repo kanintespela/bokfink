@@ -67,7 +67,8 @@ sudo tailscale serve --bg --https=8444 127.0.0.1:8091
 ```
 
 Adressen blir då `https://<maskin>.<tailnet>.ts.net:8444`, som är den som
-skrivs in i appen. `serve` är tailnet-only till skillnad från `funnel`, så
+skrivs in i appen. Öppnas appen från samma maskin på port 8443, som i
+[`server/app/`](../app/README.md), står adressen redan ifylld. `serve` är tailnet-only till skillnad från `funnel`, så
 ingenting exponeras mot internet.
 
 ## Vad servern ser
