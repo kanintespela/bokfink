@@ -55,14 +55,46 @@ export interface Forsok {
   readonly antal: number;
   /** ISO 8601 instant of the latest attempt. */
   readonly senast: string;
-  readonly utfall: 'utkast' | 'fel';
+  /** 'vantar': the reader was out of reach, which is not counted against the receipt. */
+  readonly utfall: 'utkast' | 'fel' | 'vantar';
   readonly meddelande: string;
+  /** How many runs found the reader out of reach for this receipt. */
+  readonly vantat?: number;
 }
 
 /** What has been tried, by receipt id. Kept in a file on the server. */
 export interface Vaktminne {
   readonly forsok: Readonly<Record<string, Forsok>>;
+  /**
+   * Since when the reader has been out of reach, once the owner is told.
+   * Cleared by the next reading that goes through, so the owner hears once
+   * per spell rather than once per run.
+   */
+  readonly upptagen?: string;
 }
+
+/**
+ * The reader could not be reached: the owner's Claude quota is spent, or the
+ * service is overloaded, or the question timed out waiting for either.
+ *
+ * Nothing is wrong with the receipt, so it is not counted as a failed
+ * attempt - the watcher stops for this run and asks again on the next. On
+ * 2026-10-29 a spent quota made the watcher give up on a receipt it would
+ * have read a few hours later.
+ */
+export class LasarenUpptagen extends Error {
+  constructor(meddelande: string) {
+    super(meddelande);
+    this.name = 'LasarenUpptagen';
+  }
+}
+
+/**
+ * How many runs a receipt may wait for the reader before the wait counts as
+ * a failure - about an hour at one run every two minutes. A reader that
+ * times out on one receipt for good must not hold up the rest for ever.
+ */
+const MAX_VANTAN = 30;
 
 /**
  * A receipt that is not ready to be read yet, rather than one that failed.
@@ -106,7 +138,9 @@ export function kvittonAttLasa(
     .filter((post) => {
       const forsok = minne.forsok[post.id];
       return (
-        forsok === undefined || (forsok.utfall === 'fel' && forsok.antal < MAX_FORSOK)
+        forsok === undefined ||
+        forsok.utfall === 'vantar' ||
+        (forsok.utfall === 'fel' && forsok.antal < MAX_FORSOK)
       );
     })
     .sort((a, b) => a.tillagd.localeCompare(b.tillagd))
@@ -128,6 +162,9 @@ export async function lasNyaKvitton(
 
   const rapport: string[] = [];
   let forsok = { ...minne.forsok };
+  let upptagen = minne.upptagen;
+  const spara = () =>
+    vakt.minne.spara({ forsok, ...(upptagen === undefined ? {} : { upptagen }) });
 
   for (const kvitto of kvitton) {
     const tidigare = forsok[kvitto.id];
@@ -144,13 +181,41 @@ export async function lasNyaKvitton(
             meddelande: resultat.sammanfattning,
           },
         };
-        await vakt.minne.spara({ forsok });
+        upptagen = undefined;
+        await spara();
         await meddela(vakt, resultat.text);
       }
     } catch (orsak) {
       if (orsak instanceof InteRedo) {
         rapport.push(`Kvittot ${kvitto.filnamn} väntar: ${orsak.message}`);
         continue;
+      }
+      const vantat = (tidigare?.vantat ?? 0) + 1;
+      if (orsak instanceof LasarenUpptagen && vantat <= MAX_VANTAN) {
+        rapport.push(`Assistenten når inte Claude just nu: ${orsak.message}`);
+        if (!prova) {
+          forsok = {
+            ...forsok,
+            [kvitto.id]: {
+              antal: tidigare?.antal ?? 0,
+              senast: beroenden.nu(),
+              utfall: 'vantar',
+              meddelande: orsak.message,
+              vantat,
+            },
+          };
+          if (upptagen === undefined) {
+            upptagen = beroenden.nu();
+            await meddela(
+              vakt,
+              `Assistenten når inte Claude just nu (${orsak.message}). Kvitton som ` +
+                'fotas läses så snart det går igen.',
+            );
+          }
+          await spara();
+        }
+        // The next receipt would meet the same wall.
+        break;
       }
       const fel = orsak instanceof Error ? orsak.message : String(orsak);
       const text = `Kvittot ${kvitto.filnamn} kunde inte läsas: ${fel}`;
@@ -161,7 +226,7 @@ export async function lasNyaKvitton(
           ...forsok,
           [kvitto.id]: { antal, senast: beroenden.nu(), utfall: 'fel', meddelande: fel },
         };
-        await vakt.minne.spara({ forsok });
+        await spara();
         // Said once, when it is given up on; a first failure is tried again.
         if (antal >= MAX_FORSOK) {
           await meddela(vakt, `${text}\nBokför det för hand under Kvitton.`);

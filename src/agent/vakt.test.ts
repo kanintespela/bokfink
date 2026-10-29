@@ -15,7 +15,7 @@ import { sparaUnderlag } from '../data/underlag';
 import { hashaFil } from '../platform/hash';
 import { synkkrypto } from '../platform/synkkrypto';
 import { korAgent, tolkaKommando, type Agentberoenden } from './agent';
-import { kvittonAttLasa, type Kvittovakt, type Vaktminne } from './vakt';
+import { kvittonAttLasa, LasarenUpptagen, type Kvittovakt, type Vaktminne } from './vakt';
 
 let raknare = 0;
 let klockslag = 1_789_000_000_000;
@@ -227,6 +227,34 @@ describe('the receipt watcher', () => {
 
     expect(await kor(['las-nya'])).toContain('Inga nya kvitton');
     expect((await fran()).utkast.size).toBe(0);
+  });
+
+  /*
+   * 2026-10-29: the owner's Claude quota ran out, and the watcher gave up on
+   * a receipt it would have read hours later. A reader out of reach is not
+   * the receipt's fault: it waits, the owner hears once, and it is read
+   * when the reader is back.
+   */
+  it('waits out a reader that cannot be reached, and says so once', async () => {
+    let upptagen = true;
+    svar = (_fraga, bild) => {
+      if (upptagen) {
+        throw new LasarenUpptagen('kvoten för Claude är slut för stunden');
+      }
+      return JSON.stringify(bild === undefined ? KONTERING : AVLASNING);
+    };
+
+    for (let gang = 0; gang < 3; gang += 1) {
+      expect(await kor(['las-nya'])).toContain('når inte Claude');
+    }
+    expect(meddelanden).toHaveLength(1);
+    expect(meddelanden[0]).toContain('läses så snart det går igen');
+    expect(Object.values(minne.forsok)[0]?.utfall).toBe('vantar');
+
+    upptagen = false;
+    expect(await kor(['las-nya'])).toContain('Nytt utkast');
+    expect(minne.upptagen).toBeUndefined();
+    expect((await fran()).utkast.size).toBe(1);
   });
 
   /* A booking on an account the books do not have is refused by the review. */

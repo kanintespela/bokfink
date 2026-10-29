@@ -30,7 +30,7 @@ import { synkkrypto } from '../platform/synkkrypto';
 import { korAgent, tolkaKommando } from './agent';
 import type { Bildkodare } from './fil';
 import { tolkaKonfig, tolkaVaktkonfig, type Vaktkonfig } from './konfig';
-import type { Kvittovakt, Vaktminne } from './vakt';
+import { LasarenUpptagen, type Kvittovakt, type Vaktminne } from './vakt';
 import { datum } from '../domain/tid/datum';
 
 const KONFIG =
@@ -178,7 +178,11 @@ async function fragaHermes(
     if (bild !== undefined) {
       argv.push('--image', await somBild(katalog, bild));
     }
-    return await kommando(hermes, argv);
+    try {
+      return await kommando(hermes, argv);
+    } catch (orsak) {
+      throw tolkaHermesfel(orsak);
+    }
   } finally {
     await rm(katalog, { recursive: true, force: true });
   }
@@ -218,6 +222,37 @@ async function somBild(
   return bild;
 }
 
+/**
+ * A failed question, sorted: the reader out of reach is waited out, anything
+ * else is a failure of this reading.
+ *
+ * Hermes asks Claude on the owner's subscription. When the quota is spent
+ * it gets a 429 and waits ten minutes before asking again, longer than the
+ * time a question is allowed here - so a question cut off by the time limit
+ * is counted as the reader being out of reach, as is a 429 or an overload
+ * that Hermes reports itself.
+ */
+function tolkaHermesfel(orsak: unknown): Error {
+  const text = orsak instanceof Error ? orsak.message : String(orsak);
+  if (orsak instanceof Kommandofel && orsak.avbruten) {
+    return new LasarenUpptagen('frågan tog för lång tid, troligen är kvoten slut');
+  }
+  if (/\b429\b|rate.?limit|overloaded|\b529\b/i.test(text)) {
+    return new LasarenUpptagen('kvoten för Claude är slut för stunden');
+  }
+  return orsak instanceof Error ? orsak : new Error(text);
+}
+
+class Kommandofel extends Error {
+  constructor(
+    meddelande: string,
+    /** Stopped by the time limit rather than failing on its own. */
+    readonly avbruten: boolean,
+  ) {
+    super(meddelande);
+  }
+}
+
 /** Runs a program and gives back what it printed, or says why it failed. */
 function kommando(program: string, argv: readonly string[]): Promise<string> {
   return new Promise((losa, avvisa) => {
@@ -228,10 +263,14 @@ function kommando(program: string, argv: readonly string[]): Promise<string> {
       (fel, utdata, felutdata) => {
         if (fel !== null) {
           avvisa(
-            new Error(
+            new Kommandofel(
               (fel as NodeJS.ErrnoException).code === 'ENOENT'
                 ? `Programmet ${program} saknas på den här datorn.`
-                : `${program} misslyckades: ${String(felutdata).trim() || fel.message}`,
+                : `${program} misslyckades: ${
+                    `${String(felutdata).trim()} ${String(utdata).trim()}`.trim() ||
+                    fel.message
+                  }`,
+              fel.killed === true,
             ),
           );
           return;
