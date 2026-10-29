@@ -26,6 +26,7 @@ const DIESEL: Avlasning = {
   datum: '2025-02-12',
   betalat: '1351.88',
   betalsatt: 'kort',
+  riktning: 'utgift',
   rader: [{ momssats: 25, netto: '1081.50', moms: '270.38' }],
   avrundning: '0.00',
   sokord: ['diesel'],
@@ -240,6 +241,52 @@ describe('somForslag', () => {
         motivering: '',
       }),
     ).not.toThrow();
+  });
+});
+
+/*
+ * 2026-10-29: a slaughterhouse's settlement - money in - came back with the
+ * amount paid as -15425.00, and every booking was refused for having no row
+ * of the payment. Money in is still an amount paid; the sign says which way.
+ */
+describe('a receipt for money in', () => {
+  const AVRAKNING: Avlasning = {
+    ...DIESEL,
+    leverantor: 'Slakteriet',
+    betalsatt: 'faktura',
+    riktning: 'inkomst',
+    betalat: '-15425.00',
+    rader: [{ momssats: 25, netto: '-12339.96', moms: '-3084.99' }],
+    avrundning: '-0.05',
+    sokord: ['lamm'],
+  };
+
+  it('is read and booked with the money coming in', () => {
+    const kontrollerad = kontrolleraAvlasning(AVRAKNING);
+    expect(kontrollerad.betalat).toBe(oreFromKronor('15425'));
+
+    expect(() =>
+      somForslag(kontrollerad, {
+        beskrivning: 'Slakteriet: lamm',
+        konteringar: [
+          { konto: '1930', belopp: '15425.00' },
+          { konto: '3000', belopp: '-12339.96' },
+          { konto: '2631', belopp: '-3084.99' },
+          { konto: '3740', belopp: '-0.05' },
+        ],
+        motivering: '',
+      }),
+    ).not.toThrow();
+  });
+
+  it('reads the same when the amounts come positive', () => {
+    const positiv: Avlasning = {
+      ...AVRAKNING,
+      betalat: '15425.00',
+      rader: [{ momssats: 25, netto: '12339.96', moms: '3084.99' }],
+      avrundning: '0.05',
+    };
+    expect(kontrolleraAvlasning(positiv).betalat).toBe(oreFromKronor('15425'));
   });
 });
 

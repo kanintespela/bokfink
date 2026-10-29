@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { add, oreFromKronor, sum, type Ore } from '../domain/belopp/ore';
+import { add, ore, oreFromKronor, sum, type Ore } from '../domain/belopp/ore';
 import { allaLov } from '../domain/beslutstrad/beslutstrad';
 import type { Uuid } from '../domain/id/uuidv7';
 import type { Konto, Kontonummer } from '../domain/konto/konto';
@@ -39,6 +39,8 @@ const avlasningsschema = z.object({
   datum: z.string().nullable(),
   betalat: BELOPP.nullable(),
   betalsatt: z.enum(['kort', 'kontant', 'faktura', 'swish', 'okant']),
+  /** Money out (a purchase) or in (a sale, a settlement). */
+  riktning: z.enum(['utgift', 'inkomst']).default('utgift'),
   rader: z.array(
     z.object({
       momssats: z.union([z.literal(25), z.literal(12), z.literal(6), z.literal(0)]),
@@ -79,8 +81,11 @@ export function avlasningsfraga(): string {
     '',
     'Regler:',
     '- Alla belopp som strängar i kronor med punkt och två decimaler, t.ex. "1351.88".',
-    '- "betalat": det belopp som faktiskt betalades. Vid kortbetalning det belopp kortet drogs',
-    '  på (kort avrundas inte till hela kronor), annars "att betala"/totalen.',
+    '- "riktning": "utgift" om firman betalar (kvitto, leverantörsfaktura), "inkomst" om',
+    '  firman får pengar (försäljning, avräkningsnota från slakteri, kundfaktura).',
+    '- "betalat": det belopp som faktiskt betalades, alltid positivt. Vid kortbetalning det',
+    '  belopp kortet drogs på (kort avrundas inte till hela kronor), annars "att betala"/totalen.',
+    '- Netto, moms och avrundning är också positiva, utom en avrundning nedåt som är negativ.',
     '- "rader": en rad per momssats med belopp exklusive moms ("netto") och momsen ("moms")',
     '  så som underlaget anger dem. Står momsen inte utskriven, räkna ut den.',
     '- "avrundning": betalat minus summan av netto och moms. "0.00" om ingen.',
@@ -95,6 +100,7 @@ export function avlasningsfraga(): string {
     'Format:',
     '{"leverantor": string|null, "orgnr": string|null, "datum": string|null,',
     ' "betalat": string|null, "betalsatt": "kort"|"kontant"|"faktura"|"swish"|"okant",',
+    ' "riktning": "utgift"|"inkomst",',
     ' "rader": [{"momssats": 25|12|6|0, "netto": string, "moms": string}],',
     ' "avrundning": string, "sokord": [string], "sakerhet": "hog"|"medel"|"lag",',
     ' "kommentar": string}',
@@ -121,6 +127,8 @@ export function konteringsfraga(
     '  kontoplanen som passar bäst.',
     '- Debet positivt, kredit negativt, belopp som "123.45". Summan ska bli exakt 0.00.',
     '- Momsen och betalningen ska ha exakt beloppen från avläsningen. Avrundning på 3740.',
+    '- "riktning" i avläsningen säger åt vilket håll pengarna gick: vid "inkomst" är',
+    '  betalningen debet (pengar in) och intäkten och den utgående momsen kredit.',
     '- "beskrivning": kort, t.ex. "Preem: diesel".',
     '- "motivering": en eller två meningar om varför du valde kontona.',
     '',
@@ -211,12 +219,20 @@ export function kontrolleraAvlasning(avlasning: Avlasning): KontrolleradAvlasnin
     throw new TypeError('Avläsningen saknar belopp exklusive moms och moms.');
   }
 
-  const betalat = oreFromKronor(avlasning.betalat);
+  /*
+   * Money in is sometimes read with a minus, all of it: -15425.00 paid,
+   * -12339.96 netto. The arithmetic holds either way, so it is checked as
+   * it came and the sign is taken off what is passed on - the direction is
+   * the booking's business, not the amount's.
+   */
+  const betalatMedTecken = oreFromKronor(avlasning.betalat);
   const avrundning = oreFromKronor(avlasning.avrundning);
   const netto = sum(avlasning.rader.map((rad) => oreFromKronor(rad.netto)));
-  const moms = sum(avlasning.rader.map((rad) => oreFromKronor(rad.moms)));
+  const momsMedTecken = sum(avlasning.rader.map((rad) => oreFromKronor(rad.moms)));
+  const betalat = ore(Math.abs(betalatMedTecken));
+  const moms = ore(Math.abs(momsMedTecken));
 
-  if (add(add(netto, moms), avrundning) !== betalat) {
+  if (add(add(netto, momsMedTecken), avrundning) !== betalatMedTecken) {
     throw new TypeError(
       `Summorna går inte ihop: ${avlasning.avrundning} i avrundning och raderna ger inte ` +
         `${avlasning.betalat}.`,
