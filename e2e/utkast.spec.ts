@@ -36,6 +36,31 @@ async function lasInUtkast(page: Page): Promise<void> {
     skapad: `${idag}T08:00:00.000Z`,
     meta: [],
     handelser: [
+      // A year and the draft's accounts, since a book that brings its own
+      // replaces the starter set a new app makes.
+      {
+        ...huvud('01980000-0000-7000-8000-0000000000aa'),
+        typ: 'rakenskapsar.skapat',
+        rakenskapsar: {
+          id: '01980000-0000-7000-8000-0000000000ab',
+          start: `${idag.slice(0, 4)}-01-01`,
+          slut: `${idag.slice(0, 4)}-12-31`,
+          avslutat: false,
+          ingaendeBalanser: [],
+        },
+      },
+      ...(
+        [
+          ['4000', 'Varor', 'kostnad'],
+          ['2641', 'Debiterad ingående moms', 'skuld'],
+          ['2017', 'Egen insättning', 'egetKapital'],
+          ['2013', 'Övriga egna uttag', 'egetKapital'],
+        ] as const
+      ).map(([nummer, namn, typ], index) => ({
+        ...huvud(`01980000-0000-7000-8000-00000000000${index}`),
+        typ: 'konto.skapat',
+        konto: { nummer, namn, typ, aktiv: true, favorit: false, sru: [] },
+      })),
       {
         ...huvud(UNDERLAG),
         typ: 'underlag.tillagt',
@@ -121,6 +146,32 @@ test('books a draft with its receipt attached', async ({ page }) => {
   // The receipt came along: it is the booked verifikat's evidence now.
   await page.goto('/#verifikat');
   await page.getByTestId('verifikatlista').getByRole('button', { name: /A1/ }).click();
+  await expect(page.getByTestId(`underlag-${UTKAST}`)).toContainText('kvitto-foder.png');
+});
+
+/*
+ * A suggestion that is nearly right is changed, not thrown away: here the
+ * payment came from the private account, not the one the reader guessed.
+ * The draft keeps its receipt and its reasons, and books as changed.
+ */
+test('changes a draft before booking it', async ({ page }) => {
+  await lasInUtkast(page);
+
+  await page.goto('/#kvitton');
+  await page.getByTestId(`andra-utkast-${UTKAST}`).click();
+  await expect(page.getByRole('heading', { name: 'Ändra utkastet' })).toBeVisible();
+  await page.getByLabel('Konto, rad 3').fill('2013');
+  await page.getByTestId('bokfor-fri').click();
+
+  await expect(page.getByTestId(`utkast-kontering-${UTKAST}`)).toContainText('2013');
+  await expect(page.getByTestId(`utkast-kontering-${UTKAST}`)).not.toContainText('2017');
+  await expect(page.getByTestId(`utkast-motivering-${UTKAST}`)).toBeVisible();
+
+  await page.getByTestId(`bokfor-utkast-${UTKAST}`).click();
+  await expect(page.getByTestId('utkast-besked')).toContainText('Bokfört som A1.');
+  await page.goto('/#verifikat');
+  await page.getByTestId('verifikatlista').getByRole('button', { name: /A1/ }).click();
+  await expect(page.locator('[data-testid^="kontering-"]')).toContainText('2013');
   await expect(page.getByTestId(`underlag-${UTKAST}`)).toContainText('kvitto-foder.png');
 });
 

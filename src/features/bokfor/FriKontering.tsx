@@ -27,7 +27,7 @@ export interface Friforslag {
   readonly beskrivning: string;
   readonly konteringar: readonly Kontering[];
   /** The leaf it came from, so its use is still counted. */
-  readonly mall: Uuid;
+  readonly mall?: Uuid;
 }
 
 interface Props {
@@ -47,6 +47,17 @@ interface Props {
     readonly mall: Uuid | undefined;
   }) => Promise<string>;
   readonly onTillbaka: () => void;
+  /**
+   * Used for changing a draft rather than booking: the heading, the text
+   * under it and the button say so. The form is the same - accounts,
+   * debet, kredit, a balance that has to hold - because a draft that cannot
+   * be booked is no better than none.
+   */
+  readonly redigering?: {
+    readonly rubrik: string;
+    readonly inledning: string;
+    readonly knapp: string;
+  };
 }
 
 interface Radtext {
@@ -77,6 +88,7 @@ export function FriKontering({
   kvitton,
   onBokfor,
   onTillbaka,
+  redigering,
 }: Props) {
   const [datum, setDatum] = useState<string>(start?.datum ?? idag);
   const [beskrivning, setBeskrivning] = useState(start?.beskrivning ?? '');
@@ -165,12 +177,14 @@ export function FriKontering({
   return (
     <section aria-label="Fri kontering">
       <Tillbaka onTillbaka={onTillbaka} />
-      <h2>Fri kontering</h2>
+      <h2>{redigering?.rubrik ?? 'Fri kontering'}</h2>
 
       <p className="hjalptext">
-        För det som frågorna inte passar för, eller för att ändra en kontering de
-        föreslagit. Sök fram kontona på nummer eller namn och skriv beloppen på debet-
-        eller kreditsidan – de två sidorna måste bli lika stora.
+        {redigering?.inledning ??
+          'För det som frågorna inte passar för, eller för att ändra en kontering de ' +
+            'föreslagit.'}{' '}
+        Sök fram kontona på nummer eller namn och skriv beloppen på debet- eller
+        kreditsidan – de två sidorna måste bli lika stora.
       </p>
 
       <div className="faltgrupp">
@@ -354,7 +368,7 @@ export function FriKontering({
         data-testid="bokfor-fri"
         onClick={() => void bokfor()}
       >
-        Bokför
+        {redigering?.knapp ?? 'Bokför'}
       </button>
 
       {besked !== undefined && (

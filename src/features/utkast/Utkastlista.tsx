@@ -19,6 +19,8 @@ interface Props {
   readonly onBokfor: (utkast: Verifikatutkast) => Promise<string>;
   /** Throws the draft away; its receipts go back to waiting. */
   readonly onKassera: (utkast: Verifikatutkast) => Promise<void>;
+  /** Opens the draft for changing - another account, another amount - before booking. */
+  readonly onAndra: (utkast: Verifikatutkast) => void;
 }
 
 /**
@@ -40,6 +42,7 @@ export function Utkastlista({
   underlagsbilder,
   onBokfor,
   onKassera,
+  onAndra,
 }: Props) {
   const [arbetar, setArbetar] = useState(false);
   const [besked, setBesked] = useState<string | undefined>();
@@ -201,6 +204,15 @@ export function Utkastlista({
                     onClick={() => void kor(post.id, () => onBokfor(post))}
                   >
                     Bokför
+                  </button>{' '}
+                  <button
+                    type="button"
+                    className="knapp"
+                    disabled={arbetar}
+                    data-testid={`andra-utkast-${post.id}`}
+                    onClick={() => onAndra(post)}
+                  >
+                    Ändra
                   </button>
                 </p>
 

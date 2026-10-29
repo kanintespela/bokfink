@@ -36,6 +36,7 @@ import {
   rattaVerifikat,
   avslutaRakenskapsar,
   bokforUtkast,
+  sparaUtkast,
   borttagbaraRakenskapsar,
   taBortRakenskapsar,
   momslas,
@@ -315,6 +316,8 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
   >();
   /** A booking from the questions carried over to be changed by hand. */
   const [friStart, setFriStart] = useState<Friforslag | undefined>();
+  /** The draft open for changing, when the form is used for that. */
+  const [andrarUtkast, setAndrarUtkast] = useState<Verifikatutkast | undefined>();
   const [ocr, setOcr] = useState<{ laser: boolean; fel?: string }>({ laser: false });
   /** A bank line being booked, which fills the form the way a receipt does. */
   const [bankrad, setBankrad] = useState<Banktransaktion | undefined>();
@@ -957,6 +960,10 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
               konton={laddat.konton}
               underlag={laddat.underlagPerVerifikat}
               underlagsbilder={underlagsbilder}
+              onAndra={(utkast) => {
+                setAndrarUtkast(utkast);
+                setVy('frikontering');
+              }}
               onBokfor={async (utkast) => {
                 const verifikat = await bokforUtkast(
                   db,
@@ -1309,7 +1316,60 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
             the time. */}
         {vy === 'enhet' && <StartPage db={db} />}
 
-        {vy === 'frikontering' && (
+        {vy === 'frikontering' && andrarUtkast !== undefined && (
+          <FriKontering
+            key={andrarUtkast.id}
+            idag={idag}
+            start={{
+              datum: andrarUtkast.datum,
+              beskrivning: andrarUtkast.beskrivning,
+              konteringar: andrarUtkast.konteringar,
+              ...(andrarUtkast.mall === undefined ? {} : { mall: andrarUtkast.mall }),
+            }}
+            konton={laddat.konton}
+            // The receipt is already linked to the draft, by the draft's id.
+            kvitton={[]}
+            redigering={{
+              rubrik: 'Ändra utkastet',
+              inledning:
+                'Ändringarna sparas i utkastet. Det bokförs först när du trycker Bokför ' +
+                'under Kvitton.',
+              knapp: 'Spara utkastet',
+            }}
+            onTillbaka={() => {
+              setAndrarUtkast(undefined);
+              setVy('kvitton');
+            }}
+            onBokfor={async ({ datum, beskrivning, konteringar, mall }) => {
+              /*
+               * Saved under the same id: the receipt stays linked and the
+               * draft is the same draft, changed. The assistant's reasons
+               * stay too, since they are about the receipt, and the review
+               * can see what was changed against them.
+               */
+              await sparaUtkast(
+                db,
+                await skrivkontext(db),
+                skapaUtkast({
+                  id: andrarUtkast.id,
+                  datum,
+                  beskrivning,
+                  konteringar,
+                  ...(mall === undefined ? {} : { mall }),
+                  ...(andrarUtkast.motivering === undefined
+                    ? {}
+                    : { motivering: andrarUtkast.motivering }),
+                }),
+              );
+              setLaddat(await hamta());
+              setAndrarUtkast(undefined);
+              setVy('kvitton');
+              return 'Utkastet är sparat.';
+            }}
+          />
+        )}
+
+        {vy === 'frikontering' && andrarUtkast === undefined && (
           <FriKontering
             idag={idag}
             {...(friStart === undefined ? {} : { start: friStart })}
