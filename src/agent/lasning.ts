@@ -5,6 +5,7 @@ import { allaLov } from '../domain/beslutstrad/beslutstrad';
 import type { Uuid } from '../domain/id/uuidv7';
 import type { Konto, Kontonummer } from '../domain/konto/konto';
 import { datum, type Datum } from '../domain/tid/datum';
+import type { Redovisningsmetod } from '../domain/moms/redovisningsmetod';
 import { tolkaKvitto } from '../domain/underlag/kvittotolkning';
 import type { Underlag } from '../domain/underlag/underlag';
 import type { BokfortVerifikat } from '../domain/verifikat/verifikat';
@@ -71,18 +72,32 @@ export interface KontrolleradAvlasning {
   readonly moms: Ore;
 }
 
-export function avlasningsfraga(): string {
+/** What the reader is told about the firm whose receipt it is. */
+export interface Firma {
+  /** The firm's or owner's name, as it stands on invoices to it. */
+  readonly foretag?: string;
+}
+
+export function avlasningsfraga({ foretag }: Firma = {}): string {
   return [
     'Du läser ett kvitto eller en faktura för en enskild firma i Sverige (lantbruk med får).',
     'Bilden är bifogad. Den kan vara vriden eller suddig.',
+    ...(foretag === undefined
+      ? []
+      : [
+          `Firman är ${foretag}. Står firman som köpare, kund eller mottagare är underlaget`,
+          'ett inköp; bara om firman står som säljare eller avsändare är det en försäljning.',
+        ]),
     '',
     'Använd INGA verktyg, svara direkt utifrån bilden. Svara ENDAST med ett JSON-objekt,',
     'utan någon annan text, enligt formatet nedan.',
     '',
     'Regler:',
     '- Alla belopp som strängar i kronor med punkt och två decimaler, t.ex. "1351.88".',
-    '- "riktning": "utgift" om firman betalar (kvitto, leverantörsfaktura), "inkomst" om',
-    '  firman får pengar (försäljning, avräkningsnota från slakteri, kundfaktura).',
+    '- "riktning": "utgift" om firman betalar (kvitto, faktura från en leverantör till',
+    '  firman), "inkomst" om firman får pengar (avräkningsnota från slakteri, faktura som',
+    '  firman själv skrivit). Underlag som fotas är nästan alltid inköp: välj "inkomst"',
+    '  bara när underlaget tydligt visar att firman sålt något.',
     '- "betalat": det belopp som faktiskt betalades, alltid positivt. Vid kortbetalning det',
     '  belopp kortet drogs på (kort avrundas inte till hela kronor), annars "att betala"/totalen.',
     '- Netto, moms och avrundning är också positiva, utom en avrundning nedåt som är negativ.',
@@ -111,6 +126,7 @@ export function konteringsfraga(
   avlasning: Avlasning,
   historik: readonly BokfortVerifikat[],
   konton: ReadonlyMap<Kontonummer, Konto>,
+  metod: Redovisningsmetod = 'kontantmetoden',
 ): string {
   const aktiva = [...konton.values()]
     .filter((konto) => konto.aktiv)
@@ -129,6 +145,15 @@ export function konteringsfraga(
     '- Momsen och betalningen ska ha exakt beloppen från avläsningen. Avrundning på 3740.',
     '- "riktning" i avläsningen säger åt vilket håll pengarna gick: vid "inkomst" är',
     '  betalningen debet (pengar in) och intäkten och den utgående momsen kredit.',
+    '- Visar historiken att samma slags köp eller samma leverantör tidigare bokförts åt',
+    '  motsatt håll mot avläsningens "riktning", följ historiken och säg det i motiveringen.',
+    ...(metod === 'kontantmetoden'
+      ? [
+          '- Firman bokför med kontantmetoden: en faktura bokförs när den betalas. Använd',
+          '  inte kundfordringar (15xx) eller leverantörsskulder (2440); bokför betalningen',
+          '  på det konto pengarna gick genom enligt historiken, oftast företagskontot 1930.',
+        ]
+      : []),
     '- "beskrivning": kort, t.ex. "Preem: diesel".',
     '- "motivering": en eller två meningar om varför du valde kontona.',
     '',
@@ -301,8 +326,8 @@ export function historikFor(
     .map(normalisera)
     .filter((kandidat) => kandidat.length >= MINSTA_ORD && !BOLAGSORD.has(kandidat));
   for (const post of verifikat.values()) {
-    const beskrivning = normalisera(post.beskrivning);
-    if (ord.some((kandidat) => beskrivning.includes(kandidat))) {
+    const beskrivning = normalisera(post.beskrivning).split(/\s+/);
+    if (ord.some((kandidat) => beskrivning.some((varje) => sammaOrd(varje, kandidat)))) {
       valda.set(post.id, post);
     }
   }
@@ -345,6 +370,51 @@ export function somForslag(
     beskrivning: kontering.beskrivning,
     konteringar: kontering.konteringar,
   };
+}
+
+/**
+ * A word in a description that is the searched word, or it with an ending -
+ * "korn", "kornet" - but not a longer word that starts the same way: "vete"
+ * is not in "veterinärkostnad", which pulled vet's bills into the barley
+ * history on 2026-10-29.
+ */
+function sammaOrd(ord: string, sokt: string): boolean {
+  return ord.startsWith(sokt) && ord.length - sokt.length <= 3;
+}
+
+/** Which way the money went in a booked verifikat, read off its payment row. */
+function riktningI(post: BokfortVerifikat): 'utgift' | 'inkomst' | undefined {
+  const betalning = post.konteringar.find(
+    (rad) => rad.konto.startsWith('19') || rad.konto.startsWith('20'),
+  );
+  if (betalning === undefined) {
+    return undefined;
+  }
+  return betalning.belopp < 0 ? 'utgift' : 'inkomst';
+}
+
+/**
+ * A warning when the reading says the money went one way and the earlier
+ * bookings of the same thing say the other.
+ *
+ * The reader decides the direction from the page, and a page has two names
+ * on it; the books know which way barley has gone before. Not a refusal -
+ * a firm can sell what it once bought - but said where the review sees it.
+ */
+export function motsagerHistoriken(
+  avlasning: Avlasning,
+  historik: readonly BokfortVerifikat[],
+): string | undefined {
+  const riktningar = historik.map(riktningI).filter((varje) => varje !== undefined);
+  const motsatt = riktningar.filter((varje) => varje !== avlasning.riktning).length;
+  if (riktningar.length === 0 || motsatt * 2 <= riktningar.length) {
+    return undefined;
+  }
+  return avlasning.riktning === 'inkomst'
+    ? 'Assistenten läste det som en försäljning, men tidigare bokningar av samma sak är ' +
+        'inköp. Kontrollera vem som är köpare.'
+    : 'Assistenten läste det som ett inköp, men tidigare bokningar av samma sak är ' +
+        'försäljningar. Kontrollera vem som är köpare.';
 }
 
 function siffror(text: string): string {

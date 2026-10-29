@@ -79,6 +79,16 @@ const vaktschema = z.object({
   avisering: z.string().min(1).optional(),
   /** The Hermes command, if it is not on the PATH. */
   hermes: z.string().min(1).default('hermes'),
+  /**
+   * The firm's or owner's name as it stands on invoices to it. Without it
+   * the reader cannot tell a supplier's invoice to the firm from one the
+   * firm wrote, and on 2026-10-29 it took a purchase of barley for a sale.
+   */
+  foretag: z.string().min(1).optional(),
+  /** Decides the date an invoice is booked on, and whether 1510 and 2440 belong. */
+  redovisningsmetod: z
+    .enum(['kontantmetoden', 'faktureringsmetoden'])
+    .default('kontantmetoden'),
 });
 
 export type Vaktkonfig = z.infer<typeof vaktschema>;

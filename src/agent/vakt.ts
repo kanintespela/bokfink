@@ -9,8 +9,11 @@ import { osankta, type Krypto, type Synktransport } from '../data/synk';
 import { kopplaUnderlag } from '../data/underlag';
 import { skapaUtkast } from '../domain/verifikat/verifikat';
 import { granskaForslag } from './forslag';
+import type { Redovisningsmetod } from '../domain/moms/redovisningsmetod';
+import { datum, type Datum as Dag } from '../domain/tid/datum';
 import {
   avlasningsfraga,
+  motsagerHistoriken,
   historikFor,
   konteringsfraga,
   kontrolleraAvlasning,
@@ -49,6 +52,9 @@ export interface Kvittovakt {
   };
   /** Tells the owner, in the chat Hermes already uses. */
   readonly meddela: (text: string) => Promise<void>;
+  /** The firm's name as it stands on invoices to it, so the reader knows which side it is. */
+  readonly foretag?: string;
+  readonly metod?: Redovisningsmetod;
 }
 
 export interface Forsok {
@@ -258,10 +264,18 @@ async function lasEtt(
 ): Promise<{ text: string; sammanfattning: string }> {
   const data = await hamtaKvitto(kvitto, beroenden);
   const idag = beroenden.idag();
+  const metod = beroenden.vakt.metod ?? 'kontantmetoden';
 
   const kontrollerad = kontrolleraAvlasning(
     tolkaAvlasning(
-      await beroenden.vakt.las(avlasningsfraga(), { data, mime: kvitto.mime }),
+      await beroenden.vakt.las(
+        avlasningsfraga({
+          ...(beroenden.vakt.foretag === undefined
+            ? {}
+            : { foretag: beroenden.vakt.foretag }),
+        }),
+        { data, mime: kvitto.mime },
+      ),
     ),
   );
   const historik = historikFor(
@@ -272,19 +286,47 @@ async function lasEtt(
   );
   const kontering = tolkaKontering(
     await beroenden.vakt.las(
-      konteringsfraga(kontrollerad.avlasning, historik, bocker.konton),
+      konteringsfraga(kontrollerad.avlasning, historik, bocker.konton, metod),
     ),
   );
 
+  /*
+   * Under the kontantmetod an invoice is booked on the day it is paid, and
+   * the invoice does not say when that was. The day it was photographed is
+   * the best guess there is - an invoice is photographed when it is dealt
+   * with - so that is the date, never earlier than the invoice's own, and
+   * the review is told so.
+   */
+  const fakturaKontant =
+    kontrollerad.avlasning.betalsatt === 'faktura' && metod === 'kontantmetoden';
+  const fotad = svenskDag(kvitto.tillagd);
+  const bokforingsdag =
+    fakturaKontant && fotad > kontrollerad.datum && fotad <= idag
+      ? fotad
+      : kontrollerad.datum;
+
   const granskat = granskaForslag(
     // The receipt is already in the books; granskaForslag only wants a name.
-    { ...somForslag(kontrollerad, kontering), underlag: [kvitto.filnamn] },
+    {
+      ...somForslag(kontrollerad, kontering),
+      datum: bokforingsdag,
+      underlag: [kvitto.filnamn],
+    },
     bocker,
     beroenden.nyttId(),
     idag,
   );
   const varningar = [...granskat.varningar];
-  if (kontrollerad.avlasning.betalsatt === 'faktura') {
+  const motsagelse = motsagerHistoriken(kontrollerad.avlasning, historik);
+  if (motsagelse !== undefined) {
+    varningar.unshift(motsagelse);
+  }
+  if (bokforingsdag !== kontrollerad.datum) {
+    varningar.push(
+      `Fakturan är daterad ${kontrollerad.datum}. Datumet är dagen den fotades, som antas ` +
+        'vara betalningsdagen (kontantmetoden). Ändra det om den betalades en annan dag.',
+    );
+  } else if (kontrollerad.avlasning.betalsatt === 'faktura') {
     varningar.push(
       'Det är en faktura. Bokför du med kontantmetoden ska den ha datumet då den betalades.',
     );
@@ -363,4 +405,11 @@ async function hamtaKvitto(
     throw new Error('Filen på servern stämmer inte med kvittots kontrollsumma.');
   }
   return data;
+}
+
+/** The day an instant falls on in Sweden, which is the day the owner lived it. */
+function svenskDag(tidpunkt: string): Dag {
+  return datum(
+    new Date(tidpunkt).toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' }),
+  );
 }

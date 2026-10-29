@@ -53,7 +53,9 @@ Vaktens egna inställningar, utan hemligheter, i
   "fran": "2026-10-28",
   "maxPerKorning": 3,
   "maxPerDygn": 20,
-  "avisering": "discord:#bokforing"
+  "avisering": "discord:#bokforing",
+  "foretag": "Anna Exempelsson",
+  "redovisningsmetod": "kontantmetoden"
 }
 ```
 
@@ -63,6 +65,8 @@ Vaktens egna inställningar, utan hemligheter, i
 | `maxPerKorning` | Högst så många kvitton per körning (standard 3) |
 | `maxPerDygn` | Högst så många försök per dygn (standard 20) |
 | `avisering` | Vart Hermes skickar besked, som `hermes send --list` visar dem. Utelämnat: inga meddelanden |
+| `foretag` | Firmans eller ägarens namn så som det står på fakturor till firman. Utan det kan assistenten inte skilja en leverantörs faktura från en firman skrivit |
+| `redovisningsmetod` | `kontantmetoden` (standard) eller `faktureringsmetoden`. Med kontantmetoden dateras en faktura med dagen den fotades, som antas vara betalningsdagen, och kundfordringar och leverantörsskulder används inte |
 
 Bygg vakten till en fristående fil, prova, och slå på timern:
 

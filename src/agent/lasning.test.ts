@@ -7,7 +7,9 @@ import { datum } from '../domain/tid/datum';
 import type { Underlag } from '../domain/underlag/underlag';
 import type { BokfortVerifikat } from '../domain/verifikat/verifikat';
 import {
+  avlasningsfraga,
   historikFor,
+  motsagerHistoriken,
   konteringsfraga,
   kontrolleraAvlasning,
   plockaJson,
@@ -287,6 +289,53 @@ describe('a receipt for money in', () => {
       avrundning: '0.05',
     };
     expect(kontrolleraAvlasning(positiv).betalat).toBe(oreFromKronor('15425'));
+  });
+});
+
+/*
+ * 2026-10-29: an invoice for barley, the firm under "Köpare", was read as a
+ * sale - the reader did not know who the firm was, and took the sender for
+ * it - although the last barley in the books was a purchase.
+ */
+describe('which way the money went', () => {
+  it('tells the reader who the firm is', () => {
+    const fraga = avlasningsfraga({ foretag: 'Anna Exempelsson' });
+    expect(fraga).toContain('Firman är Anna Exempelsson');
+    expect(fraga).toContain('köpare');
+  });
+
+  const inkop = verifikat('2025-10-29', 'Inköp av korn', [
+    ['4010', '1050.00'],
+    ['2640', '262.50'],
+    ['1930', '-1312.50'],
+  ]);
+  const forsaljning = verifikat('2025-10-25', 'Försäljning av lamm', [
+    ['1930', '15425.00'],
+    ['3000', '-15425.00'],
+  ]);
+
+  it('says when the reading goes against the earlier bookings', () => {
+    const salt: Avlasning = { ...DIESEL, riktning: 'inkomst', sokord: ['korn'] };
+    expect(motsagerHistoriken(salt, [inkop])).toContain('inköp');
+    expect(motsagerHistoriken({ ...salt, riktning: 'utgift' }, [inkop])).toBeUndefined();
+    expect(motsagerHistoriken(salt, [forsaljning])).toBeUndefined();
+    expect(motsagerHistoriken(salt, [])).toBeUndefined();
+  });
+
+  /* "vete" is not in "veterinärkostnad". */
+  it('matches whole words in the descriptions', () => {
+    const vet = verifikat('2025-03-21', 'Veterinärkostnad', [
+      ['6991', '100.00'],
+      ['1930', '-100.00'],
+    ]);
+    const vete = verifikat('2025-04-15', 'Köp av vete', [
+      ['5400', '100.00'],
+      ['1930', '-100.00'],
+    ]);
+    const alla = new Map([vet, vete].map((post) => [post.id, post]));
+    expect(
+      historikFor({ ...DIESEL, leverantor: null, sokord: ['vete'] }, [], alla, IDAG),
+    ).toEqual([vete]);
   });
 });
 

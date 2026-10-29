@@ -257,6 +257,24 @@ describe('the receipt watcher', () => {
     expect((await fran()).utkast.size).toBe(1);
   });
 
+  /*
+   * Kontantmetoden books an invoice on the day it is paid, which the invoice
+   * cannot say. The day it was photographed is taken for it, and the review
+   * is told the invoice's own date.
+   */
+  it('dates an invoice by the day it was photographed', async () => {
+    svar = (_fraga, bild) =>
+      JSON.stringify(
+        bild === undefined ? KONTERING : { ...AVLASNING, betalsatt: 'faktura' },
+      );
+
+    await kor(['las-nya']);
+
+    const [utkast] = [...(await fran()).utkast.values()];
+    expect(utkast?.datum).toBe('2026-09-12');
+    expect(utkast?.motivering).toContain('daterad 2026-09-10');
+  });
+
   /* A booking on an account the books do not have is refused by the review. */
   it('refuses a booking the review would refuse', async () => {
     svar = (_fraga, bild) =>

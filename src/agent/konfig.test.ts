@@ -60,6 +60,7 @@ describe('tolkaVaktkonfig', () => {
       maxPerKorning: 3,
       maxPerDygn: 20,
       hermes: 'hermes',
+      redovisningsmetod: 'kontantmetoden',
     });
   });
 

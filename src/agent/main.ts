@@ -127,6 +127,8 @@ function kvittovakt(installning: Vaktkonfig): Kvittovakt {
     fran: datum(installning.fran),
     maxPerKorning: installning.maxPerKorning,
     maxPerDygn: installning.maxPerDygn,
+    metod: installning.redovisningsmetod,
+    ...(installning.foretag === undefined ? {} : { foretag: installning.foretag }),
     las: (fraga, bild) => fragaHermes(installning.hermes, fraga, bild),
     minne: {
       hamta: async () => {
