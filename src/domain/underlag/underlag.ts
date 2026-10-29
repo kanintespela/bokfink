@@ -240,9 +240,18 @@ export class OforanderligtUnderlagError extends Error {
  * of a table, and refusing to delete it would be superstition rather than
  * bookkeeping.
  *
- * Detaching first is not a way around this: a booked verifikat is immutable
- * and nothing offers to unlink evidence from one.
+ * Attached only to drafts, it is still a picture: a draft is a suggestion,
+ * not a booking, and throwing the receipt away leaves the draft without one,
+ * which shows. That case is not rare since the receipt watcher drafts
+ * receipts on the server: the owner can throw one away on the phone in the
+ * same minute the watcher links it, and each device then sees the other's
+ * step in a different order.
+ *
+ * A link to anything that is not known to be a draft keeps the receipt: a
+ * booked verifikat, or an id this device has not received yet, which may be
+ * one. Detaching first is not a way around this: a booked verifikat is
+ * immutable and nothing offers to unlink evidence from one.
  */
-export function farTasBort(underlag: Underlag): boolean {
-  return arOkopplat(underlag);
+export function farTasBort(underlag: Underlag, arUtkast: (id: Uuid) => boolean): boolean {
+  return underlag.verifikat.every(arUtkast);
 }

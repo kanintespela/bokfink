@@ -136,7 +136,12 @@ export async function taBortUnderlag(
   if (underlag === undefined) {
     return;
   }
-  if (!farTasBort(underlag)) {
+  const utkast = new Set(
+    (await db.table<{ id: Uuid }, Uuid>(UTKAST_TABLE).bulkGet([...underlag.verifikat]))
+      .filter((post) => post !== undefined)
+      .map((post) => post.id),
+  );
+  if (!farTasBort(underlag, (id) => utkast.has(id))) {
     throw new OforanderligtUnderlagError(underlagId);
   }
 

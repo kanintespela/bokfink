@@ -452,6 +452,7 @@ async function laddaUppslag(
 ): Promise<Tillstandsuppslag> {
   const arPoster = new Map<Uuid, Rakenskapsar>();
   const verifikatPoster = new Map<Uuid, BokfortVerifikat>();
+  const utkastposter = new Map<Uuid, Verifikatutkast>();
   const underlagsposter = new Map<Uuid, Underlag>();
   const anlaggningsposter = new Map<Uuid, Anlaggningstillgang>();
   const fastighetsposter = new Map<Uuid, Fastighetstillgang>();
@@ -494,6 +495,25 @@ async function laddaUppslag(
     const post = await db.table<Underlag, Uuid>(UNDERLAG_TABLE).get(id);
     if (post !== undefined) {
       underlagsposter.set(post.id, post);
+    }
+
+    /*
+     * Whether what the receipt is linked to, or is being linked to, is a
+     * draft - the difference between a picture and evidence when it is
+     * thrown away, and between a conflict and nothing when the receipt is
+     * already gone.
+     */
+    const lankar =
+      handelse.typ === 'underlag.kopplat'
+        ? [handelse.verifikatId]
+        : handelse.typ === 'underlag.borttaget'
+          ? (post?.verifikat ?? [])
+          : [];
+    for (const lank of lankar) {
+      const utkast = await db.table<Verifikatutkast, Uuid>(UTKAST_TABLE).get(lank);
+      if (utkast !== undefined) {
+        utkastposter.set(utkast.id, utkast);
+      }
     }
   }
 
@@ -538,6 +558,7 @@ async function laddaUppslag(
   return {
     rakenskapsar: (id) => arPoster.get(id),
     verifikat: (id) => verifikatPoster.get(id),
+    utkast: (id) => utkastposter.get(id),
     underlag: (id) => underlagsposter.get(id),
     anlaggning: (id) => anlaggningsposter.get(id),
     fastighet: (id) => fastighetsposter.get(id),

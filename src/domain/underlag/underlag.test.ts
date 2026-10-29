@@ -167,11 +167,21 @@ describe('farTasBort', () => {
    * The line between a photograph and räkenskapsinformation, and it is the
    * link that decides which one a picture is.
    */
+  const ingetUtkast = () => false;
+
   it('lets a picture nobody has booked be thrown away', () => {
-    expect(farTasBort(underlag())).toBe(true);
+    expect(farTasBort(underlag(), ingetUtkast)).toBe(true);
   });
 
   it('keeps what a verifikat rests on', () => {
-    expect(farTasBort(koppla(underlag(), verifikatId(1)))).toBe(false);
+    expect(farTasBort(koppla(underlag(), verifikatId(1)), ingetUtkast)).toBe(false);
+  });
+
+  /* A draft is a suggestion, not a booking; its receipt is still a picture. */
+  it('lets a picture only drafts have claimed be thrown away', () => {
+    const utkast = verifikatId(1);
+    const post = koppla(underlag(), utkast);
+    expect(farTasBort(post, (id) => id === utkast)).toBe(true);
+    expect(farTasBort(koppla(post, verifikatId(2)), (id) => id === utkast)).toBe(false);
   });
 });

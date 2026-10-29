@@ -15,7 +15,7 @@ import {
   sha256,
   type Sha256,
 } from '../domain/underlag/underlag';
-import { lasLogg, lasTillstand } from './bokforing';
+import { lasLogg, lasTillstand, tillampaAlla } from './bokforing';
 import { KonteraDatabase } from './db';
 import {
   bokforUtkast,
@@ -294,6 +294,53 @@ describe('underlag', () => {
       await kasseraUtkast(db, kontext, forslag.id);
 
       expect((await lasUnderlag(db, underlag.id))?.verifikat).toEqual([VERIFIKAT_A]);
+    });
+
+    /*
+     * A draft is not bookkeeping. A receipt that only a draft has claimed is
+     * still a photograph, and throwing it away leaves the draft without one -
+     * which shows - rather than refusing as if it were evidence.
+     */
+    it('throws away a receipt that only a draft has claimed', async () => {
+      const forslag = utkast();
+      await sparaUtkast(db, kontext, forslag);
+      const { underlag } = await sparaUnderlag(db, kontext, fil());
+      await kopplaUnderlag(db, kontext, underlag.id, forslag.id);
+
+      await taBortUnderlag(db, kontext, underlag.id);
+
+      expect(await lasUnderlag(db, underlag.id)).toBeUndefined();
+      expect((await lasTillstand(db)).utkast.size).toBe(1);
+    });
+
+    /*
+     * 2026-10-29: the receipt watcher linked a receipt to a draft on the
+     * server while the phone, not yet knowing, threw the receipt away. The
+     * watcher then refused the removal and the phone refused the link, each
+     * stopping its own sync for good. Both orders have to arrive at the same
+     * books: no receipt, and the draft without it.
+     */
+    it('agrees on both devices when a receipt is removed while a draft claims it', async () => {
+      const servern = new KonteraDatabase(`kontera-underlag-${(raknare += 1)}`);
+      await servern.open();
+      const { underlag } = await sparaUnderlag(db, kontext, fil());
+      await tillampaAlla(servern, await lasLogg(db), 'fjarr');
+
+      // On the server: a draft, linked to the receipt.
+      const forslag = utkast();
+      await sparaUtkast(servern, kontext, forslag);
+      await kopplaUnderlag(servern, kontext, underlag.id, forslag.id);
+      // On the phone, before it has heard of either: the receipt goes.
+      await taBortUnderlag(db, kontext, underlag.id);
+
+      await tillampaAlla(db, await lasLogg(servern), 'fjarr');
+      await tillampaAlla(servern, await lasLogg(db), 'fjarr');
+
+      for (const enhet of [db, servern]) {
+        const tillstand = await lasTillstand(enhet);
+        expect(tillstand.underlag.size).toBe(0);
+        expect([...tillstand.utkast.keys()]).toEqual([forslag.id]);
+      }
     });
 
     it('is quiet about a draft that is already gone', async () => {

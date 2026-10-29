@@ -255,6 +255,7 @@ export type Effekt =
 export interface Tillstandsuppslag {
   rakenskapsar(id: Uuid): Rakenskapsar | undefined;
   verifikat(id: Uuid): BokfortVerifikat | undefined;
+  utkast(id: Uuid): Verifikatutkast | undefined;
   underlag(id: Uuid): Underlag | undefined;
   anlaggning(id: Uuid): Anlaggningstillgang | undefined;
   fastighet(id: Uuid): Fastighetstillgang | undefined;
@@ -349,6 +350,18 @@ export function effekter(
     }
 
     case 'underlag.kopplat': {
+      /*
+       * A receipt thrown away on one device while another linked it to a
+       * draft: the removal won there, and the link has nothing left to link
+       * here. Only for a draft - a link to anything else on a receipt that
+       * is gone is a conflict in the books, and says so below.
+       */
+      if (
+        uppslag.underlag(handelse.underlagId) === undefined &&
+        uppslag.utkast(handelse.verifikatId) !== undefined
+      ) {
+        return [];
+      }
       const post = kravUnderlag(uppslag, handelse.underlagId, 'koppla');
       return [
         { tabell: 'underlag', atgard: 'satt', post: koppla(post, handelse.verifikatId) },
@@ -396,7 +409,7 @@ export function effekter(
         // about.
         return [];
       }
-      if (!farTasBort(post)) {
+      if (!farTasBort(post, (id) => uppslag.utkast(id) !== undefined)) {
         // The evidence for a booked verifikat is not something a log entry
         // gets to remove, whoever wrote it.
         throw new OforanderligtUnderlagError(post.id);
@@ -539,6 +552,7 @@ export function bygg(handelser: Iterable<Handelse>): Bokforingstillstand {
   const uppslag: Tillstandsuppslag = {
     rakenskapsar: (id) => rakenskapsar.get(id),
     verifikat: (id) => verifikat.get(id),
+    utkast: (id) => utkast.get(id),
     underlag: (id) => underlag.get(id),
     anlaggning: (id) => anlaggningar.get(id),
     fastighet: (id) => fastigheter.get(id),
