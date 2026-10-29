@@ -283,9 +283,6 @@ async function lasEtt(
     beroenden.nyttId(),
     idag,
   );
-  // The reasons travel with the draft, so the review in the app can see them.
-  const utkast = skapaUtkast({ ...granskat.utkast, motivering: kontering.motivering });
-
   const varningar = [...granskat.varningar];
   if (kontrollerad.avlasning.betalsatt === 'faktura') {
     varningar.push(
@@ -295,6 +292,16 @@ async function lasEtt(
   if (kontrollerad.avlasning.sakerhet === 'lag') {
     varningar.push(`Läsningen var osäker: ${kontrollerad.avlasning.kommentar}`);
   }
+
+  // The reasons travel with the draft, so the review in the app can see
+  // them - and the warnings with them, since a possible duplicate is the
+  // one thing the review must not miss.
+  const utkast = skapaUtkast({
+    ...granskat.utkast,
+    motivering: [kontering.motivering, ...varningar.map((varning) => `OBS: ${varning}`)]
+      .join(' ')
+      .trim(),
+  });
 
   const sammanfattning = `${utkast.beskrivning}, ${formatKronor(kontrollerad.betalat)} kr, ${utkast.datum}`;
   const text = [

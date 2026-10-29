@@ -255,4 +255,41 @@ describe('granskaForslag', () => {
     expect(varningar).toHaveLength(1);
     expect(varningar[0]).toContain('A7');
   });
+
+  /*
+   * 2026-10-29: a photographed settlement dated the 9th was drafted again,
+   * though the same settlement had been booked on the 25th - the day it was
+   * paid, as the kontantmetod has it. Same total within a couple of months
+   * is worth a look whatever the dates say.
+   */
+  it('warns about the same total booked within two months', () => {
+    const verifikat = (dag: string, nummer: number) =>
+      bokfor(
+        skapaUtkast({
+          id: `01990000-0000-7000-8000-0000000000${nummer}0` as Uuid,
+          datum: datum(dag),
+          beskrivning: 'Lantmännen foder',
+          konteringar: [
+            { konto: kontonummer('4010'), belopp: oreFromKronor('500') },
+            { konto: kontonummer('2013'), belopp: oreFromKronor('-500') },
+          ],
+        }),
+        {
+          serie: verifikatserie('A'),
+          nummer,
+          bokfortDatum: datum(dag),
+          kalla: 'manuell',
+        },
+      );
+
+    const { varningar } = granskaForslag(
+      foder(),
+      bocker({}, [verifikat('2026-08-20', 8), verifikat('2026-05-01', 9)]),
+      ID,
+      IDAG,
+    );
+    expect(varningar).toHaveLength(1);
+    expect(varningar[0]).toContain('A8');
+    expect(varningar[0]).toContain('2026-08-20');
+  });
 });

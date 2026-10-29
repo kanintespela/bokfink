@@ -10,7 +10,7 @@ import {
   omfattar,
   type Rakenskapsar,
 } from '../domain/rakenskapsar/rakenskapsar';
-import { datum, type Datum } from '../domain/tid/datum';
+import { dagarMellan, datum, type Datum } from '../domain/tid/datum';
 import {
   beteckning,
   omslutning,
@@ -128,19 +128,35 @@ export function granskaForslag(
 }
 
 /**
+ * How far apart a booked verifikat may be dated and still look like the same
+ * purchase. Under the kontantmetod an invoice is booked on the day it is
+ * paid, weeks after the date printed on it, so the same total on a nearby
+ * date is as suspicious as on the same one.
+ */
+const DUBBLETTFONSTER_DAGAR = 60;
+
+/**
  * Booked verifikat that look like the same purchase.
  *
- * Same date and same total is what a receipt booked once already looks like.
- * A warning rather than a refusal: two identical coffees on one day are two
+ * The same total within two months is what a receipt booked once already
+ * looks like - on 2026-10-29 a settlement dated the 9th was drafted again
+ * though it had been booked on the 25th, the day it was paid. A warning
+ * rather than a refusal: two identical sacks of feed a month apart are two
  * purchases, and only the person holding the receipts can tell.
  */
 function dubbletter(utkast: Verifikatutkast, bocker: Granskningsunderlag): string[] {
   const summa = omslutning(utkast);
   return [...bocker.verifikat.values()]
-    .filter((post) => post.datum === utkast.datum && omslutning(post) === summa)
-    .map(
+    .filter(
       (post) =>
-        `${beteckning(post)} har samma datum och belopp: ${post.beskrivning}. ` +
-        'Kontrollera att kvittot inte redan är bokfört.',
+        omslutning(post) === summa &&
+        Math.abs(dagarMellan(post.datum, utkast.datum)) <= DUBBLETTFONSTER_DAGAR,
+    )
+    .map((post) =>
+      post.datum === utkast.datum
+        ? `${beteckning(post)} har samma datum och belopp: ${post.beskrivning}. ` +
+          'Kontrollera att kvittot inte redan är bokfört.'
+        : `${beteckning(post)} den ${post.datum} har samma belopp: ${post.beskrivning}. ` +
+          'Kontrollera att det inte är samma köp, redan bokfört.',
     );
 }
