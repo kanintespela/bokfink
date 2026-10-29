@@ -13,6 +13,15 @@ export interface Kvittobild {
   readonly url: string;
 }
 
+/**
+ * What the receipt assistant is doing with a receipt, as far as the app can
+ * tell: reading it, or done without a draft. The app sees drafts arrive but
+ * not failures, so the second is inferred from time - a run takes a minute
+ * or two, and a receipt still without a draft well after that did not get
+ * one. The reason went to the owner's chat.
+ */
+export type Assistentstatus = 'laser' | 'inget-utkast';
+
 interface Props {
   readonly kvitton: readonly Kvittobild[];
   readonly onLaggTill: (
@@ -44,7 +53,7 @@ interface Props {
    * starts the phone's own reading, which is the weaker one, and races the
    * draft that is on its way.
    */
-  readonly laserAssistenten?: (underlag: Underlag) => boolean;
+  readonly assistentstatus?: (underlag: Underlag) => Assistentstatus | undefined;
   /** The drafts waiting for review, shown between the camera and the receipts. */
   readonly children?: ReactNode;
 }
@@ -65,7 +74,7 @@ export function Kvitton({
   onTaBort,
   onForfallodag,
   onLasText,
-  laserAssistenten = () => false,
+  assistentstatus = () => undefined,
   children,
 }: Props) {
   const kamera = useRef<HTMLInputElement>(null);
@@ -224,7 +233,8 @@ export function Kvitton({
         <ul className="kvittorutnat" data-testid="kvittolista">
           {kvitton.map((kvitto) => {
             const { underlag, url } = kvitto;
-            const laser = laserAssistenten(underlag);
+            const status = assistentstatus(underlag);
+            const laser = status === 'laser';
             return (
               <li key={underlag.id}>
                 <button
@@ -252,6 +262,15 @@ export function Kvitton({
                   >
                     Assistenten läser kvittot… Utkastet dyker upp här inom ett par
                     minuter.
+                  </p>
+                )}
+                {status === 'inget-utkast' && (
+                  <p
+                    className="hjalptext"
+                    data-testid={`assistenten-klar-${underlag.id}`}
+                  >
+                    Assistenten lämnade inget utkast för det här kvittot. Bokför det själv
+                    – skälet står i meddelandet från assistenten.
                   </p>
                 )}
                 <button

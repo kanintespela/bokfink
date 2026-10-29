@@ -179,7 +179,7 @@ import { Tillbaka } from '../ui/Tillbaka';
 import { Varumarke } from '../ui/Varumarke';
 import { Vyval } from '../ui/Vyval';
 import { BokforUtgift } from './bokfor/BokforUtgift';
-import { Kvitton, type Kvittobild } from './underlag/Kvitton';
+import { Kvitton, type Assistentstatus, type Kvittobild } from './underlag/Kvitton';
 import { Bankimport } from './bank/Bankimport';
 import { lasKontoutdrag, type Banktransaktion } from '../domain/bank/kontoutdrag';
 import { matchaKontoutdrag } from '../domain/bank/matchning';
@@ -287,7 +287,10 @@ async function skrivkontext(db: KonteraDatabase): Promise<Skrivkontext> {
 const ASSISTENT_AKTIV_MS = 14 * 24 * 60 * 60 * 1000;
 
 /** How long after a receipt is added the assistant is taken to be reading it. */
-const ASSISTENT_LASTID_MS = 10 * 60 * 1000;
+const ASSISTENT_LASTID_MS = 5 * 60 * 1000;
+
+/** How long a receipt the assistant left without a draft says so. */
+const ASSISTENT_BESKED_MS = 60 * 60 * 1000;
 
 export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval }) {
   const [vy, setVy] = useVy();
@@ -623,25 +626,32 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
   const [autosynkfel, setAutosynkfel] = useState<string | undefined>();
 
   /*
-   * A receipt the assistant is probably reading: added in the last minutes,
-   * in books where the assistant has been at work lately. Its drafts arrive
-   * within a couple of minutes, so ten covers a slow run and an unsynced
-   * phone; after that the receipt is the owner's again. Two weeks without a
-   * word from the assistant and it is not promised at all.
+   * What the assistant is doing with a receipt, in books where it has been
+   * at work lately. It runs every two minutes and a reading takes about one,
+   * so a receipt is "being read" for five minutes after it was added; still
+   * without a draft after that, it did not get one, and the reason went to
+   * the owner's chat. After an hour the receipt is simply waiting again. Two
+   * weeks without a word from the assistant and nothing is promised at all.
    */
-  const laserAssistenten = (underlag: Underlag): boolean => {
+  const assistentstatus = (underlag: Underlag): Assistentstatus | undefined => {
     const senast = laddat?.assistentenSenast;
     if (senast === undefined) {
-      return false;
+      return undefined;
     }
     const nu = Date.now();
-    return (
-      nu - Date.parse(senast) < ASSISTENT_AKTIV_MS &&
-      nu - Date.parse(underlag.tillagd) < ASSISTENT_LASTID_MS
-    );
+    if (nu - Date.parse(senast) >= ASSISTENT_AKTIV_MS) {
+      return undefined;
+    }
+    const alder = nu - Date.parse(underlag.tillagd);
+    return alder < ASSISTENT_LASTID_MS
+      ? 'laser'
+      : alder < ASSISTENT_BESKED_MS
+        ? 'inget-utkast'
+        : undefined;
   };
   const vantarPaAssistenten =
-    vy === 'kvitton' && (laddat?.kvitton ?? []).some(laserAssistenten);
+    vy === 'kvitton' &&
+    (laddat?.kvitton ?? []).some((kvitto) => assistentstatus(kvitto) === 'laser');
 
   useAutosynk({
     aktiv: laddat?.synk.inloggning !== undefined,
@@ -915,7 +925,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
         {vy === 'kvitton' && (
           <Kvitton
             kvitton={bilder}
-            laserAssistenten={laserAssistenten}
+            assistentstatus={assistentstatus}
             onBokfor={(kvitto) => {
               setFormularnyckel((forra) => forra + 1);
               setValtKvitto(kvitto.underlag.id);
