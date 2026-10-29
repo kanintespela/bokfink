@@ -175,6 +175,45 @@ test('changes a draft before booking it', async ({ page }) => {
   await expect(page.getByTestId(`underlag-${UTKAST}`)).toContainText('kvitto-foder.png');
 });
 
+/*
+ * Photographed in books where the assistant has been at work: the receipt
+ * says the assistant is reading it, and booking it by hand is offered as the
+ * alternative rather than the next step - pressed at once, it would start the
+ * phone's own, weaker reading and race the draft on its way.
+ */
+test('says the assistant is reading a receipt just photographed', async ({ page }) => {
+  await lasInUtkast(page);
+
+  await page.goto('/#kvitton');
+  await page.getByTestId('valj-underlag').setInputFiles({
+    name: 'nytt-kvitto.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAAAAABX3VL4AAAADklEQVQI12P8wMDEwAAABMIA9OHnekkAAAAASUVORK5CYII=',
+      'base64',
+    ),
+  });
+  const spara = page.getByTestId('spara-hela');
+  await spara.click();
+  if (
+    await page
+      .getByTestId('bildomdome')
+      .waitFor({ state: 'visible', timeout: 3000 })
+      .then(() => true)
+      .catch(() => false)
+  ) {
+    await spara.click();
+  }
+
+  const lista = page.getByTestId('kvittolista');
+  await expect(lista.locator('[data-testid^="assistenten-laser-"]')).toContainText(
+    'Assistenten läser kvittot',
+  );
+  await expect(
+    lista.getByRole('button', { name: 'Bokför själv i stället' }),
+  ).toBeVisible();
+});
+
 test('sends the receipt back to wait when a draft is thrown away', async ({ page }) => {
   await lasInUtkast(page);
 

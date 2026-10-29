@@ -36,6 +36,15 @@ interface Props {
   ) => Promise<void>;
   /** The text read out of the file, reading it first when nobody has. */
   readonly onLasText: (kvitto: Kvittobild) => Promise<string>;
+  /**
+   * Whether the receipt assistant is probably reading this one right now.
+   *
+   * Then the receipt says so, and booking it by hand becomes the
+   * alternative rather than the obvious next step: pressed at once, it
+   * starts the phone's own reading, which is the weaker one, and races the
+   * draft that is on its way.
+   */
+  readonly laserAssistenten?: (underlag: Underlag) => boolean;
   /** The drafts waiting for review, shown between the camera and the receipts. */
   readonly children?: ReactNode;
 }
@@ -56,6 +65,7 @@ export function Kvitton({
   onTaBort,
   onForfallodag,
   onLasText,
+  laserAssistenten = () => false,
   children,
 }: Props) {
   const kamera = useRef<HTMLInputElement>(null);
@@ -214,6 +224,7 @@ export function Kvitton({
         <ul className="kvittorutnat" data-testid="kvittolista">
           {kvitton.map((kvitto) => {
             const { underlag, url } = kvitto;
+            const laser = laserAssistenten(underlag);
             return (
               <li key={underlag.id}>
                 <button
@@ -233,13 +244,23 @@ export function Kvitton({
                     {underlag.tillagd.slice(0, 10)} · {kilobyte(underlag.storlek)}
                   </span>
                 </button>
+                {laser && (
+                  <p
+                    className="hjalptext"
+                    role="status"
+                    data-testid={`assistenten-laser-${underlag.id}`}
+                  >
+                    Assistenten läser kvittot… Utkastet dyker upp här inom ett par
+                    minuter.
+                  </p>
+                )}
                 <button
                   type="button"
                   className="knapp knapp--text"
                   data-testid={`bokfor-${underlag.id}`}
                   onClick={() => onBokfor(kvitto)}
                 >
-                  Bokför kvittot
+                  {laser ? 'Bokför själv i stället' : 'Bokför kvittot'}
                 </button>
 
                 <Forfallodag

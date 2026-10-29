@@ -24,6 +24,7 @@ import {
 import { verifikatserie } from '../domain/verifikat/serie';
 import type { Uuid } from '../domain/id/uuidv7';
 import {
+  lasLogg,
   lasVerifikat,
   lasTillstand,
   senastBokforda,
@@ -70,6 +71,7 @@ import {
 import type { Underlag } from '../domain/underlag/underlag';
 import { tolkaKvitto, type Kvittoforslag } from '../domain/underlag/kvittotolkning';
 import { foreslaMallForText } from '../domain/mall/kvittomall';
+import { assistentenSenast } from '../domain/underlag/assistent';
 import {
   foreslaFranTidigare,
   tidigareKop,
@@ -214,6 +216,8 @@ interface Laddat {
   readonly underlagPerVerifikat: ReadonlyMap<Uuid, readonly Underlag[]>;
   /** Booked purchases with a read receipt, for remembering suppliers. */
   readonly tidigareKop: readonly TidigareKop[];
+  /** When the receipt assistant last wrote to the books, if it ever has. */
+  readonly assistentenSenast: string | undefined;
   /** Every booked verifikat, across every year, for the reports. */
   readonly allaVerifikat: readonly BokfortVerifikat[];
   /** The fiscal years a removal would accept. Empty in the normal case. */
@@ -278,6 +282,12 @@ async function skrivkontext(db: KonteraDatabase): Promise<Skrivkontext> {
     idag: () => systemklocka().idag(),
   };
 }
+
+/** How recently the assistant must have written for its reading to be promised. */
+const ASSISTENT_AKTIV_MS = 14 * 24 * 60 * 60 * 1000;
+
+/** How long after a receipt is added the assistant is taken to be reading it. */
+const ASSISTENT_LASTID_MS = 10 * 60 * 1000;
 
 export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval }) {
   const [vy, setVy] = useVy();
@@ -384,6 +394,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
       kvitton,
       underlagPerVerifikat,
       tidigareKop: tidigareKop(tillstand.underlag.values(), tillstand.verifikat, idag),
+      assistentenSenast: assistentenSenast(await lasLogg(db)),
       allaVerifikat: [...tillstand.verifikat.values()],
       borttagbaraAr: await borttagbaraRakenskapsar(db),
       dagarSedanBackup:
@@ -611,11 +622,33 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
 
   const [autosynkfel, setAutosynkfel] = useState<string | undefined>();
 
+  /*
+   * A receipt the assistant is probably reading: added in the last minutes,
+   * in books where the assistant has been at work lately. Its drafts arrive
+   * within a couple of minutes, so ten covers a slow run and an unsynced
+   * phone; after that the receipt is the owner's again. Two weeks without a
+   * word from the assistant and it is not promised at all.
+   */
+  const laserAssistenten = (underlag: Underlag): boolean => {
+    const senast = laddat?.assistentenSenast;
+    if (senast === undefined) {
+      return false;
+    }
+    const nu = Date.now();
+    return (
+      nu - Date.parse(senast) < ASSISTENT_AKTIV_MS &&
+      nu - Date.parse(underlag.tillagd) < ASSISTENT_LASTID_MS
+    );
+  };
+  const vantarPaAssistenten =
+    vy === 'kvitton' && (laddat?.kvitton ?? []).some(laserAssistenten);
+
   useAutosynk({
     aktiv: laddat?.synk.inloggning !== undefined,
     osankta: laddat?.synk.osankta ?? 0,
     synka: korSynk,
     onFel: setAutosynkfel,
+    bevaka: vantarPaAssistenten,
   });
 
   if (fel !== undefined) {
@@ -882,6 +915,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
         {vy === 'kvitton' && (
           <Kvitton
             kvitton={bilder}
+            laserAssistenten={laserAssistenten}
             onBokfor={(kvitto) => {
               setFormularnyckel((forra) => forra + 1);
               setValtKvitto(kvitto.underlag.id);

@@ -22,6 +22,13 @@ describe('skaSynkas', () => {
     expect(skaSynkas(lage({ anledning: 'natet-tillbaka' }))).toBe(true);
   });
 
+  /* Waiting for a draft from the assistant is about the other side too. */
+  it('asks while something is expected from the server', () => {
+    expect(skaSynkas(lage({ anledning: 'bevakning', osankta: 0 }))).toBe(true);
+    expect(skaSynkas(lage({ anledning: 'bevakning', pagar: true }))).toBe(false);
+    expect(skaSynkas(lage({ anledning: 'bevakning', aktiv: false }))).toBe(false);
+  });
+
   /* A retry is about the server coming back, so it asks whatever the queue holds. */
   it('tries again after a failure whether or not anything is queued', () => {
     expect(skaSynkas(lage({ anledning: 'nytt-forsok', osankta: 0 }))).toBe(true);
@@ -45,6 +52,7 @@ describe('skaSynkas', () => {
       'natet-tillbaka',
       'ny-handelse',
       'nytt-forsok',
+      'bevakning',
     ] as const) {
       expect(skaSynkas(lage({ aktiv: false, osankta: 5, anledning }))).toBe(false);
     }

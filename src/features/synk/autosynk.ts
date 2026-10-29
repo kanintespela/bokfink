@@ -33,7 +33,7 @@ import { useEffect, useRef } from 'react';
  */
 
 export type Anledning =
-  'start' | 'synlig' | 'natet-tillbaka' | 'ny-handelse' | 'nytt-forsok';
+  'start' | 'synlig' | 'natet-tillbaka' | 'ny-handelse' | 'nytt-forsok' | 'bevakning';
 
 export interface Synklage {
   /** Logged in to a server and holding a passphrase. */
@@ -84,6 +84,13 @@ interface Props {
   readonly osankta: number;
   readonly synka: () => Promise<unknown>;
   /**
+   * Something is expected from the other side within minutes - a receipt the
+   * assistant is reading - and the person is looking at where it will show.
+   * Then the app asks every so often instead of waiting for one of the four
+   * moments, and only while it is on screen; nothing is asked from a pocket.
+   */
+  readonly bevaka?: boolean;
+  /**
    * Told when a round failed.
    *
    * Reported rather than swallowed (hard rule 11), but quietly: a phone that
@@ -93,7 +100,16 @@ interface Props {
   readonly onFel: (meddelande: string | undefined) => void;
 }
 
-export function useAutosynk({ aktiv, osankta, synka, onFel }: Props): void {
+/** How often to ask while something is expected, see Props.bevaka. */
+const BEVAKNING_MS = 20_000;
+
+export function useAutosynk({
+  aktiv,
+  osankta,
+  synka,
+  onFel,
+  bevaka = false,
+}: Props): void {
   /*
    * Refs rather than state: these must not make the effect run again, or
    * every finished round would schedule the next one.
@@ -180,4 +196,41 @@ export function useAutosynk({ aktiv, osankta, synka, onFel }: Props): void {
       globalThis.document?.removeEventListener('visibilitychange', nar);
     };
   }, [aktiv, osankta]);
+
+  /*
+   * The watch: a round every so often while something is expected and the
+   * app is on screen. Same lock as every other round, so two never overlap,
+   * and failures reported the same way.
+   */
+  useEffect(() => {
+    if (!aktiv || !bevaka) {
+      return;
+    }
+    const tick = setInterval(() => {
+      const online = globalThis.navigator?.onLine ?? true;
+      if (
+        globalThis.document?.visibilityState === 'hidden' ||
+        !skaSynkas({
+          aktiv,
+          online,
+          pagar: pagar.current,
+          osankta: 0,
+          anledning: 'bevakning',
+        })
+      ) {
+        return;
+      }
+      pagar.current = true;
+      senaste.current
+        .synka()
+        .then(() => senaste.current.onFel(undefined))
+        .catch((orsak: unknown) =>
+          senaste.current.onFel(orsak instanceof Error ? orsak.message : String(orsak)),
+        )
+        .finally(() => {
+          pagar.current = false;
+        });
+    }, BEVAKNING_MS);
+    return () => clearInterval(tick);
+  }, [aktiv, bevaka]);
 }
