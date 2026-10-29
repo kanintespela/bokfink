@@ -62,6 +62,7 @@ async function lasInUtkast(page: Page): Promise<void> {
             { konto: '2641', belopp: 10000 },
             { konto: '2017', belopp: -50000 },
           ],
+          motivering: 'Kraftfoder till fåren, som de tidigare köpen hos Lantmännen.',
         },
       },
       {
@@ -106,6 +107,9 @@ test('books a draft with its receipt attached', async ({ page }) => {
   await expect(
     utkast.getByRole('img', { name: 'Underlag kvitto-foder.png' }),
   ).toBeVisible();
+  await expect(page.getByTestId(`utkast-motivering-${UTKAST}`)).toContainText(
+    'som de tidigare köpen hos Lantmännen',
+  );
   await expect(page.getByTestId(`utkast-kontering-${UTKAST}`)).toContainText('4000');
   await expect(page.getByTestId(`utkast-kontering-${UTKAST}`)).toContainText('400,00');
 

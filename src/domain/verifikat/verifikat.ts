@@ -39,6 +39,15 @@ export interface Verifikatutkast {
    * in step.
    */
   readonly mall?: Uuid;
+  /**
+   * Why a reader suggested these accounts, when one did.
+   *
+   * Set by the receipt watcher, shown beside the draft so the review can
+   * check the reasoning and not only the result. Never carried into the
+   * booked verifikat: that records what happened, not what was thought
+   * about the receipt.
+   */
+  readonly motivering?: string;
 }
 
 /** Where a verifikat came from, kept for traceability. */
@@ -378,6 +387,7 @@ export interface Utkastuppgifter {
   readonly beskrivning: string;
   readonly konteringar: readonly Kontering[];
   readonly mall?: Uuid;
+  readonly motivering?: string;
 }
 
 /**
@@ -419,5 +429,8 @@ export function skapaUtkast(uppgifter: Utkastuppgifter): Verifikatutkast {
     beskrivning: uppgifter.beskrivning.trim(),
     konteringar: konteringar.map((rad) => ({ ...rad })),
     ...(uppgifter.mall === undefined ? {} : { mall: uppgifter.mall }),
+    ...(uppgifter.motivering === undefined || uppgifter.motivering.trim() === ''
+      ? {}
+      : { motivering: uppgifter.motivering.trim() }),
   };
 }

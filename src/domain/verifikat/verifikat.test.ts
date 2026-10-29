@@ -93,6 +93,30 @@ describe('debet and kredit', () => {
 });
 
 describe('skapaUtkast', () => {
+  /*
+   * Why the receipt watcher chose the accounts, for the person reviewing the
+   * draft. It belongs to the suggestion and stays there: a booked verifikat
+   * says what happened, not what a reader thought of the receipt.
+   */
+  it('keeps the reasons on the draft and leaves them out of the booking', () => {
+    const forslag = skapaUtkast({
+      id: ID,
+      datum: datum('2026-09-05'),
+      beskrivning: 'Diesel',
+      konteringar: [rad('5400', '100.00'), rad('2013', '-100.00')],
+      motivering: '  Som de senaste dieselköpen.  ',
+    });
+    expect(forslag.motivering).toBe('Som de senaste dieselköpen.');
+
+    const bokfort = bokfor(forslag, {
+      serie: verifikatserie('A'),
+      nummer: 1,
+      bokfortDatum: datum('2026-09-05'),
+      kalla: 'manuell',
+    });
+    expect('motivering' in bokfort).toBe(false);
+  });
+
   it('refuses a verifikat that does not balance', () => {
     expect(() =>
       skapaUtkast({

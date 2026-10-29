@@ -7,6 +7,7 @@ import type { KonteraDatabase } from '../data/db';
 import { sparaUtkast, type Skrivkontext } from '../data/kommandon';
 import { osankta, type Krypto, type Synktransport } from '../data/synk';
 import { kopplaUnderlag } from '../data/underlag';
+import { skapaUtkast } from '../domain/verifikat/verifikat';
 import { granskaForslag } from './forslag';
 import {
   avlasningsfraga,
@@ -217,7 +218,8 @@ async function lasEtt(
     beroenden.nyttId(),
     idag,
   );
-  const { utkast } = granskat;
+  // The reasons travel with the draft, so the review in the app can see them.
+  const utkast = skapaUtkast({ ...granskat.utkast, motivering: kontering.motivering });
 
   const varningar = [...granskat.varningar];
   if (kontrollerad.avlasning.betalsatt === 'faktura') {

@@ -177,6 +177,7 @@ describe('the receipt watcher', () => {
     expect(tillstand.verifikat.size).toBe(0);
     const [utkast] = [...tillstand.utkast.values()];
     expect(utkast?.konteringar).toHaveLength(3);
+    expect(utkast?.motivering).toBe('Som tidigare dieselköp.');
     const [kvitto] = [...tillstand.underlag.values()];
     expect(kvitto?.verifikat).toEqual([utkast?.id]);
     expect(tillstand.underlag.size).toBe(1);

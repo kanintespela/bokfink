@@ -106,6 +106,12 @@ export function Utkastlista({
                   <span className="listrad__sekundar">{post.datum}</span>
                 </p>
 
+                {post.motivering !== undefined && (
+                  <p className="hjalptext" data-testid={`utkast-motivering-${post.id}`}>
+                    <strong>Assistentens motivering:</strong> {post.motivering}
+                  </p>
+                )}
+
                 {bevis.length === 0 ? (
                   <p className="hjalptext">Inget kvitto är kopplat till förslaget.</p>
                 ) : (
