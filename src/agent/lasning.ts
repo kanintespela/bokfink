@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 import { add, ore, oreFromKronor, sum, type Ore } from '../domain/belopp/ore';
 import { allaLov } from '../domain/beslutstrad/beslutstrad';
+import { beslutstradFor } from '../domain/beslutstrad/tradval';
+import { STANDARD_BOKPROFIL, type Bokprofil } from '../domain/bok/bokprofil';
 import type { Uuid } from '../domain/id/uuidv7';
 import type { Konto, Kontonummer } from '../domain/konto/konto';
 import { datum, type Datum } from '../domain/tid/datum';
@@ -74,19 +76,40 @@ export interface KontrolleradAvlasning {
 
 /** What the reader is told about the firm whose receipt it is. */
 export interface Firma {
-  /** The firm's or owner's name, as it stands on invoices to it. */
+  /** The firm's or association's name, as it stands on invoices to it. */
   readonly foretag?: string;
+  /** Which kind of book the receipt is for. */
+  readonly profil?: Bokprofil;
 }
 
-export function avlasningsfraga({ foretag }: Firma = {}): string {
+/** What the bookkeeping party is called in a question, and what it is. */
+function huvudman(profil: Bokprofil): {
+  readonly vem: string;
+  readonly den: string;
+  readonly Den: string;
+} {
+  return profil === 'forening'
+    ? { vem: 'en ideell förening i Sverige', den: 'föreningen', Den: 'Föreningen' }
+    : {
+        vem: 'en enskild firma i Sverige (lantbruk med får)',
+        den: 'firman',
+        Den: 'Firman',
+      };
+}
+
+export function avlasningsfraga({
+  foretag,
+  profil = STANDARD_BOKPROFIL,
+}: Firma = {}): string {
+  const { vem, den, Den } = huvudman(profil);
   return [
-    'Du läser ett kvitto eller en faktura för en enskild firma i Sverige (lantbruk med får).',
+    `Du läser ett kvitto eller en faktura för ${vem}.`,
     'Bilden är bifogad. Den kan vara vriden eller suddig.',
     ...(foretag === undefined
       ? []
       : [
-          `Firman är ${foretag}. Står firman som köpare, kund eller mottagare är underlaget`,
-          'ett inköp; bara om firman står som säljare eller avsändare är det en försäljning.',
+          `${Den} är ${foretag}. Står ${den} som köpare, kund eller mottagare är underlaget`,
+          `ett inköp; bara om ${den} står som säljare eller avsändare är det en försäljning.`,
         ]),
     '',
     'Använd INGA verktyg, svara direkt utifrån bilden. Svara ENDAST med ett JSON-objekt,',
@@ -94,10 +117,13 @@ export function avlasningsfraga({ foretag }: Firma = {}): string {
     '',
     'Regler:',
     '- Alla belopp som strängar i kronor med punkt och två decimaler, t.ex. "1351.88".',
-    '- "riktning": "utgift" om firman betalar (kvitto, faktura från en leverantör till',
-    '  firman), "inkomst" om firman får pengar (avräkningsnota från slakteri, faktura som',
-    '  firman själv skrivit). Underlag som fotas är nästan alltid inköp: välj "inkomst"',
-    '  bara när underlaget tydligt visar att firman sålt något.',
+    `- "riktning": "utgift" om ${den} betalar (kvitto, faktura från en leverantör till`,
+    `  ${den}), "inkomst" om ${den} får pengar (${
+      profil === 'forening'
+        ? 'faktura som föreningen själv skrivit, till exempel för uthyrning'
+        : 'avräkningsnota från slakteri, faktura som firman själv skrivit'
+    }). Underlag som fotas är nästan alltid inköp: välj "inkomst"`,
+    `  bara när underlaget tydligt visar att ${den} sålt något.`,
     '- "betalat": det belopp som faktiskt betalades, alltid positivt. Vid kortbetalning det',
     '  belopp kortet drogs på (kort avrundas inte till hela kronor), annars "att betala"/totalen.',
     '- Netto, moms och avrundning är också positiva, utom en avrundning nedåt som är negativ.',
@@ -127,12 +153,14 @@ export function konteringsfraga(
   historik: readonly BokfortVerifikat[],
   konton: ReadonlyMap<Kontonummer, Konto>,
   metod: Redovisningsmetod = 'kontantmetoden',
+  profil: Bokprofil = STANDARD_BOKPROFIL,
 ): string {
+  const { vem, Den } = huvudman(profil);
   const aktiva = [...konton.values()]
     .filter((konto) => konto.aktiv)
     .sort((a, b) => a.nummer.localeCompare(b.nummer));
   return [
-    'Föreslå hur ett kvitto ska bokföras i en enskild firma i Sverige (lantbruk med får).',
+    `Föreslå hur ett kvitto ska bokföras i ${vem}.`,
     'Kvittot är redan avläst, se nedan. Använd INGA verktyg. Svara ENDAST med ett JSON-objekt,',
     'utan någon annan text, enligt formatet nedan.',
     '',
@@ -142,16 +170,28 @@ export function konteringsfraga(
     '  historiken; nyare bokningar väger tyngre än äldre. Saknas historik, välj det konto i',
     '  kontoplanen som passar bäst.',
     '- Debet positivt, kredit negativt, belopp som "123.45". Summan ska bli exakt 0.00.',
-    '- Momsen och betalningen ska ha exakt beloppen från avläsningen. Avrundning på 3740.',
-    '- "riktning" i avläsningen säger åt vilket håll pengarna gick: vid "inkomst" är',
-    '  betalningen debet (pengar in) och intäkten och den utgående momsen kredit.',
+    ...(profil === 'forening'
+      ? [
+          '- Föreningen är inte momsregistrerad och drar inte av moms. Hela det betalda beloppet',
+          '  är kostnaden, momsen ingår i den, och det ska inte finnas någon momsrad.',
+          '  Betalningen ska ha exakt beloppet från avläsningen. Ingen avrundning behövs.',
+          '- "riktning" i avläsningen säger åt vilket håll pengarna gick: vid "inkomst" är',
+          '  betalningen debet (pengar in) och intäkten hela beloppet kredit, utan moms.',
+        ]
+      : [
+          '- Momsen och betalningen ska ha exakt beloppen från avläsningen. Avrundning på 3740.',
+          '- "riktning" i avläsningen säger åt vilket håll pengarna gick: vid "inkomst" är',
+          '  betalningen debet (pengar in) och intäkten och den utgående momsen kredit.',
+        ]),
     '- Visar historiken att samma slags köp eller samma leverantör tidigare bokförts åt',
     '  motsatt håll mot avläsningens "riktning", följ historiken och säg det i motiveringen.',
     ...(metod === 'kontantmetoden'
       ? [
-          '- Firman bokför med kontantmetoden: en faktura bokförs när den betalas. Använd',
+          `- ${Den} bokför med kontantmetoden: en faktura bokförs när den betalas. Använd`,
           '  inte kundfordringar (15xx) eller leverantörsskulder (2440); bokför betalningen',
-          '  på det konto pengarna gick genom enligt historiken, oftast företagskontot 1930.',
+          `  på det konto pengarna gick genom enligt historiken, oftast ${
+            profil === 'forening' ? 'bankkontot' : 'företagskontot'
+          } 1930.`,
         ]
       : []),
     '- "beskrivning": kort, t.ex. "Preem: diesel".',
@@ -171,7 +211,9 @@ export function konteringsfraga(
     ...aktiva.map((konto) => `${konto.nummer} ${konto.namn}`),
     '',
     'Bokföringsalternativ i appen, som stöd (id | namn | konto):',
-    ...allaLov().map((lov) => `${lov.id} | ${lov.namn} | ${lov.konto}`),
+    ...allaLov(beslutstradFor(profil)).map(
+      (lov) => `${lov.id} | ${lov.namn} | ${lov.konto}`,
+    ),
   ].join('\n');
 }
 

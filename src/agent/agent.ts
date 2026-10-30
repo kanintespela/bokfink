@@ -12,6 +12,7 @@ import { osankta, synka, type Krypto, type Synktransport } from '../data/synk';
 import { kopplaUnderlag, sparaUnderlag } from '../data/underlag';
 import { forberedUnderlag, underlagsnamn, type Bildkodare } from './fil';
 import { granskaForslag, type GranskatForslag } from './forslag';
+import type { Bokprofil } from '../domain/bok/bokprofil';
 import { beskrivLage, sok } from './lage';
 import { lasNyaKvitton, type Kvittovakt } from './vakt';
 
@@ -42,6 +43,11 @@ export interface Agentberoenden {
   readonly kodaBild: Bildkodare;
   /** The receipt watcher's reader, limits and memory; set only where it runs. */
   readonly vakt?: Kvittovakt;
+  /**
+   * What kind of book this is, from the watcher's settings, which is where the
+   * assistant is told: the sync log does not carry it. A firm's when absent.
+   */
+  readonly profil?: Bokprofil;
 }
 
 export type Agentkommando =
@@ -94,7 +100,7 @@ export async function korAgent(
 
   switch (kommando.typ) {
     case 'lage':
-      return beskrivLage(bocker);
+      return beskrivLage(bocker, beroenden.profil);
     case 'sok':
       return sok(bocker, kommando.fraga);
     case 'utkast':

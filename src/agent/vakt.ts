@@ -9,6 +9,7 @@ import { osankta, type Krypto, type Synktransport } from '../data/synk';
 import { kopplaUnderlag } from '../data/underlag';
 import { skapaUtkast } from '../domain/verifikat/verifikat';
 import { granskaForslag } from './forslag';
+import { STANDARD_BOKPROFIL, type Bokprofil } from '../domain/bok/bokprofil';
 import type { Redovisningsmetod } from '../domain/moms/redovisningsmetod';
 import { datum, type Datum as Dag } from '../domain/tid/datum';
 import {
@@ -55,6 +56,8 @@ export interface Kvittovakt {
   /** The firm's name as it stands on invoices to it, so the reader knows which side it is. */
   readonly foretag?: string;
   readonly metod?: Redovisningsmetod;
+  /** What kind of book the receipts are for; a firm's when absent. */
+  readonly profil?: Bokprofil;
 }
 
 export interface Forsok {
@@ -265,11 +268,13 @@ async function lasEtt(
   const data = await hamtaKvitto(kvitto, beroenden);
   const idag = beroenden.idag();
   const metod = beroenden.vakt.metod ?? 'kontantmetoden';
+  const profil = beroenden.vakt.profil ?? STANDARD_BOKPROFIL;
 
   const kontrollerad = kontrolleraAvlasning(
     tolkaAvlasning(
       await beroenden.vakt.las(
         avlasningsfraga({
+          profil,
           ...(beroenden.vakt.foretag === undefined
             ? {}
             : { foretag: beroenden.vakt.foretag }),
@@ -286,7 +291,7 @@ async function lasEtt(
   );
   const kontering = tolkaKontering(
     await beroenden.vakt.las(
-      konteringsfraga(kontrollerad.avlasning, historik, bocker.konton, metod),
+      konteringsfraga(kontrollerad.avlasning, historik, bocker.konton, metod, profil),
     ),
   );
 

@@ -66,7 +66,9 @@ async function main(): Promise<void> {
     lasFil: async (sokvag) => new Uint8Array(await readFile(sokvag)),
     lasText: (sokvag) => readFile(sokvag, 'utf8'),
     kodaBild: magick,
-    ...(vaktkonfig === undefined ? {} : { vakt: kvittovakt(vaktkonfig) }),
+    ...(vaktkonfig === undefined
+      ? {}
+      : { vakt: kvittovakt(vaktkonfig), profil: vaktkonfig.profil }),
   });
   process.stdout.write(utdata);
 }
@@ -128,6 +130,7 @@ function kvittovakt(installning: Vaktkonfig): Kvittovakt {
     maxPerKorning: installning.maxPerKorning,
     maxPerDygn: installning.maxPerDygn,
     metod: installning.redovisningsmetod,
+    profil: installning.profil,
     ...(installning.foretag === undefined ? {} : { foretag: installning.foretag }),
     las: (fraga, bild) => fragaHermes(installning.hermes, fraga, bild),
     minne: {

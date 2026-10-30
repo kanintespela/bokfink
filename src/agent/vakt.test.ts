@@ -2,6 +2,7 @@ import 'fake-indexeddb/auto';
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import type { Bokprofil } from '../domain/bok/bokprofil';
 import { uuidv7, type Uuid } from '../domain/id/uuidv7';
 import { skapaKonto } from '../domain/konto/konto';
 import { skapaRakenskapsar } from '../domain/rakenskapsar/rakenskapsar';
@@ -109,7 +110,7 @@ describe('the receipt watcher', () => {
     },
   });
 
-  const kor = async (argv: string[]) =>
+  const kor = async (argv: string[], profil?: Bokprofil) =>
     korAgent(await nyDb('pi'), tolkaKommando(argv), {
       transport: server,
       krypto: await synkkrypto(undefined),
@@ -121,7 +122,7 @@ describe('the receipt watcher', () => {
       lasFil: async () => BILD,
       lasText: async () => '',
       kodaBild: async () => BILD,
-      vakt: vakt(),
+      vakt: { ...vakt(), ...(profil === undefined ? {} : { profil }) },
     } satisfies Agentberoenden);
 
   const fran = async () => {
@@ -188,6 +189,15 @@ describe('the receipt watcher', () => {
 
     // Read once: the link in the books is what marks it as done.
     expect(await kor(['las-nya'])).toContain('Inga nya kvitton');
+  });
+
+  it("asks as an association's reader when the book is one", async () => {
+    await kor(['las-nya'], 'forening');
+
+    expect(fragor).toHaveLength(2);
+    expect(fragor[0]?.fraga).toContain('en ideell förening i Sverige');
+    expect(fragor[1]?.fraga).toContain('inte momsregistrerad');
+    expect(fragor[1]?.fraga).toContain('f-el | El | 5020');
   });
 
   /* The picture goes with the first question only; the books with the second. */

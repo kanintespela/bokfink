@@ -1,7 +1,14 @@
 import { formatKronor } from '../domain/belopp/ore';
 import type { Uuid } from '../domain/id/uuidv7';
 import type { Konto, Kontonummer } from '../domain/konto/konto';
-import { allaLov, stigTill, type Lov } from '../domain/beslutstrad/beslutstrad';
+import {
+  allaLov,
+  stigTill,
+  type Fraga,
+  type Lov,
+} from '../domain/beslutstrad/beslutstrad';
+import { beslutstradFor } from '../domain/beslutstrad/tradval';
+import { STANDARD_BOKPROFIL, type Bokprofil } from '../domain/bok/bokprofil';
 import { forvaltMomskonto } from '../domain/moms/momskonto';
 import type { Rakenskapsar } from '../domain/rakenskapsar/rakenskapsar';
 import {
@@ -32,7 +39,11 @@ const TRAFFAR = 20;
  * costs a third of the characters. The latest verifikat are there because
  * how the same supplier was booked last time is the best suggestion there is.
  */
-export function beskrivLage(bocker: Bocker): string {
+export function beskrivLage(
+  bocker: Bocker,
+  profil: Bokprofil = STANDARD_BOKPROFIL,
+): string {
+  const rot = beslutstradFor(profil);
   const ar = [...bocker.rakenskapsar.values()].sort((a, b) =>
     a.start.localeCompare(b.start),
   );
@@ -47,8 +58,10 @@ export function beskrivLage(bocker: Bocker): string {
     'Räkenskapsår',
     ...ar.map((post) => `  ${post.start}–${post.slut} ${arstatus(post)}`),
     '',
-    'Svar i appens frågor om vad som hänt (BAS K1)',
-    ...allaLov().map((lov) => `  ${lovrad(lov)}`),
+    profil === 'forening'
+      ? 'Svar i appens frågor om vad som hänt (föreningens egna)'
+      : 'Svar i appens frågor om vad som hänt (BAS K1)',
+    ...allaLov(rot).map((lov) => `  ${lovrad(lov, rot)}`),
     '',
     'Utkast som väntar',
     ...(utkast.length === 0 ? ['  inga'] : utkast.map((post) => `  ${rad(post)}`)),
@@ -123,8 +136,8 @@ function rad(post: Verifikat): string {
  * One leaf of the booking questions, the way the form would book it - so a
  * suggestion made here lands on the same accounts as one made in the app.
  */
-function lovrad(lov: Lov): string {
-  const stig = [...(stigTill(lov.id) ?? []), lov.namn].join(' › ');
+function lovrad(lov: Lov, rot: Fraga): string {
+  const stig = [...(stigTill(lov.id, rot) ?? []), lov.namn].join(' › ');
   const momskonto = forvaltMomskonto(lov.riktning, 25);
   const moms =
     lov.moms.typ === 'fast'

@@ -339,6 +339,45 @@ describe('which way the money went', () => {
   });
 });
 
+describe('för en förening', () => {
+  it('asks the reader about an association, not a firm', () => {
+    const fraga = avlasningsfraga({ foretag: 'Exempelföreningen', profil: 'forening' });
+    expect(fraga).toContain('en ideell förening i Sverige');
+    expect(fraga).toContain('Föreningen är Exempelföreningen');
+    expect(fraga).not.toContain('lantbruk med får');
+    expect(fraga).not.toContain('Firman');
+    expect(fraga).not.toContain('slakteri');
+  });
+
+  it('is unchanged for a firm', () => {
+    expect(avlasningsfraga({ profil: 'enskild_firma' })).toBe(avlasningsfraga());
+    expect(avlasningsfraga()).toContain('enskild firma i Sverige (lantbruk med får)');
+  });
+
+  it('tells the booking question that there is no moms to split off', () => {
+    const fraga = konteringsfraga(DIESEL, [], new Map(), 'kontantmetoden', 'forening');
+    expect(fraga).toContain('ideell förening');
+    expect(fraga).toContain('inte momsregistrerad');
+    expect(fraga).toContain('ska inte finnas någon momsrad');
+    expect(fraga).toContain('bankkontot 1930');
+    expect(fraga).not.toContain('Avrundning på 3740');
+    expect(fraga).not.toContain('utgående momsen');
+  });
+
+  it("offers the association's own answers, not the firm's", () => {
+    const fraga = konteringsfraga(DIESEL, [], new Map(), 'kontantmetoden', 'forening');
+    expect(fraga).toContain('f-el | El | 5020');
+    expect(fraga).toContain('f-medlem | Medlemsavgift | 3610');
+    expect(fraga).not.toContain('foder |');
+  });
+
+  it("keeps a firm's question as it was", () => {
+    const fraga = konteringsfraga(DIESEL, [], new Map());
+    expect(fraga).toContain('Avrundning på 3740');
+    expect(fraga).toContain('Firman bokför med kontantmetoden');
+  });
+});
+
 describe('konteringsfraga', () => {
   it('carries the reading, the history and only the active accounts', () => {
     const konton = new Map<Kontonummer, Konto>([

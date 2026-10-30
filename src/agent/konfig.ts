@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { BOKPROFILER, STANDARD_BOKPROFIL } from '../domain/bok/bokprofil';
+
 /**
  * What the assistant needs to reach the books: the sync server, a login to
  * it, and - if the books sync encrypted - the passphrase.
@@ -70,26 +72,53 @@ export function tolkaKonfig(sokvag: string, fil: Konfigfil): Agentkonfig {
  * the login in it is one to open as rarely as possible. Without this file
  * las-nya refuses to start, and nothing is sent anywhere.
  */
-const vaktschema = z.object({
-  /** Only receipts added on or after this day, YYYY-MM-DD. */
-  fran: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'fran ska vara ett datum, ÅÅÅÅ-MM-DD'),
-  maxPerKorning: z.number().int().positive().default(3),
-  maxPerDygn: z.number().int().positive().default(20),
-  /** Where Hermes sends the news, e.g. "discord"; none when left out. */
-  avisering: z.string().min(1).optional(),
-  /** The Hermes command, if it is not on the PATH. */
-  hermes: z.string().min(1).default('hermes'),
-  /**
-   * The firm's or owner's name as it stands on invoices to it. Without it
-   * the reader cannot tell a supplier's invoice to the firm from one the
-   * firm wrote, and on 2026-10-29 it took a purchase of barley for a sale.
-   */
-  foretag: z.string().min(1).optional(),
-  /** Decides the date an invoice is booked on, and whether 1510 and 2440 belong. */
-  redovisningsmetod: z
-    .enum(['kontantmetoden', 'faktureringsmetoden'])
-    .default('kontantmetoden'),
-});
+const vaktschema = z
+  .object({
+    /** Only receipts added on or after this day, YYYY-MM-DD. */
+    fran: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'fran ska vara ett datum, ÅÅÅÅ-MM-DD'),
+    maxPerKorning: z.number().int().positive().default(3),
+    maxPerDygn: z.number().int().positive().default(20),
+    /** Where Hermes sends the news, e.g. "discord"; none when left out. */
+    avisering: z.string().min(1).optional(),
+    /** The Hermes command, if it is not on the PATH. */
+    hermes: z.string().min(1).default('hermes'),
+    /**
+     * The firm's or owner's name as it stands on invoices to it. Without it
+     * the reader cannot tell a supplier's invoice to the firm from one the
+     * firm wrote, and on 2026-10-29 it took a purchase of barley for a sale.
+     */
+    foretag: z.string().min(1).optional(),
+    /** Decides the date an invoice is booked on, and whether 1510 and 2440 belong. */
+    redovisningsmetod: z
+      .enum(['kontantmetoden', 'faktureringsmetoden'])
+      .default('kontantmetoden'),
+    /**
+     * What kind of book the assistant is connected to.
+     *
+     * The profile lives in the book's metadata, which the sync log does not
+     * carry, so the assistant cannot read it off the books and is told here. A
+     * file that says nothing is a firm's, as every book was before profiles.
+     */
+    profil: z.enum(BOKPROFILER).default(STANDARD_BOKPROFIL),
+    /** Whether the book has moms to declare. Only an association says anything: a firm always has. */
+    momsregistrerad: z.boolean().optional(),
+  })
+  .superRefine((vakt, ctx) => {
+    /*
+     * A registered association's moms has to be divided over a mixed activity,
+     * which the app does not work out, so it has no booking questions of its
+     * own and the assistant must not suggest bookings for it. Refused here, at
+     * start, rather than by suggesting the wrong thing (hard rule 11).
+     */
+    if (vakt.profil === 'forening' && vakt.momsregistrerad === true) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['momsregistrerad'],
+        message:
+          'kvittovakten stöder ännu inte en momsregistrerad förening; bokför dess kvitton för hand',
+      });
+    }
+  });
 
 export type Vaktkonfig = z.infer<typeof vaktschema>;
 

@@ -67,6 +67,12 @@ Vaktens egna inställningar, utan hemligheter, i
 | `avisering` | Vart Hermes skickar besked, som `hermes send --list` visar dem. Utelämnat: inga meddelanden |
 | `foretag` | Firmans eller ägarens namn så som det står på fakturor till firman. Utan det kan assistenten inte skilja en leverantörs faktura från en firman skrivit |
 | `redovisningsmetod` | `kontantmetoden` (standard) eller `faktureringsmetoden`. Med kontantmetoden dateras en faktura med dagen den fotades, som antas vara betalningsdagen, och kundfordringar och leverantörsskulder används inte |
+| `profil` | `enskild_firma` (standard) eller `forening`. Vilken sorts bok vakten är kopplad till. Profilen ligger i bokens egna inställningar, som synkloggen inte för med sig, så vakten kan inte läsa den själv och får veta den här. En förening får föreningens frågor och konton, och ingen momsrad |
+| `momsregistrerad` | Bara för en förening: `false` (standard). `true` stöds inte ännu, och vakten vägrar starta, eftersom en momsregistrerad förenings moms måste fördelas och det inte är utrett. En enskild firma har alltid moms |
+
+En vakt hör till en bok och ett synkkonto, så en förening som synkar mot sitt
+eget konto får sin egen `kvittovakt.json` med `"profil": "forening"`. Två
+böcker får inte synka mot samma konto.
 
 Bygg vakten till en fristående fil, prova, och slå på timern:
 

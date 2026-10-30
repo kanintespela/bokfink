@@ -56,6 +56,20 @@ function bocker(): Bocker {
   };
 }
 
+describe('beskrivLage för en förening', () => {
+  it("lists the association's own answers and not the firm's", () => {
+    const text = beskrivLage(bocker(), 'forening');
+    expect(text).toContain('(föreningens egna)');
+    expect(text).toContain('Pengar in › Medlemsavgift (inkomst): 3610');
+    expect(text).not.toContain('Djuren');
+    expect(text).not.toContain('(BAS K1)');
+  });
+
+  it("is the firm's overview when it is not told otherwise", () => {
+    expect(beskrivLage(bocker())).toContain('(BAS K1)');
+  });
+});
+
 describe('beskrivLage', () => {
   it('lists the year with its lock, the active accounts and the latest verifikat', () => {
     const text = beskrivLage(bocker());

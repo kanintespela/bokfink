@@ -61,7 +61,42 @@ describe('tolkaVaktkonfig', () => {
       maxPerDygn: 20,
       hermes: 'hermes',
       redovisningsmetod: 'kontantmetoden',
+      profil: 'enskild_firma',
     });
+  });
+
+  it('takes a book for an association, and says so in the file', () => {
+    expect(
+      tolkaVaktkonfig('/v.json', '{"fran": "2026-10-28", "profil": "forening"}').profil,
+    ).toBe('forening');
+  });
+
+  it('refuses a profile it does not know', () => {
+    expect(() =>
+      tolkaVaktkonfig('/v.json', '{"fran": "2026-10-28", "profil": "stiftelse"}'),
+    ).toThrow('profil');
+  });
+
+  it('refuses a registered association, which the assistant cannot book for yet', () => {
+    expect(() =>
+      tolkaVaktkonfig(
+        '/v.json',
+        '{"fran": "2026-10-28", "profil": "forening", "momsregistrerad": true}',
+      ),
+    ).toThrow('momsregistrerad');
+  });
+
+  it("lets an association say it is not registered, and leaves a firm's file alone", () => {
+    expect(
+      tolkaVaktkonfig(
+        '/v.json',
+        '{"fran": "2026-10-28", "profil": "forening", "momsregistrerad": false}',
+      ).momsregistrerad,
+    ).toBe(false);
+    expect(
+      tolkaVaktkonfig('/v.json', '{"fran": "2026-10-28", "momsregistrerad": true}')
+        .profil,
+    ).toBe('enskild_firma');
   });
 
   it('says what is wrong with the file', () => {
