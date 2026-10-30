@@ -161,6 +161,8 @@ describe('foreningsarsbokslut', () => {
     const efter = await foreningsarsbokslut(db, ar2026);
     expect(efter.aret.aretsResultat).toBe(fore.aret.aretsResultat);
     expect(efter.aret.balanseratResultat).toBe(fore.aret.balanseratResultat);
+    expect(fore.ejOverfortResultat).toBe(kr('15000'));
+    expect(efter.ejOverfortResultat).toBe(kr('0'));
     expect((await lasTillstand(db)).verifikat.size).toBe(5);
   });
 });

@@ -87,7 +87,7 @@ export function doldaVyer(profil: Bokprofil, momsregistrerad: boolean): Readonly
   if (!harFunktion(profil, 'djurlager')) {
     dolda.add('lager');
   }
-  if (!harFunktion(profil, 'k1Bokslut')) {
+  if (!harFunktion(profil, 'k1Bokslut') && !harFunktion(profil, 'foreningsbokslut')) {
     dolda.add('arsbokslut');
   }
   return dolda;

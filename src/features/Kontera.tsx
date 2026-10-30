@@ -127,6 +127,16 @@ import { Foreningskapitalsida } from './bokslut/Foreningskapitalsida';
 import { Egetkapitalsida } from './bokslut/Egetkapitalsida';
 import { Arsbokslutsida } from './bokslut/Arsbokslutsida';
 import { lasRutval, sparaRutval } from '../data/rutval';
+import {
+  foreningsarsbokslut,
+  lasRadval,
+  lasStyrelse,
+  sparaRadval,
+  sparaStyrelse,
+  type Styrelseledamot,
+} from '../data/foreningsbokslut';
+import type { Foreningsrad } from '../domain/bokslut/foreningsbokslut';
+import { Foreningsbokslutsida } from './bokslut/Foreningsbokslutsida';
 import { lasEgnaPrisbasbelopp, sparaPrisbasbelopp } from '../data/skattetal';
 import { hamtaPrisbasbelopp } from '../platform/scb';
 import { bokforMomsomforing } from '../data/momsomforing';
@@ -238,6 +248,9 @@ interface Laddat {
   readonly fastigheter: readonly Fastighetstillgang[];
   readonly djurlagerinventeringar: readonly Djurlagerinventering[];
   readonly rutval: ReadonlyMap<Kontonummer, Resultatrad>;
+  /** An association's own placement of accounts on the posts of bilaga 2. */
+  readonly foreningsradval: ReadonlyMap<Kontonummer, Foreningsrad>;
+  readonly styrelse: readonly Styrelseledamot[];
   readonly egnaPrisbasbelopp: ReadonlyMap<number, Ore>;
   readonly synk: {
     readonly inloggning: Inloggning | undefined;
@@ -312,6 +325,19 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
       justeringar: await lasNejusteringar(db, arId),
       deklarant: await lasDeklarant(db),
     }),
+    [db],
+  );
+  /*
+   * Stable, so an association's pages read a year once rather than on every
+   * render of this component: a new function each time cancels the read still
+   * in flight, and a busy parent could then keep a page from ever showing.
+   */
+  const lasForeningskapital = useCallback(
+    (ar: Rakenskapsar) => foreningskapitalFor(db, ar),
+    [db],
+  );
+  const lasForeningsbokslut = useCallback(
+    (ar: Rakenskapsar) => foreningsarsbokslut(db, ar),
     [db],
   );
   const [laddat, setLaddat] = useState<Laddat | undefined>();
@@ -435,6 +461,8 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
         (a, b) => b.datum.localeCompare(a.datum),
       ),
       rutval: await lasRutval(db),
+      foreningsradval: await lasRadval(db),
+      styrelse: await lasStyrelse(db),
       egnaPrisbasbelopp: await lasEgnaPrisbasbelopp(db),
       synk: {
         inloggning: await db.getMeta<Inloggning>('synk.inloggning'),
@@ -1884,7 +1912,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
             rakenskapsar={laddat.rakenskapsar}
             konton={laddat.konton}
             idag={idag}
-            onHamta={(ar) => foreningskapitalFor(db, ar)}
+            onHamta={lasForeningskapital}
             onBokfor={async ({ datum, konto, namn, belopp, riktning }) => {
               const verifikat = await bokforReservering(db, await skrivkontext(db), {
                 datum,
@@ -1931,7 +1959,37 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
           />
         )}
 
-        {vy === 'arsbokslut' && (
+        {vy === 'arsbokslut' && laddat.profil === 'forening' && (
+          <Foreningsbokslutsida
+            onTillbaka={() => setVy('mer')}
+            rakenskapsar={laddat.rakenskapsar}
+            foreningsnamn={bokval.aktiv.namn}
+            konton={laddat.konton}
+            radval={laddat.foreningsradval}
+            styrelse={laddat.styrelse}
+            onHamta={lasForeningsbokslut}
+            onRadval={async (konto, rad) => {
+              await sparaRadval(db, konto, rad);
+              setLaddat(await hamta());
+            }}
+            onStyrelse={async (styrelse) => {
+              await sparaStyrelse(db, styrelse);
+              setLaddat(await hamta());
+            }}
+            onBokforResultat={async (ar) => {
+              const verifikat = await bokforResultatoverforing(
+                db,
+                await skrivkontext(db),
+                ar,
+                verifikatserie(laddat.serie),
+              );
+              setLaddat(await hamta());
+              return `${beteckning(verifikat)} bokfört.`;
+            }}
+          />
+        )}
+
+        {vy === 'arsbokslut' && laddat.profil !== 'forening' && (
           <Arsbokslutsida
             onTillbaka={() => setVy('mer')}
             rakenskapsar={laddat.rakenskapsar}

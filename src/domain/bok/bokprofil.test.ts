@@ -66,6 +66,12 @@ describe('foreningens eget kapital', () => {
     expect(harFunktion('forening', 'foreningskapital')).toBe(true);
     expect(harFunktion('enskild_firma', 'foreningskapital')).toBe(false);
   });
+
+  it("has a year-end statement of its own, which a firm's K1 is not", () => {
+    expect(harFunktion('forening', 'foreningsbokslut')).toBe(true);
+    expect(harFunktion('enskild_firma', 'foreningsbokslut')).toBe(false);
+    expect(harFunktion('forening', 'k1Bokslut')).toBe(false);
+  });
 });
 
 describe('arMomsregistrerad', () => {

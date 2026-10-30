@@ -97,10 +97,12 @@ test('an association book has no owner screens and no moms until it is registere
 
   // Under Mer: no NE-bilaga, owner's equity, K1 statement, animal stock or moms.
   await page.goto('/#mer');
-  for (const dold of ['NE-bilaga', 'Förenklat årsbokslut', 'Djurlager', 'Moms']) {
+  for (const dold of ['NE-bilaga', 'Djurlager', 'Moms']) {
     await expect(page.getByRole('button', { name: dold, exact: true })).toHaveCount(0);
   }
   await expect(page.getByRole('button', { name: 'Företaget' })).toBeVisible();
+  // Its year-end statement is the association's own form, not the K1 one.
+  await expect(page.getByRole('button', { name: 'Förenklat årsbokslut' })).toBeVisible();
 
   // An address that belongs to the other kind of book opens the overview.
   await page.goto('/#nebilaga');
@@ -225,4 +227,79 @@ test("takes up an association's decided grant at the year's end and reverses it"
   await expect(page.getByTestId('bokslutspost-forslag')).toContainText('3710');
   await page.getByTestId('bokfor-bokslutspost').click();
   await expect(page.getByTestId('bokslutspost-besked')).toContainText('2026-12-31');
+});
+
+test("sets an association's year out on the form of bilaga 2, ready to sign", async ({
+  page,
+}) => {
+  await page.clock.install({ time: new Date('2026-10-22T10:00:00+02:00') });
+  await page.clock.resume();
+
+  await oppnaBocker(page);
+  await page.getByLabel('Namn på den nya boken').fill('Bygdegårdsföreningen');
+  await page.getByRole('button', { name: 'Ideell förening' }).click();
+  await page.getByRole('button', { name: 'Skapa och öppna boken' }).click();
+  await expect(page.getByTestId('aktiv-bok')).toContainText('Bygdegårdsföreningen');
+
+  // 30 000 kr in membership fees and a 1 250 kr electricity bill.
+  await page.goto('/#bokfor');
+  await page
+    .getByTestId('svar')
+    .getByRole('button', { name: 'Pengar in', exact: true })
+    .click();
+  await page
+    .getByTestId('svar')
+    .getByRole('button', { name: /Medlemsavgift/ })
+    .click();
+  await page.getByLabel('Att få in').fill('30000');
+  await page.locator('main').getByRole('button', { name: 'Bokför', exact: true }).click();
+  await expect(page.getByTestId('senast-bokfort')).toContainText('A1');
+  await page
+    .getByTestId('svar')
+    .getByRole('button', { name: 'Pengar ut', exact: true })
+    .click();
+  await page.getByTestId('svar').getByRole('button', { name: 'Fastigheten' }).click();
+  await page.getByTestId('svar').getByRole('button', { name: /^El/ }).click();
+  await page.getByLabel('Att betala').fill('1250');
+  await page.locator('main').getByRole('button', { name: 'Bokför', exact: true }).click();
+  await expect(page.getByTestId('senast-bokfort')).toContainText('A2');
+
+  // The year has ended by the time the bokslut is made, which is when the result
+  // can be moved onto eget kapital: nothing is booked with a date ahead.
+  await page.clock.setSystemTime(new Date('2027-01-20T10:00:00+01:00'));
+  await page.goto('/#arsbokslut');
+  await page.getByLabel('Räkenskapsår').selectOption({ label: '2026' });
+  const bokslut = page.getByTestId('foreningsbokslut');
+  await expect(bokslut).toContainText('Förenklat årsbokslut för räkenskapsåret');
+  await expect(page.getByTestId('rad-medlemsavgifter')).toContainText('30 000');
+  await expect(page.getByTestId('rad-ovriga_externa_kostnader')).toContainText('1 250');
+  await expect(page.getByTestId('arets-resultat')).toContainText('28 750');
+  // A post with nothing to show is left out, and no post is added to the form.
+  await expect(page.getByTestId('rad-forsaljningsintakter')).toHaveCount(0);
+  await expect(page.getByTestId('rad-verksamhetskostnader')).toHaveCount(0);
+  // The balance sheet balances, and has no comparatives to show for a first year.
+  await expect(page.getByTestId('rad-kassa_och_bank')).toContainText('28 750');
+  await expect(page.getByTestId('summa-ek-skulder')).toContainText('28 750');
+  await expect(page.getByTestId('inga-jamforelsetal')).toBeVisible();
+
+  // The association decides which post an account is on: the electricity is
+  // an activity cost for a hall that is let out, in this association's view.
+  await page.getByLabel(/^5020/).selectOption({ label: 'Verksamhetskostnader' });
+  await expect(page.getByTestId('rad-verksamhetskostnader')).toContainText('1 250');
+  await expect(page.getByTestId('rad-ovriga_externa_kostnader')).toHaveCount(0);
+  await expect(page.getByTestId('arets-resultat')).toContainText('28 750');
+
+  // The result is moved onto eget kapital on request, and the form reads the same.
+  await page.getByTestId('bokfor-resultatoverforing').click();
+  await expect(page.getByTestId('foreningsbokslut-besked')).toContainText('bokfört');
+  await expect(page.getByTestId('resultatoverforing')).toHaveCount(0);
+  await expect(page.getByTestId('arets-resultat')).toContainText('28 750');
+
+  // The board signs: every member gets a line.
+  await page.getByLabel('Namn', { exact: true }).fill('Exempel Ordförande');
+  await page.getByLabel('Roll i styrelsen').fill('ordförande');
+  await page.getByTestId('lagg-till-ledamot').click();
+  await expect(page.getByTestId('underskrifter')).toContainText(
+    'Exempel Ordförande, ordförande',
+  );
 });

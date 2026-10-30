@@ -7,13 +7,17 @@ describe('doldaVyer', () => {
     expect([...doldaVyer('enskild_firma', true)]).toEqual([]);
   });
 
+  it('keeps the year-end statement for an association, which has its own form for it', () => {
+    expect(doldaVyer('forening', false).has('arsbokslut')).toBe(false);
+  });
+
   it('keeps the equity view for an association, which has its own page for it', () => {
     expect(doldaVyer('forening', false).has('egetkapital')).toBe(false);
   });
 
   it('hides what belongs to an owner, and moms, from an association without moms', () => {
     expect([...doldaVyer('forening', false)].sort()).toEqual(
-      ['arsbokslut', 'lager', 'moms', 'nebilaga'].sort(),
+      ['lager', 'moms', 'nebilaga'].sort(),
     );
   });
 

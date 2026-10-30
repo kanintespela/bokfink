@@ -4,6 +4,7 @@ import {
   type Foreningsbokslut,
   type Foreningsrad,
 } from '../domain/bokslut/foreningsbokslut';
+import { add, negate, type Ore } from '../domain/belopp/ore';
 import { kontonummer, type Kontonummer } from '../domain/konto/konto';
 import { omfattar, type Rakenskapsar } from '../domain/rakenskapsar/rakenskapsar';
 import { beraknaSaldon } from '../domain/rapport/saldon';
@@ -102,6 +103,12 @@ export interface Foreningsarsbokslut {
   /** The year before, for the comparatives every post needs (kapitel 5); none for a first year. */
   readonly foregaendeAr: Rakenskapsar | undefined;
   readonly foregaende: Foreningsbokslut | undefined;
+  /**
+   * What of the year's result still sits on the result accounts, which a
+   * transfer onto eget kapital (8999 mot 2019) would move. The form reads the
+   * same before and after it; the transfer is for the ledger's own sake.
+   */
+  readonly ejOverfortResultat: Ore;
   /** The funds set aside inside eget kapital, for the note, this year and last. */
   readonly kapital: Foreningskapital;
   readonly foregaendeKapital: Foreningskapital | undefined;
@@ -121,22 +128,25 @@ export async function foreningsarsbokslut(
   const tillstand = await lasTillstand(db);
   const radval = await lasRadval(db);
   const alla = [...tillstand.verifikat.values()];
-  const sorterat = (aret: Rakenskapsar) =>
-    beraknaForeningsbokslut(
-      beraknaSaldon(
-        aret.ingaendeBalanser,
-        alla.filter((post) => omfattar(aret, post.datum)),
-      ),
-      radval,
+  const saldonFor = (aret: Rakenskapsar) =>
+    beraknaSaldon(
+      aret.ingaendeBalanser,
+      alla.filter((post) => omfattar(aret, post.datum)),
     );
+  const sorterat = (aret: Rakenskapsar) =>
+    beraknaForeningsbokslut(saldonFor(aret), radval);
 
   const dagenFore = addDagar(ar.start, -1);
   const foregaendeAr = [...tillstand.rakenskapsar.values()].find(
     (kandidat) => kandidat.slut === dagenFore,
   );
+  const aret = sorterat(ar);
+  // 8999 is debited with the result when it is moved, so what it has moved is what is done.
+  const overfort = saldonFor(ar).get(kontonummer('8999'))?.forandring ?? (0 as Ore);
   return {
     ar,
-    aret: sorterat(ar),
+    aret,
+    ejOverfortResultat: add(aret.aretsResultat, negate(overfort)),
     foregaendeAr,
     foregaende: foregaendeAr === undefined ? undefined : sorterat(foregaendeAr),
     kapital: await foreningskapitalFor(db, ar),

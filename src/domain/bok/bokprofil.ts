@@ -63,6 +63,8 @@ export type Profilfunktion =
   | 'egnaUttag'
   /** The association's eget kapital, with the funds set aside inside it. */
   | 'foreningskapital'
+  /** The year-end statement of BFNAR 2010:1, in the form of its bilaga 2. */
+  | 'foreningsbokslut'
   /** The animal stock register. */
   | 'djurlager'
   /** The year-end statement for an enskild näringsidkare (BFNAR 2006:1, K1). */
@@ -84,7 +86,7 @@ const FUNKTIONER: Record<Bokprofil, ReadonlySet<Profilfunktion>> = {
    * year-end statement comes with its own stage and shows up here when it
    * exists. Its equity page is BFNAR 2010:1 punkt 6.66-6.67.
    */
-  forening: new Set<Profilfunktion>(['foreningskapital']),
+  forening: new Set<Profilfunktion>(['foreningskapital', 'foreningsbokslut']),
 };
 
 export function harFunktion(profil: Bokprofil, funktion: Profilfunktion): boolean {

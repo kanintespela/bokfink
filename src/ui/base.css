@@ -999,3 +999,56 @@ dd {
 main {
   padding-bottom: calc(var(--tapp-stor) + env(safe-area-inset-bottom) + var(--rum-5));
 }
+
+/* ── Tables of figures, and the form a board signs ─────────────────────── */
+
+.tabell {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.tabell th,
+.tabell td {
+  padding: var(--rum-1) var(--rum-2);
+  text-align: right;
+  border-bottom: 1px solid var(--line);
+}
+
+.tabell th[scope='row'],
+.tabell th[scope='rowgroup'],
+.tabell thead th:first-child {
+  text-align: left;
+  font-weight: 500;
+}
+
+.tabell th[scope='rowgroup'] {
+  padding-top: var(--rum-3);
+}
+
+/*
+ * Printing the bokslut: nothing but the form itself, from the top of the
+ * page, so that "Skriv ut" gives a sheet to sign and "Spara som PDF" the
+ * same sheet as a file.
+ */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .bokslut-utskrift,
+  .bokslut-utskrift * {
+    visibility: visible;
+  }
+
+  .bokslut-utskrift {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+
+  .ej-utskrift {
+    display: none;
+  }
+}
