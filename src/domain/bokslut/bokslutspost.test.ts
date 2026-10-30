@@ -5,8 +5,11 @@ import { kontonummer } from '../konto/konto';
 import {
   aterforing,
   BOKSLUTSPOSTER,
+  bokslutskatalogFor,
   bokslutspostKonteringar,
+  FORENINGENS_BOKSLUTSPOSTER,
   type Bokslutsposttyp,
+  type Foreningsposttyp,
 } from './bokslutspost';
 
 const kr = oreFromKronor;
@@ -133,5 +136,117 @@ describe('aterforing', () => {
       ['3000', kr('10000')],
       ['2611', kr('2500')],
     ]);
+  });
+});
+
+describe('en förenings poster vid årets slut', () => {
+  const forening = (typ: Foreningsposttyp, belopp: string) => {
+    const beskrivning = FORENINGENS_BOKSLUTSPOSTER[typ];
+    return rader(
+      bokslutspostKonteringar(
+        {
+          typ,
+          belopp: kr(belopp),
+          motkonto: beskrivning.motkonto ?? kontonummer('3990'),
+          balanskonto: beskrivning.balanskonto,
+        },
+        FORENINGENS_BOKSLUTSPOSTER,
+      ),
+    );
+  };
+
+  /*
+   * A grant of 40 000 kr decided for the year and paid in January, for an
+   * association that recognises grants in the year they relate to (7.3 b):
+   * a fordran on 1600 on 31 December, income on 3710.
+   */
+  it('takes a decided grant up as a fordran and as income for the year (6.53, 7.3 b)', () => {
+    expect(forening('beslutat_bidrag', '40000')).toEqual([
+      ['1600', kr('40000')],
+      ['3710', kr('-40000')],
+    ]);
+  });
+
+  /*
+   * 15 000 kr of a grant paid in December for next year: income taken back out
+   * of this year and held as a skuld on 2900 (6.76).
+   */
+  it('holds the part of a grant paid for next year as a skuld (6.76)', () => {
+    expect(forening('bidrag_for_kommande_ar', '15000')).toEqual([
+      ['3710', kr('15000')],
+      ['2900', kr('-15000')],
+    ]);
+  });
+
+  it('puts no moms on an unpaid invoice, the moms being part of its amount', () => {
+    // 12 500 kr billed for a rented hall and 6 250 kr owed to a supplier.
+    expect(forening('obetald_kundfaktura', '12500')).toEqual([
+      ['1510', kr('12500')],
+      ['3811', kr('-12500')],
+    ]);
+    expect(forening('obetald_leverantorsfaktura', '6250')).toEqual([
+      ['6390', kr('6250')],
+      ['2440', kr('-6250')],
+    ]);
+  });
+
+  it('takes an advance, and interest, up only above 5 000 kr', () => {
+    for (const typ of [
+      'forskott_fran_kund',
+      'forskott_till_leverantor',
+      'upplupen_ranteintakt',
+      'upplupen_rantekostnad',
+    ] as const) {
+      expect(() => forening(typ, '5000'), typ).toThrow('5 000 kr');
+      expect(forening(typ, '5000.01'), typ).toHaveLength(2);
+    }
+  });
+
+  it('always balances, and the reversal takes every row back', () => {
+    for (const typ of Object.keys(FORENINGENS_BOKSLUTSPOSTER) as Foreningsposttyp[]) {
+      const beskrivning = FORENINGENS_BOKSLUTSPOSTER[typ];
+      const konteringar = bokslutspostKonteringar(
+        {
+          typ,
+          belopp: kr('12345.67'),
+          motkonto: beskrivning.motkonto ?? kontonummer('3990'),
+          balanskonto: beskrivning.balanskonto,
+        },
+        FORENINGENS_BOKSLUTSPOSTER,
+      );
+      expect(
+        konteringar.reduce((summa, rad) => summa + rad.belopp, 0),
+        typ,
+      ).toBe(0);
+      expect(
+        [...konteringar, ...aterforing(konteringar)].reduce(
+          (summa, rad) => summa + rad.belopp,
+          0,
+        ),
+        typ,
+      ).toBe(0);
+    }
+  });
+
+  it('names BFNAR 2010:1 as the source of every item', () => {
+    for (const post of Object.values(FORENINGENS_BOKSLUTSPOSTER)) {
+      expect(post.kalla).toContain('BFNAR 2010:1');
+    }
+  });
+
+  it("is what an association is offered, and the firm's list is what a firm is", () => {
+    expect(bokslutskatalogFor('forening')).toBe(FORENINGENS_BOKSLUTSPOSTER);
+    expect(bokslutskatalogFor('enskild_firma')).toBe(BOKSLUTSPOSTER);
+  });
+
+  it("is refused for a firm: the grant items are an association's alone", () => {
+    expect(() =>
+      bokslutspostKonteringar({
+        typ: 'beslutat_bidrag',
+        belopp: kr('1000'),
+        motkonto: kontonummer('3710'),
+        balanskonto: kontonummer('1600'),
+      }),
+    ).toThrow('tar inte upp');
   });
 });

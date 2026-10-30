@@ -1,6 +1,7 @@
 import {
   aterforing as vandRader,
   bokslutspostKonteringar,
+  type Bokslutskatalog,
   type Bokslutspost,
 } from '../domain/bokslut/bokslutspost';
 import { nastaRakenskapsarsperiod } from '../domain/bokslut/arsavslut';
@@ -33,8 +34,9 @@ export async function bokforBokslutspost(
   post: Bokslutspost,
   beskrivning: string,
   serie: Verifikatserie,
+  katalog?: Bokslutskatalog,
 ): Promise<{ verifikat: BokfortVerifikat; aterforing: BokfortVerifikat }> {
-  const konteringar = bokslutspostKonteringar(post);
+  const konteringar = bokslutspostKonteringar(post, katalog);
   const tillbaka = vandRader(konteringar);
   const text = beskrivning.trim();
 

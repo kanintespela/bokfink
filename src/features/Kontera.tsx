@@ -156,6 +156,7 @@ import { vantandeFakturor } from '../domain/underlag/forfallodag';
 import { skrivIcs } from '../domain/kalender/ics';
 import { arMomsregistrerad, type Bokprofil } from '../domain/bok/bokprofil';
 import { beslutstradFor } from '../domain/beslutstrad/tradval';
+import { bokslutskatalogFor } from '../domain/bokslut/bokslutspost';
 import { paminnelser } from '../domain/kalender/paminnelser';
 import type { Momsperiod } from '../domain/moms/period';
 import type { Redovisningsmetod } from '../domain/moms/redovisningsmetod';
@@ -1855,6 +1856,9 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
             rakenskapsar={laddat.rakenskapsar}
             konton={laddat.konton}
             idag={idag}
+            katalog={bokslutskatalogFor(laddat.profil)}
+            profil={laddat.profil}
+            momsregistrerad={laddat.momsregistrerad}
             onBokfor={async ({ ar, post, beskrivning }) => {
               const { verifikat, aterforing } = await bokforBokslutspost(
                 db,
@@ -1863,6 +1867,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
                 post,
                 beskrivning,
                 verifikatserie(laddat.serie),
+                bokslutskatalogFor(laddat.profil),
               );
               setLaddat(await hamta());
               return (

@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
 
 import { formatKronor, type Ore } from '../../domain/belopp/ore';
+import type { Bokprofil } from '../../domain/bok/bokprofil';
 import {
-  BOKSLUTSPOSTER,
   bokslutspostKonteringar,
+  type Bokslutskatalog,
   type Bokslutspost,
-  type Bokslutsposttyp,
+  type Posttyp,
 } from '../../domain/bokslut/bokslutspost';
 import { kontonummer, type Konto, type Kontonummer } from '../../domain/konto/konto';
 import { forvaltMomskonto } from '../../domain/moms/momskonto';
@@ -21,14 +22,16 @@ interface Props {
   readonly rakenskapsar: readonly Rakenskapsar[];
   readonly konton: ReadonlyMap<Kontonummer, Konto>;
   readonly idag: Datum;
+  /** The items this kind of book takes up, with their accounts and sources. */
+  readonly katalog: Bokslutskatalog;
+  readonly profil: Bokprofil;
+  readonly momsregistrerad: boolean;
   readonly onBokfor: (val: {
     readonly ar: Rakenskapsar;
     readonly post: Bokslutspost;
     readonly beskrivning: string;
   }) => Promise<string>;
 }
-
-const TYPER = Object.keys(BOKSLUTSPOSTER) as Bokslutsposttyp[];
 
 /**
  * What the förenklat årsbokslut takes up at the year's end: unpaid invoices
@@ -41,8 +44,13 @@ export function Bokslutspostsida({
   rakenskapsar,
   konton,
   idag,
+  katalog,
+  profil,
+  momsregistrerad,
   onBokfor,
 }: Props) {
+  const TYPER = Object.keys(katalog) as Posttyp[];
+  const forsta = katalog[TYPER[0]!]!;
   const aren = useMemo(
     () => [...rakenskapsar].sort((a, b) => b.start.localeCompare(a.start)),
     [rakenskapsar],
@@ -54,22 +62,20 @@ export function Bokslutspostsida({
     aren[0];
 
   const [arId, setArId] = useState(forvaltAr?.id);
-  const [typ, setTyp] = useState<Bokslutsposttyp>('obetald_kundfaktura');
+  const [typ, setTyp] = useState<Posttyp>(TYPER[0]!);
+  /** A decided grant is only taken up with a decision and its documentation. */
+  const [beslutFinns, setBeslutFinns] = useState(false);
   const [beskrivning, setBeskrivning] = useState('');
   const [beloppText, setBeloppText] = useState('');
   const [momssats, setMomssats] = useState(25);
-  const [motkontoText, setMotkontoText] = useState(
-    BOKSLUTSPOSTER.obetald_kundfaktura.motkonto ?? '',
-  );
-  const [balanskontoText, setBalanskontoText] = useState<string>(
-    BOKSLUTSPOSTER.obetald_kundfaktura.balanskonto,
-  );
+  const [motkontoText, setMotkontoText] = useState(forsta.motkonto ?? '');
+  const [balanskontoText, setBalanskontoText] = useState<string>(forsta.balanskonto);
   const [arbetar, setArbetar] = useState(false);
   const [besked, setBesked] = useState<string | undefined>();
   const [fel, setFel] = useState<string | undefined>();
 
   const ar = aren.find((kandidat) => kandidat.id === arId) ?? forvaltAr;
-  const post = BOKSLUTSPOSTER[typ];
+  const post = katalog[typ] ?? forsta;
   const belopp = tolkaBelopp(beloppText);
   const motkonto = tolkaKonto(motkontoText);
   const balanskonto = tolkaKonto(balanskontoText);
@@ -77,10 +83,11 @@ export function Bokslutspostsida({
     ? forvaltMomskonto(post.motkontoArIntakt ? 'inkomst' : 'utgift', momssats)
     : undefined;
 
-  function valjTyp(nytt: Bokslutsposttyp) {
+  function valjTyp(nytt: Posttyp) {
     setTyp(nytt);
-    setMotkontoText(BOKSLUTSPOSTER[nytt].motkonto ?? '');
-    setBalanskontoText(BOKSLUTSPOSTER[nytt].balanskonto);
+    setBeslutFinns(false);
+    setMotkontoText(katalog[nytt]?.motkonto ?? '');
+    setBalanskontoText(katalog[nytt]?.balanskonto ?? '');
   }
 
   // The rows the press will book, or why it cannot yet.
@@ -93,6 +100,12 @@ export function Bokslutspostsida({
     }
     if (belopp === undefined) {
       return { hinder: 'Skriv beloppet.' };
+    }
+    if (typ === 'beslutat_bidrag' && !beslutFinns) {
+      return {
+        hinder:
+          'Ett beslutat bidrag tas bara upp om det finns ett beslut och dokumentation om beloppet. Bekräfta det ovan.',
+      };
     }
     for (const [konto, text] of [
       [motkonto, motkontoText],
@@ -108,7 +121,8 @@ export function Bokslutspostsida({
     try {
       return {
         rader: bokslutspostKonteringar(
-          byggPost(typ, belopp, momssats, motkonto!, balanskonto!),
+          byggPost(katalog, typ, belopp, momssats, motkonto!, balanskonto!),
+          katalog,
         ),
       };
     } catch (orsak) {
@@ -134,7 +148,7 @@ export function Bokslutspostsida({
       setBesked(
         await onBokfor({
           ar,
-          post: byggPost(typ, belopp, momssats, motkonto, balanskonto),
+          post: byggPost(katalog, typ, belopp, momssats, motkonto, balanskonto),
           beskrivning,
         }),
       );
@@ -154,12 +168,22 @@ export function Bokslutspostsida({
       <h2>Obetalda fakturor och periodisering</h2>
 
       <p className="hjalptext">
-        Vid årets slut tar ett förenklat årsbokslut upp det som inte har betalats än:
-        obetalda fakturor och några få andra poster. Varje post bokförs på årets sista dag
-        och förs tillbaka automatiskt första dagen nästa år, så att betalningen då räknas
-        en gång. Bokför obetalda fakturor innan årets sista momsdeklaration lämnas – deras
-        moms ska med i den.
+        {profil === 'forening'
+          ? 'Vid årets slut tar föreningens förenklade årsbokslut upp det som inte har betalats än: obetalda fakturor, bidrag som hör till året eller till nästa år, och några få andra poster. '
+          : 'Vid årets slut tar ett förenklat årsbokslut upp det som inte har betalats än: obetalda fakturor och några få andra poster. '}
+        Varje post bokförs på årets sista dag och förs tillbaka automatiskt första dagen
+        nästa år, så att betalningen då räknas en gång.
+        {profil === 'forening'
+          ? ''
+          : ' Bokför obetalda fakturor innan årets sista momsdeklaration lämnas – deras moms ska med i den.'}
       </p>
+
+      {profil === 'forening' && momsregistrerad && (
+        <p className="hjalptext" data-testid="bokslutspost-moms-varning">
+          Föreningen är momsregistrerad. Momsen på en faktura delas inte upp här; bokför
+          en sådan faktura med Fri kontering.
+        </p>
+      )}
 
       {aren.length > 1 && (
         <div className="faltgrupp">
@@ -185,11 +209,11 @@ export function Bokslutspostsida({
           id="bokslutspost-typ"
           className="falt"
           value={typ}
-          onChange={(handelse) => valjTyp(handelse.target.value as Bokslutsposttyp)}
+          onChange={(handelse) => valjTyp(handelse.target.value as Posttyp)}
         >
           {TYPER.map((kandidat) => (
             <option key={kandidat} value={kandidat}>
-              {BOKSLUTSPOSTER[kandidat].namn}
+              {katalog[kandidat]?.namn}
             </option>
           ))}
         </select>
@@ -197,6 +221,23 @@ export function Bokslutspostsida({
           {post.forklaring}
         </span>
       </div>
+
+      {typ === 'beslutat_bidrag' && (
+        <div className="faltgrupp">
+          <label htmlFor="bokslutspost-beslut">Beslut och dokumentation</label>
+          <select
+            id="bokslutspost-beslut"
+            className="falt"
+            value={beslutFinns ? 'ja' : 'nej'}
+            onChange={(handelse) => setBeslutFinns(handelse.target.value === 'ja')}
+          >
+            <option value="nej">Jag har inte bekräftat det</option>
+            <option value="ja">
+              Det finns ett beslut med beloppet, och det är dokumenterat
+            </option>
+          </select>
+        </div>
+      )}
 
       <div className="faltgrupp">
         <label htmlFor="bokslutspost-beskrivning">Beskrivning</label>
@@ -332,7 +373,8 @@ export function Bokslutspostsida({
 }
 
 function byggPost(
-  typ: Bokslutsposttyp,
+  katalog: Bokslutskatalog,
+  typ: Posttyp,
   belopp: Ore,
   momssats: number,
   motkonto: Kontonummer,
@@ -341,7 +383,7 @@ function byggPost(
   return {
     typ,
     belopp,
-    ...(BOKSLUTSPOSTER[typ].medMoms ? { momssats } : {}),
+    ...(katalog[typ]?.medMoms ? { momssats } : {}),
     motkonto,
     balanskonto,
   };

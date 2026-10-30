@@ -191,3 +191,38 @@ test("books an association's bill by answering what happened, with no moms split
   await page.locator('main').getByRole('button', { name: 'Bokför', exact: true }).click();
   await expect(page.getByTestId('senast-bokfort')).toContainText('A1');
 });
+
+test("takes up an association's decided grant at the year's end and reverses it", async ({
+  page,
+}) => {
+  // The year's end is worked in January, when the books for the year are closed.
+  await page.clock.install({ time: new Date('2026-12-20T10:00:00+01:00') });
+  await page.clock.resume();
+
+  await oppnaBocker(page);
+  await page.getByLabel('Namn på den nya boken').fill('Bygdegårdsföreningen');
+  await page.getByRole('button', { name: 'Ideell förening' }).click();
+  await page.getByRole('button', { name: 'Skapa och öppna boken' }).click();
+  await expect(page.getByTestId('aktiv-bok')).toContainText('Bygdegårdsföreningen');
+
+  await page.clock.setSystemTime(new Date('2027-01-20T10:00:00+01:00'));
+  await page.goto('/#periodisering');
+
+  // The association's own items come first, and none of them has moms.
+  await expect(page.getByLabel('Vad gäller det?')).toHaveValue('beslutat_bidrag');
+  await expect(page.getByTestId('bokslutspost-forklaring')).toContainText('beslutat');
+  await expect(page.getByLabel('Moms', { exact: true })).toHaveCount(0);
+
+  await page.getByLabel('Beskrivning').fill('Kommunalt bidrag 2026');
+  await page.getByLabel('Belopp utan moms').fill('40000');
+
+  // Taking it up needs the decision, said in so many words.
+  await expect(page.getByTestId('bokslutspost-hinder')).toContainText('beslut');
+  await expect(page.getByTestId('bokfor-bokslutspost')).toBeDisabled();
+  await page.getByLabel('Beslut och dokumentation').selectOption('ja');
+
+  await expect(page.getByTestId('bokslutspost-forslag')).toContainText('1600');
+  await expect(page.getByTestId('bokslutspost-forslag')).toContainText('3710');
+  await page.getByTestId('bokfor-bokslutspost').click();
+  await expect(page.getByTestId('bokslutspost-besked')).toContainText('2026-12-31');
+});

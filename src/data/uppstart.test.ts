@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { allaLov, kontonITradet } from '../domain/beslutstrad/beslutstrad';
 import { FORENINGSTRAD } from '../domain/beslutstrad/foreningstrad';
+import { FORENINGENS_BOKSLUTSPOSTER } from '../domain/bokslut/bokslutspost';
 import type { Handelse } from '../domain/handelse/handelse';
 import type { Uuid } from '../domain/id/uuidv7';
 import { skapaKonto } from '../domain/konto/konto';
@@ -142,6 +143,15 @@ describe('FORENINGENS_GRUNDKONTON och trädet', () => {
   it("holds every account the association's questions book on", () => {
     const grund = new Set(FORENINGENS_GRUNDKONTON.map((konto) => konto.nummer));
     const behovs = allaLov(FORENINGSTRAD).flatMap((lov) => [lov.konto, ...lov.betalsatt]);
+    expect([...new Set(behovs)].filter((konto) => !grund.has(konto))).toEqual([]);
+  });
+
+  it("holds every account the association's year-end items book on", () => {
+    const grund = new Set(FORENINGENS_GRUNDKONTON.map((konto) => konto.nummer));
+    const behovs = Object.values(FORENINGENS_BOKSLUTSPOSTER).flatMap((post) => [
+      post.balanskonto,
+      ...(post.motkonto === undefined ? [] : [post.motkonto]),
+    ]);
     expect([...new Set(behovs)].filter((konto) => !grund.has(konto))).toEqual([]);
   });
 });

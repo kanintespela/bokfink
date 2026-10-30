@@ -13,6 +13,7 @@ import {
 } from '../domain/rakenskapsar/rakenskapsar';
 import { datum } from '../domain/tid/datum';
 import { verifikatserie } from '../domain/verifikat/serie';
+import { FORENINGENS_BOKSLUTSPOSTER } from '../domain/bokslut/bokslutspost';
 import { bokforBokslutspost } from './bokslutspost';
 import { lasTillstand, skyddaBokfordaVerifikat } from './bokforing';
 import { KonteraDatabase } from './db';
@@ -116,6 +117,81 @@ describe('bokforBokslutspost', () => {
         verifikatserie('A'),
       ),
     ).rejects.toThrow(PeriodLastError);
+    expect((await lasTillstand(db)).verifikat.size).toBe(0);
+  });
+});
+
+describe('bokforBokslutspost för en förening', () => {
+  it('takes a decided grant up on 31 December and reverses it on 1 January', async () => {
+    const db = new KonteraDatabase(`kontera-bokslutspost-${(raknare += 1)}`);
+    skyddaBokfordaVerifikat(db);
+    await db.open();
+    const ar = skapaRakenskapsar({
+      id: '019b76da-a800-7000-8000-000000002026' as Uuid,
+      start: datum('2026-01-01'),
+      slut: datum('2026-12-31'),
+    });
+    await skrivRakenskapsar(db, kontext('2027-01-20'), ar);
+    for (const [nummer, namn] of [
+      ['1600', 'Övriga fordringar'],
+      ['3710', 'Bidrag från kommun och stat'],
+    ] as const) {
+      await skrivKonto(db, kontext('2027-01-20'), skapaKonto({ nummer, namn }));
+    }
+
+    const { verifikat, aterforing } = await bokforBokslutspost(
+      db,
+      kontext('2027-01-20'),
+      ar,
+      {
+        typ: 'beslutat_bidrag',
+        belopp: oreFromKronor('40000'),
+        motkonto: kontonummer('3710'),
+        balanskonto: kontonummer('1600'),
+      },
+      'Kommunalt bidrag 2026',
+      verifikatserie('A'),
+      FORENINGENS_BOKSLUTSPOSTER,
+    );
+
+    expect(verifikat.datum).toBe('2026-12-31');
+    expect(verifikat.konteringar.map((rad) => [rad.konto, rad.belopp])).toEqual([
+      ['1600', oreFromKronor('40000')],
+      ['3710', oreFromKronor('-40000')],
+    ]);
+    expect(aterforing.datum).toBe('2027-01-01');
+    expect(aterforing.konteringar.map((rad) => rad.belopp)).toEqual([
+      oreFromKronor('-40000'),
+      oreFromKronor('40000'),
+    ]);
+  });
+
+  it("refuses an association's item to a book that uses the firm's list", async () => {
+    const db = new KonteraDatabase(`kontera-bokslutspost-${(raknare += 1)}`);
+    skyddaBokfordaVerifikat(db);
+    await db.open();
+    const ar = skapaRakenskapsar({
+      id: '019b76da-a800-7000-8000-000000002026' as Uuid,
+      start: datum('2026-01-01'),
+      slut: datum('2026-12-31'),
+    });
+    await skrivRakenskapsar(db, kontext('2027-01-20'), ar);
+
+    await expect(
+      bokforBokslutspost(
+        db,
+        kontext('2027-01-20'),
+        ar,
+        {
+          typ: 'beslutat_bidrag',
+          belopp: oreFromKronor('1000'),
+          motkonto: kontonummer('3710'),
+          balanskonto: kontonummer('1600'),
+        },
+        'x',
+        verifikatserie('A'),
+      ),
+    ).rejects.toThrow('tar inte upp');
     expect((await lasTillstand(db)).verifikat.size).toBe(0);
   });
 });
