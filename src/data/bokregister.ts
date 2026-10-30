@@ -3,7 +3,9 @@ import Dexie, { type Table } from 'dexie';
 import type { Bokprofil } from '../domain/bok/bokprofil';
 import { BOK_ID_NYCKEL, BOK_PROFIL_NYCKEL, URSPRUNGLIG_BOK } from './bokidentitet';
 import { KonteraDatabase } from './db';
+import { lasLogg, lasTillstand } from './bokforing';
 import { newIdentifier } from './id';
+import { arEnbartStartdata } from './uppstart';
 
 /**
  * One set of books: the firm's, an association's, anything kept apart.
@@ -242,4 +244,87 @@ export async function valjBok(register: Bokregister, id: string): Promise<void> 
     throw new Error(`Boken ${id} finns inte på den här enheten.`);
   }
   await register.val.put({ key: AKTIV_NYCKEL, value: id });
+}
+
+export class KanInteTasBortError extends Error {
+  constructor(meddelande: string) {
+    super(meddelande);
+    this.name = 'KanInteTasBortError';
+  }
+}
+
+/** What a book holds, as far as taking it away is concerned. */
+export interface Bokinnehall {
+  /** Nothing but what a new book starts with: no one has booked or kept anything in it. */
+  readonly tom: boolean;
+  readonly verifikat: number;
+  readonly utkast: number;
+  readonly underlag: number;
+  /** Whether it is set up to sync, in which case the server keeps its own copy. */
+  readonly synkad: boolean;
+}
+
+/**
+ * Whether a book is empty, and what it holds if it is not.
+ *
+ * Empty is judged by the log, with the same test that recognises an unused
+ * device (arEnbartStartdata): the starter accounts and the empty year every
+ * new book is given are not something anyone made. Anything else - a booking,
+ * a receipt, an account of one's own, a project - is, and is not thrown away
+ * on a single press.
+ */
+export async function lasBokinnehall(db: KonteraDatabase): Promise<Bokinnehall> {
+  const [logg, tillstand, synk] = await Promise.all([
+    lasLogg(db),
+    lasTillstand(db),
+    db.getMeta<unknown>('synk.inloggning'),
+  ]);
+  return {
+    tom: arEnbartStartdata(logg),
+    verifikat: tillstand.verifikat.size,
+    utkast: tillstand.utkast.size,
+    underlag: tillstand.underlag.size,
+    synkad: synk !== undefined,
+  };
+}
+
+/**
+ * Takes a book away: its database, and then its place in the register.
+ *
+ * In that order, so that a failure leaves the book where it was. A database
+ * that was deleted but still has an entry would open as an empty book of that
+ * name; an entry that was removed but whose database remains is found again by
+ * lasBocker and listed as a recovered book - nothing lost either way, but only
+ * the first order leaves the user with what they saw.
+ *
+ * The original book cannot go: it is the one every installation starts with
+ * and falls back on, and the register would put it straight back. If the book
+ * taken away is the open one, the original is opened in its place. The
+ * caller has to have closed its own connection to the database first.
+ *
+ * Deliberately not guarded by what the book holds - that is the interface's
+ * to ask about and to have confirmed (lasBokinnehall).
+ */
+export async function tabortBok(
+  register: Bokregister,
+  kontext: Registerkontext,
+  id: string,
+): Promise<void> {
+  const { bocker } = await lasBocker(register, kontext);
+  const bok = bocker.find((kandidat) => kandidat.id === id);
+  if (bok === undefined) {
+    throw new KanInteTasBortError(`Boken ${id} finns inte på den här enheten.`);
+  }
+  if (bok.databas === URSPRUNGLIG_DATABAS) {
+    throw new KanInteTasBortError(
+      `${bok.namn} är den första boken på den här enheten och kan inte tas bort. ` +
+        'Den kan byta namn.',
+    );
+  }
+
+  await Dexie.delete(bok.databas);
+  await register.bocker.delete(bok.id);
+  if ((await register.val.get(AKTIV_NYCKEL))?.value === bok.id) {
+    await register.val.put({ key: AKTIV_NYCKEL, value: URSPRUNGLIG_BOK });
+  }
 }

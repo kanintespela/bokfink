@@ -39,6 +39,20 @@ export function databasFor(bok: Bok): KonteraDatabase {
   return db;
 }
 
+/**
+ * Lets go of a book's open database, so that it can be deleted.
+ *
+ * A database cannot be deleted while a connection to it is open, and this
+ * module is the one that holds the connections.
+ */
+export function stangDatabas(bok: Bok): void {
+  const db = oppna.get(bok.databas);
+  if (db !== undefined) {
+    db.close();
+    oppna.delete(bok.databas);
+  }
+}
+
 export function lasBockerPaEnheten() {
   return lasBocker(register, registerkontext);
 }

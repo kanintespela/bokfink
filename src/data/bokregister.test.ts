@@ -1,5 +1,6 @@
 import 'fake-indexeddb/auto';
 
+import Dexie from 'dexie';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -14,16 +15,29 @@ import {
   bytNamnPaBok,
   filprefix,
   granskaBoknamn,
+  KanInteTasBortError,
+  lasBokinnehall,
   lasBocker,
   LANGSTA_BOKNAMN,
   OgiltigtBoknamnError,
   skapaBok,
+  tabortBok,
   URSPRUNGLIG_DATABAS,
   valjBok,
   type Bok,
   type Registerkontext,
 } from './bokregister';
 import { KonteraDatabase } from './db';
+import { uuidv7 } from '../domain/id/uuidv7';
+import { forberedBokforing } from './uppstart';
+import { bokforUtkast, skrivKonto, type Skrivkontext } from './kommandon';
+import { skyddaBokfordaVerifikat } from './bokforing';
+import { skapaUtkast } from '../domain/verifikat/verifikat';
+import { verifikatserie } from '../domain/verifikat/serie';
+import { fastKlocka } from '../domain/tid/klocka';
+import { datum } from '../domain/tid/datum';
+import { kontonummer, skapaKonto } from '../domain/konto/konto';
+import { oreFromKronor } from '../domain/belopp/ore';
 
 let raknare = 0;
 let idRaknare = 0;
@@ -31,6 +45,12 @@ let idRaknare = 0;
 const kontext: Registerkontext = {
   nu: () => `2026-10-22T10:00:${String(idRaknare).padStart(2, '0')}.000Z`,
   nyttId: () => `bok-${(idRaknare += 1)}`,
+};
+
+const skrivkontext: Skrivkontext = {
+  enhet: 'enhet-a',
+  nu: () => '2026-10-30T08:00:00.000Z',
+  nyttId: () => uuidv7(1_788_554_000_000 + (idRaknare += 1), new Uint8Array(10).fill(6)),
 };
 
 const bok = (namn: string, id = namn): Bok => ({
@@ -204,5 +224,118 @@ describe('bokregistret', () => {
       [URSPRUNGLIG_BOK, 'Min bokföring'],
       ['019a0000-0000-7000-8000-000000000001', 'Återfunnen bok 1'],
     ]);
+  });
+});
+
+describe('lasBokinnehall och tabortBok', () => {
+  let register: Bokregister;
+  beforeEach(async () => {
+    register = new Bokregister(`kontera-bocker-ta-bort-${(raknare += 1)}`);
+    await register.open();
+  });
+
+  const bokforAlltSomEnNybok = async (databas: string) => {
+    const db = new KonteraDatabase(databas);
+    skyddaBokfordaVerifikat(db);
+    await db.open();
+    await forberedBokforing(db, skrivkontext, fastKlocka(datum('2026-10-30')));
+    return db;
+  };
+
+  it('takes a book nobody has used for empty', async () => {
+    const bok = await skapaBok(register, kontext, 'Tillfällig', 'forening');
+    const db = await bokforAlltSomEnNybok(bok.databas);
+    expect(await lasBokinnehall(db)).toEqual({
+      tom: true,
+      verifikat: 0,
+      utkast: 0,
+      underlag: 0,
+      synkad: false,
+    });
+    db.close();
+  });
+
+  it('takes a book with a booking, a receipt or an account of its own for not empty', async () => {
+    const bok = await skapaBok(register, kontext, 'Använd', 'forening');
+    const db = await bokforAlltSomEnNybok(bok.databas);
+    await skrivKonto(
+      db,
+      skrivkontext,
+      skapaKonto({ nummer: '5999', namn: 'Eget konto' }),
+    );
+    const innehall = await lasBokinnehall(db);
+    expect(innehall.tom).toBe(false);
+    db.close();
+  });
+
+  it('counts what is in it, and says when it syncs', async () => {
+    const bok = await skapaBok(register, kontext, 'Synkad', 'enskild_firma');
+    const db = await bokforAlltSomEnNybok(bok.databas);
+    await db.setMeta('synk.inloggning', {
+      url: 'https://synk.example',
+      token: 't',
+      epost: 'a@example.se',
+    });
+    await bokforUtkast(
+      db,
+      skrivkontext,
+      skapaUtkast({
+        id: skrivkontext.nyttId!(),
+        datum: datum('2026-10-30'),
+        beskrivning: 'x',
+        konteringar: [
+          { konto: kontonummer('1930'), belopp: oreFromKronor('100') },
+          { konto: kontonummer('3000'), belopp: oreFromKronor('-100') },
+        ],
+      }),
+      verifikatserie('A'),
+    );
+    const innehall = await lasBokinnehall(db);
+    expect(innehall).toMatchObject({ tom: false, verifikat: 1, synkad: true });
+    db.close();
+  });
+
+  it('takes the database and the entry away together', async () => {
+    const bok = await skapaBok(register, kontext, 'Tillfällig', 'forening');
+    const db = await bokforAlltSomEnNybok(bok.databas);
+    db.close();
+
+    await tabortBok(register, kontext, bok.id);
+
+    expect((await lasBocker(register, kontext)).bocker.map((post) => post.namn)).toEqual([
+      'Min bokföring',
+    ]);
+    expect(await Dexie.getDatabaseNames()).not.toContain(bok.databas);
+  });
+
+  it('opens the original book when the open one goes', async () => {
+    const bok = await skapaBok(register, kontext, 'Öppen', 'forening');
+    await valjBok(register, bok.id);
+    await tabortBok(register, kontext, bok.id);
+
+    expect((await lasBocker(register, kontext)).aktiv.databas).toBe(URSPRUNGLIG_DATABAS);
+  });
+
+  it('leaves the open choice alone when another book goes', async () => {
+    const kvar = await skapaBok(register, kontext, 'Kvar', 'forening');
+    const bort = await skapaBok(register, kontext, 'Bort', 'forening');
+    await valjBok(register, kvar.id);
+    await tabortBok(register, kontext, bort.id);
+
+    expect((await lasBocker(register, kontext)).aktiv.id).toBe(kvar.id);
+  });
+
+  it('refuses the original book, which would only be put back', async () => {
+    const { bocker } = await lasBocker(register, kontext);
+    await expect(tabortBok(register, kontext, bocker[0]!.id)).rejects.toBeInstanceOf(
+      KanInteTasBortError,
+    );
+    expect((await lasBocker(register, kontext)).bocker).toHaveLength(1);
+  });
+
+  it('says so about a book that is not there', async () => {
+    await expect(tabortBok(register, kontext, 'finns-inte')).rejects.toThrow(
+      'finns inte på den här enheten',
+    );
   });
 });

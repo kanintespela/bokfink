@@ -1,11 +1,21 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { bytNamnPaBok, filprefix, skapaBok, valjBok, type Bok } from './data/bokregister';
+import {
+  bytNamnPaBok,
+  filprefix,
+  lasBokinnehall,
+  skapaBok,
+  tabortBok,
+  valjBok,
+  type Bok,
+} from './data/bokregister';
+import { URSPRUNGLIG_BOK } from './data/bokidentitet';
 import {
   databasFor,
   lasBockerPaEnheten,
   register,
   registerkontext,
+  stangDatabas,
 } from './data/instance';
 import { Kontera } from './features/Kontera';
 import { FilprefixContext } from './ui/bok';
@@ -27,6 +37,12 @@ interface Bocker {
 export function App() {
   const [bocker, setBocker] = useState<Bocker | undefined>();
   const [fel, setFel] = useState<string | undefined>();
+  /*
+   * Said above whatever book is open. Taking away the open book starts the app
+   * over in the first one, which unmounts the list the message would have been
+   * on, so it is kept here.
+   */
+  const [borttagen, setBorttagen] = useState<string | undefined>();
 
   useEffect(() => {
     // Hard rule 11: a register that cannot be read is said, not swallowed.
@@ -69,6 +85,18 @@ export function App() {
   return (
     <>
       <UpdateBanner />
+      {borttagen !== undefined && (
+        <p className="kort" role="status" data-testid="bok-borttagen">
+          {borttagen}{' '}
+          <button
+            type="button"
+            className="knapp knapp--text"
+            onClick={() => setBorttagen(undefined)}
+          >
+            Stäng
+          </button>
+        </p>
+      )}
       <FilprefixContext.Provider value={filprefix(aktiv)}>
         <Kontera
           key={aktiv.id}
@@ -83,6 +111,18 @@ export function App() {
             },
             onBytNamn: async (namn) => {
               await bytNamnPaBok(register, registerkontext, aktiv.id, namn);
+              await lasOm();
+            },
+            onInnehall: (bok) => lasBokinnehall(databasFor(bok)),
+            onTaBort: async (bok) => {
+              // The open book is let go of first, so nothing holds its database
+              // while it is deleted; the original opens in its place.
+              if (bok.id === aktiv.id) {
+                await valj(URSPRUNGLIG_BOK);
+                setBorttagen(`${bok.namn} är borttagen. Den första boken är öppen.`);
+              }
+              stangDatabas(bok);
+              await tabortBok(register, registerkontext, bok.id);
               await lasOm();
             },
           }}

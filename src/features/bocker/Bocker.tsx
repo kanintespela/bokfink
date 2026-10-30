@@ -1,6 +1,11 @@
 import { useState } from 'react';
 
-import { LANGSTA_BOKNAMN, type Bok } from '../../data/bokregister';
+import {
+  LANGSTA_BOKNAMN,
+  URSPRUNGLIG_DATABAS,
+  type Bok,
+  type Bokinnehall,
+} from '../../data/bokregister';
 import { BOKPROFILER, BOKPROFILNAMN, type Bokprofil } from '../../domain/bok/bokprofil';
 import { Uppgiftsstatus, useUppgift } from '../data/uppgift';
 
@@ -12,6 +17,10 @@ export interface Bokval {
   readonly onValj: (id: string) => Promise<void>;
   readonly onSkapa: (namn: string, profil: Bokprofil) => Promise<void>;
   readonly onBytNamn: (namn: string) => Promise<void>;
+  /** What a book holds, so the interface knows whether it may go without asking. */
+  readonly onInnehall: (bok: Bok) => Promise<Bokinnehall>;
+  /** Takes the book away for good. The open book may be the one. */
+  readonly onTaBort: (bok: Bok) => Promise<void>;
 }
 
 /**
@@ -22,7 +31,15 @@ export interface Bokval {
  * years, backups and exports. Choosing a book opens it on this device only,
  * and the other device chooses for itself.
  */
-export function Bocker({ bocker, aktiv, onValj, onSkapa, onBytNamn }: Bokval) {
+export function Bocker({
+  bocker,
+  aktiv,
+  onValj,
+  onSkapa,
+  onBytNamn,
+  onInnehall,
+  onTaBort,
+}: Bokval) {
   const [nyttNamn, setNyttNamn] = useState('');
   /*
    * Nothing chosen to begin with. The choice cannot be changed once the book
@@ -32,6 +49,13 @@ export function Bocker({ bocker, aktiv, onValj, onSkapa, onBytNamn }: Bokval) {
   const [nyProfil, setNyProfil] = useState<Bokprofil | undefined>();
   const [namn, setNamn] = useState(aktiv.namn);
   const { arbetar, besked, fel, kor } = useUppgift();
+  /** A book with something in it, waiting for its name to be typed. */
+  const [attTaBort, setAttTaBort] = useState<
+    { bok: Bok; innehall: Bokinnehall } | undefined
+  >();
+  const [bekraftelse, setBekraftelse] = useState('');
+  /** The first book is the one every installation has; the rest can go. */
+  const kanTasBort = bocker.filter((bok) => bok.databas !== URSPRUNGLIG_DATABAS);
 
   return (
     <section aria-label="Böcker">
@@ -150,7 +174,126 @@ export function Bocker({ bocker, aktiv, onValj, onSkapa, onBytNamn }: Bokval) {
         </button>
       </form>
 
+      {kanTasBort.length > 0 && (
+        <>
+          <h2>Ta bort en bok</h2>
+          <p className="hjalptext">
+            En bok som ingen har använt tas bort direkt. Har den bokföring eller kvitton i
+            sig måste du skriva dess namn för att bekräfta. Den första boken kan inte tas
+            bort.
+          </p>
+          <ul className="lista" data-testid="borttagbara-bocker">
+            {kanTasBort.map((bok) => (
+              <li key={bok.id}>
+                <span className="listrad">
+                  <span className="listrad__text">
+                    <strong>{bok.namn}</strong>
+                  </span>
+                  <button
+                    type="button"
+                    className="knapp knapp--text"
+                    disabled={arbetar}
+                    aria-label={`Ta bort ${bok.namn}`}
+                    onClick={() =>
+                      void kor(async () => {
+                        setAttTaBort(undefined);
+                        setBekraftelse('');
+                        const innehall = await onInnehall(bok);
+                        if (innehall.tom) {
+                          await onTaBort(bok);
+                          return `${bok.namn} är borttagen.`;
+                        }
+                        setAttTaBort({ bok, innehall });
+                        return `${bok.namn} har innehåll. Bekräfta borttagningen nedan.`;
+                      })
+                    }
+                  >
+                    Ta bort
+                  </button>
+                </span>
+              </li>
+            ))}
+          </ul>
+
+          {attTaBort !== undefined && (
+            <form
+              className="kort"
+              data-testid="bekrafta-borttagning"
+              onSubmit={(handelse) => {
+                handelse.preventDefault();
+                const { bok } = attTaBort;
+                void kor(async () => {
+                  await onTaBort(bok);
+                  setAttTaBort(undefined);
+                  setBekraftelse('');
+                  return `${bok.namn} är borttagen.`;
+                });
+              }}
+            >
+              <p>
+                <strong>{attTaBort.bok.namn}</strong> innehåller{' '}
+                {beskrivInnehall(attTaBort.innehall)}. Att ta bort boken går inte att
+                ångra.
+              </p>
+              <p className="hjalptext">
+                Räkenskapsinformation ska bevaras i sju år (bokföringslagen 7 kap. 2 §).
+                Ta en säkerhetskopia eller ett arkivpaket av boken först, om något av den
+                ska sparas.
+                {attTaBort.innehall.synkad
+                  ? ' Boken är inställd att synka. Servern behåller sin egen kopia, som den här borttagningen inte rör.'
+                  : ''}
+              </p>
+              <div className="faltgrupp">
+                <label htmlFor="bekrafta-namn">
+                  Skriv bokens namn för att bekräfta: {attTaBort.bok.namn}
+                </label>
+                <input
+                  id="bekrafta-namn"
+                  className="falt"
+                  autoComplete="off"
+                  value={bekraftelse}
+                  onChange={(handelse) => setBekraftelse(handelse.target.value)}
+                />
+              </div>
+              <button
+                type="submit"
+                className="knapp knapp--primar"
+                disabled={arbetar || bekraftelse.trim() !== attTaBort.bok.namn}
+                data-testid="ta-bort-bok"
+              >
+                Ta bort {attTaBort.bok.namn} för alltid
+              </button>
+              <button
+                type="button"
+                className="knapp knapp--text"
+                onClick={() => {
+                  setAttTaBort(undefined);
+                  setBekraftelse('');
+                }}
+              >
+                Avbryt
+              </button>
+            </form>
+          )}
+        </>
+      )}
+
       <Uppgiftsstatus arbetar={arbetar} besked={besked} fel={fel} />
     </section>
   );
+}
+
+/** "12 verifikat, 2 utkast och 3 kvitton", leaving out what is not there. */
+function beskrivInnehall(innehall: Bokinnehall): string {
+  const delar = [
+    innehall.verifikat > 0 ? `${innehall.verifikat} verifikat` : undefined,
+    innehall.utkast > 0 ? `${innehall.utkast} utkast` : undefined,
+    innehall.underlag > 0 ? `${innehall.underlag} kvitton och underlag` : undefined,
+  ].filter((del) => del !== undefined);
+  if (delar.length === 0) {
+    return 'uppgifter som någon har lagt in';
+  }
+  return delar.length === 1
+    ? delar[0]!
+    : `${delar.slice(0, -1).join(', ')} och ${delar.at(-1)}`;
 }

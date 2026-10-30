@@ -303,3 +303,71 @@ test("sets an association's year out on the form of bilaga 2, ready to sign", as
     'Exempel Ordförande, ordförande',
   );
 });
+
+test('takes an empty book away without asking, and the open one falls back to the first', async ({
+  page,
+}) => {
+  await oppnaBocker(page);
+  await page.getByLabel('Namn på den nya boken').fill('Tillfälligt');
+  await page.getByRole('button', { name: 'Ideell förening' }).click();
+  await page.getByRole('button', { name: 'Skapa och öppna boken' }).click();
+  await expect(page.getByTestId('aktiv-bok')).toContainText('Tillfälligt');
+
+  await page.getByRole('button', { name: 'Byt bok' }).click();
+  await page.getByRole('button', { name: 'Ta bort Tillfälligt' }).click();
+
+  // No question, and the first book is open again - the app starts over in it,
+  // so there is no message left to read. The book is gone from the list.
+  await expect(page.getByTestId('bok-borttagen')).toContainText(
+    'Tillfälligt är borttagen',
+  );
+  await expect(page.getByTestId('aktiv-bok')).toHaveCount(0);
+  await oppnaBocker(page);
+  await expect(page.getByRole('button', { name: /Tillfälligt/ })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Ta bort en bok' })).toHaveCount(0);
+});
+
+test('asks for the name of a book with something in it before taking it away', async ({
+  page,
+}) => {
+  await page.clock.install({ time: new Date('2026-10-22T10:00:00+02:00') });
+  await page.clock.resume();
+
+  await oppnaBocker(page);
+  await page.getByLabel('Namn på den nya boken').fill('Provboken');
+  await page.getByRole('button', { name: 'Enskild firma' }).click();
+  await page.getByRole('button', { name: 'Skapa och öppna boken' }).click();
+  await expect(page.getByTestId('aktiv-bok')).toContainText('Provboken');
+  await bokforEtt(page, 'Kontorsmaterial i provboken');
+
+  await page.goto('/');
+  await page
+    .getByRole('navigation', { name: 'Vyer' })
+    .getByRole('button', { name: 'Mer' })
+    .click();
+  await page.getByRole('button', { name: 'Böcker' }).click();
+  await page.getByRole('button', { name: 'Ta bort Provboken' }).click();
+
+  // It has a verifikat, so it is not gone yet: the name has to be typed.
+  const bekrafta = page.getByTestId('bekrafta-borttagning');
+  await expect(bekrafta).toContainText('1 verifikat');
+  await expect(bekrafta).toContainText('sju år');
+  await expect(page.getByTestId('ta-bort-bok')).toBeDisabled();
+
+  await page.getByLabel(/Skriv bokens namn/).fill('provboken');
+  await expect(page.getByTestId('ta-bort-bok')).toBeDisabled();
+  await page.getByLabel(/Skriv bokens namn/).fill('Provboken');
+  await page.getByTestId('ta-bort-bok').click();
+
+  await expect(page.getByTestId('bok-borttagen')).toContainText('Provboken är borttagen');
+  await expect(page.getByTestId('aktiv-bok')).toHaveCount(0);
+  // And it stays gone after a reload.
+  await page.reload();
+  await oppnaBocker(page);
+  await expect(page.getByRole('button', { name: /Provboken/ })).toHaveCount(0);
+});
+
+test('offers no way to take away the first book', async ({ page }) => {
+  await oppnaBocker(page);
+  await expect(page.getByRole('heading', { name: 'Ta bort en bok' })).toHaveCount(0);
+});
