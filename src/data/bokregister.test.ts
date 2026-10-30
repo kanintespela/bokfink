@@ -42,7 +42,9 @@ const bok = (namn: string, id = namn): Bok => ({
 
 describe('granskaBoknamn', () => {
   it('trims the name and folds its inner spaces', () => {
-    expect(granskaBoknamn('  Exempelbygden   bygdegård ', [])).toBe('Exempelbygden bygdegård');
+    expect(granskaBoknamn('  Exempelbygden   bygdegård ', [])).toBe(
+      'Exempelbygden bygdegård',
+    );
   });
 
   it('refuses an empty name', () => {
