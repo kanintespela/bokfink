@@ -1,10 +1,10 @@
 import { expect, test, type Page } from '@playwright/test';
 
 /** Books one verifikat by hand: 100 kr of office supplies from the bank. */
-async function bokforEtt(page: Page, beskrivning: string) {
+async function bokforEtt(page: Page, beskrivning: string, kostnadskonto = '6100') {
   await page.goto('/#frikontering');
   await page.getByLabel('Vad avser det?').fill(beskrivning);
-  await page.getByLabel('Konto, rad 1').fill('6100');
+  await page.getByLabel('Konto, rad 1').fill(kostnadskonto);
   await page.getByLabel('Debet, rad 1').fill('100');
   await page.getByLabel('Konto, rad 2').fill('1930');
   await page.getByLabel('Kredit, rad 2').fill('100');
@@ -47,7 +47,8 @@ test('keeps a second book apart from the first', async ({ page }) => {
   await expect(page.getByText('Kontorsmaterial till firman')).toHaveCount(0);
 
   // Its own series starts at 1, and survives a reload as the open book.
-  await bokforEtt(page, 'Kontorsmaterial till föreningen');
+  // The association's own accounts: 6110 Kontorsmaterial, where the firm has 6100.
+  await bokforEtt(page, 'Kontorsmaterial till föreningen', '6110');
   await page.reload();
   await expect(page.getByTestId('aktiv-bok')).toContainText('Bygdegårdsföreningen');
 

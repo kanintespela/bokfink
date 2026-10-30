@@ -1,9 +1,11 @@
+import type { Bokprofil } from '../domain/bok/bokprofil';
 import { skapaKonto, type Kontoutkast } from '../domain/konto/konto';
 import { rakenskapsarsid, skapaRakenskapsar } from '../domain/rakenskapsar/rakenskapsar';
 import { datumAv, delar, type Datum } from '../domain/tid/datum';
 import type { Klocka } from '../domain/tid/klocka';
 import type { Handelse } from '../domain/handelse/handelse';
 import { kontonummer } from '../domain/konto/konto';
+import { lasBokprofil } from './bokidentitet';
 import { lasLogg, lasTillstand } from './bokforing';
 import type { KonteraDatabase } from './db';
 import { skrivKonto, skrivRakenskapsar, type Skrivkontext } from './kommandon';
@@ -81,6 +83,77 @@ export const GRUNDKONTON: readonly Kontoutkast[] = [
   { nummer: '8410', namn: 'Räntekostnader för skulder', typ: 'kostnad' },
   { nummer: '8999', namn: 'Årets resultat', typ: 'kostnad' },
 ];
+
+/**
+ * The accounts a new association's book starts with: what its booking
+ * questions (src/domain/beslutstrad/foreningstrad.ts) book on, and nothing
+ * more.
+ *
+ * The numbers follow the kontoplan of an association that has kept its books
+ * in a program for ideella föreningar, so that a book started from this set and
+ * one imported from such a program use the same numbers for the same things;
+ * the names are our own. BAS publishes no kontoplan for ideella föreningar
+ * (bas.se lists one for everyone but K1 and one for K1, which is for
+ * enskilda näringsidkare), so nothing here claims to be BAS's. An account
+ * already in the book by number is left as it is, which is how an imported
+ * kontoplan keeps its own names.
+ *
+ * Two numbers are fixed by the booking engine and not by that kontoplan:
+ * 3740 Öres- och kronutjämning, where every receipt's rounding goes, and
+ * 3010 Försäljning, so that sales stay apart from the other verksamhetsintäkter
+ * in bilaga 2 of BFNAR 2010:1.
+ */
+export const FORENINGENS_GRUNDKONTON: readonly Kontoutkast[] = [
+  { nummer: '1110', namn: 'Byggnader' },
+  { nummer: '1118', namn: 'Ackumulerade avskrivningar på byggnader' },
+  { nummer: '1220', namn: 'Inventarier' },
+  { nummer: '1228', namn: 'Ackumulerade avskrivningar på inventarier' },
+  { nummer: '1510', namn: 'Kundfordringar' },
+  { nummer: '1600', namn: 'Övriga fordringar' },
+  { nummer: '1910', namn: 'Kassa' },
+  { nummer: '1930', namn: 'Bank' },
+  { nummer: '1940', namn: 'Placeringskonto' },
+  { nummer: '2010', namn: 'Eget kapital, balanserat' },
+  { nummer: '2019', namn: 'Årets över- eller underskott' },
+  { nummer: '2399', namn: 'Lån, till exempel fastighetslån' },
+  { nummer: '2440', namn: 'Leverantörsskulder' },
+  { nummer: '2900', namn: 'Övriga skulder' },
+  { nummer: '3010', namn: 'Försäljning' },
+  { nummer: '3320', namn: 'Intäkter från lotterier' },
+  { nummer: '3610', namn: 'Medlemsavgifter' },
+  { nummer: '3710', namn: 'Bidrag från kommun och stat' },
+  { nummer: '3720', namn: 'Gåvor och privata bidrag' },
+  { nummer: '3730', namn: 'Bidrag från EU' },
+  { nummer: '3740', namn: 'Öres- och kronutjämning' },
+  { nummer: '3811', namn: 'Uthyrning av lokaler' },
+  { nummer: '3990', namn: 'Övriga ersättningar och intäkter' },
+  { nummer: '4010', namn: 'Inköp av material och varor' },
+  { nummer: '5020', namn: 'El' },
+  { nummer: '5030', namn: 'Värme' },
+  { nummer: '5040', namn: 'Bredband' },
+  { nummer: '5050', namn: 'Vatten och avlopp' },
+  { nummer: '5060', namn: 'Sophämtning' },
+  { nummer: '5070', namn: 'Reparation och underhåll' },
+  { nummer: '5193', namn: 'Fastighetsskötsel och förvaltning' },
+  { nummer: '5410', namn: 'Förbrukningsinventarier' },
+  { nummer: '5700', namn: 'Frakter och transporter' },
+  { nummer: '6110', namn: 'Kontorsmaterial' },
+  { nummer: '6150', namn: 'Trycksaker' },
+  { nummer: '6230', namn: 'Telefon och internet' },
+  { nummer: '6250', namn: 'Porto' },
+  { nummer: '6310', namn: 'Försäkringar' },
+  { nummer: '6320', namn: 'Avgifter till andra organisationer' },
+  { nummer: '6390', namn: 'Övriga kostnader' },
+  { nummer: '6570', namn: 'Bankkostnader' },
+  { nummer: '8300', namn: 'Ränteintäkter', typ: 'intakt' },
+  { nummer: '8400', namn: 'Räntekostnader', typ: 'kostnad' },
+  { nummer: '8999', namn: 'Årets resultat', typ: 'kostnad' },
+];
+
+/** The starter accounts a book of this kind begins with. */
+export function grundkontonFor(profil: Bokprofil): readonly Kontoutkast[] {
+  return profil === 'forening' ? FORENINGENS_GRUNDKONTON : GRUNDKONTON;
+}
 
 /**
  * The accounts earlier versions started a ledger with.
@@ -185,7 +258,7 @@ export async function forberedBokforing(
   }
 
   let kontonSkapade = 0;
-  for (const utkast of GRUNDKONTON) {
+  for (const utkast of grundkontonFor(await lasBokprofil(db))) {
     if (tillstand.konton.has(kontonummer(utkast.nummer))) {
       continue;
     }
@@ -217,7 +290,7 @@ export function arEnbartStartdata(logg: readonly Handelse[]): boolean {
           handelse.rakenskapsar.momslastTom === undefined
         );
       case 'konto.skapat':
-        return [...GRUNDKONTON, ...TIDIGARE_GRUNDKONTON].some(
+        return [...GRUNDKONTON, ...FORENINGENS_GRUNDKONTON, ...TIDIGARE_GRUNDKONTON].some(
           (grund) =>
             grund.nummer === handelse.konto.nummer && grund.namn === handelse.konto.namn,
         );
