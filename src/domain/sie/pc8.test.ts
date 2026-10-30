@@ -1,7 +1,7 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { avkodaPC8, kodaPC8, OkodbartTeckenError } from './pc8';
+import { avkodaPC8, kodaPC8, medPC8Motsvarigheter, OkodbartTeckenError } from './pc8';
 
 const bytes = (...v: number[]) => new Uint8Array(v);
 
@@ -84,5 +84,39 @@ describe('kodaPC8', () => {
 
   it('names the character it refused', () => {
     expect(() => kodaPC8('Räksmörgås €')).toThrow(/"€"/);
+  });
+});
+
+/*
+ * 2026-10-30: an invoice period "Oct 5–Nov 5" on a booked verifikat stopped
+ * the whole archive, because the en dash is not in PC8.
+ */
+describe('medPC8Motsvarigheter', () => {
+  it('writes dashes, quotes, ellipsis, euro and odd spaces the plain way', () => {
+    expect(medPC8Motsvarigheter('Oct 5–Nov 5, 2026')).toBe('Oct 5-Nov 5, 2026');
+    expect(medPC8Motsvarigheter('a—b')).toBe('a-b');
+    expect(medPC8Motsvarigheter('Det “stora” lägret')).toBe('Det "stora" lägret');
+    expect(medPC8Motsvarigheter('Annas bil‘s')).toBe("Annas bil's");
+    expect(medPC8Motsvarigheter('Vänta…')).toBe('Vänta...');
+    expect(medPC8Motsvarigheter('22,50 €')).toBe('22,50 EUR');
+    expect(medPC8Motsvarigheter('1\u00A0000')).toBe('1 000');
+    expect(medPC8Motsvarigheter('a\u200Bb')).toBe('ab');
+  });
+
+  it('leaves what PC8 already holds exactly as it is', () => {
+    expect(medPC8Motsvarigheter('Räksmörgås åäöÅÄÖ é ü ñ 1-2 "x"')).toBe(
+      'Räksmörgås åäöÅÄÖ é ü ñ 1-2 "x"',
+    );
+  });
+
+  it('makes text that kodaPC8 accepts, which is the point', () => {
+    expect(() =>
+      kodaPC8(medPC8Motsvarigheter('Claude Pro Oct 5–Nov 5, 2026 – 22,50 €')),
+    ).not.toThrow();
+  });
+
+  it('does not guess at a character with no plain equivalent', () => {
+    expect(medPC8Motsvarigheter('☺ 😀 ł')).toBe('☺ 😀 ł');
+    expect(() => kodaPC8(medPC8Motsvarigheter('Läger 😀'))).toThrow(OkodbartTeckenError);
   });
 });

@@ -1,5 +1,5 @@
 import { isZero } from '../domain/belopp/ore';
-import { kodaPC8 } from '../domain/sie/pc8';
+import { kodaPC8, OkodbartTeckenError } from '../domain/sie/pc8';
 import type { Siedokument, Siekonto, Siesaldo, Sieverifikat } from '../domain/sie/parser';
 import { skrivSie } from '../domain/sie/skrivare';
 import {
@@ -108,7 +108,17 @@ export async function exporteraSie(
   rakenskapsarId: Uuid,
   installningar: Exportinstallningar = {},
 ): Promise<Uint8Array> {
-  return kodaPC8(skrivSie(await byggSiedokument(db, rakenskapsarId, installningar)));
+  const text = skrivSie(await byggSiedokument(db, rakenskapsarId, installningar));
+  try {
+    return kodaPC8(text);
+  } catch (orsak) {
+    if (orsak instanceof OkodbartTeckenError) {
+      // Said where it stands: the one line is what has to be corrected in the books.
+      const rad = text.split('\n').find((kandidat) => kandidat.includes(orsak.tecken));
+      throw new OkodbartTeckenError(orsak.tecken, rad?.slice(0, 120));
+    }
+    throw orsak;
+  }
 }
 
 function tillSiekonto(konto: Konto): Siekonto {

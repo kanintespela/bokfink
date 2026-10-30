@@ -7,11 +7,15 @@ import { uuidv7 } from '../domain/id/uuidv7';
 import { avkodaPC8, kodaPC8 } from '../domain/sie/pc8';
 import { tolkaSie } from '../domain/sie/parser';
 import { datum } from '../domain/tid/datum';
+import { kontonummer } from '../domain/konto/konto';
+import { verifikatserie } from '../domain/verifikat/serie';
+import { skapaUtkast } from '../domain/verifikat/verifikat';
+import { OkodbartTeckenError } from '../domain/sie/pc8';
 import { lasTillstand, skyddaBokfordaVerifikat } from './bokforing';
 import { KonteraDatabase } from './db';
 import { byggSiedokument, exporteraSie } from './sieexport';
 import { importeraSieFiler } from './sieimport';
-import type { Skrivkontext } from './kommandon';
+import { bokforUtkast, type Skrivkontext } from './kommandon';
 
 let raknare = 0;
 let ms = 1_788_000_000_000;
@@ -182,5 +186,55 @@ describe('exporteraSie', () => {
     expect(text).toContain('#RAR 0 20260101 20261231');
     expect(text).toContain('#VER "A" 1 20260109 "Inköp av kraftfoder" 20260112');
     expect(text).not.toContain(datum('2026-01-09'));
+  });
+});
+
+describe('exporteraSie och tecken som PC8 saknar', () => {
+  let db: KonteraDatabase;
+
+  beforeEach(async () => {
+    db = new KonteraDatabase(`kontera-sieexport-d-${(raknare += 1)}`);
+    skyddaBokfordaVerifikat(db);
+    await db.open();
+    await importeraSieFiler(db, kontext, [siefil(2026)]);
+  });
+
+  const bokfor = (beskrivning: string) =>
+    bokforUtkast(
+      db,
+      kontext,
+      skapaUtkast({
+        id: kontext.nyttId!(),
+        datum: datum('2026-10-05'),
+        beskrivning,
+        konteringar: [
+          { konto: kontonummer('4010'), belopp: oreFromKronor('22.50') },
+          { konto: kontonummer('1930'), belopp: oreFromKronor('-22.50') },
+        ],
+      }),
+      verifikatserie('A'),
+    );
+
+  it('writes a dash in a description the plain way instead of stopping the file', async () => {
+    await bokfor('Claude Pro Oct 5–Nov 5, 2026');
+    const ar = [...(await lasTillstand(db)).rakenskapsar.values()][0]!;
+    const text = avkodaPC8(await exporteraSie(db, ar.id));
+
+    expect(text).toContain('"Claude Pro Oct 5-Nov 5, 2026"');
+    // The books themselves keep what was typed.
+    const lagrat = [...(await lasTillstand(db)).verifikat.values()].map(
+      (v) => v.beskrivning,
+    );
+    expect(lagrat).toContain('Claude Pro Oct 5–Nov 5, 2026');
+  });
+
+  it('still refuses a character with no plain equivalent, and says where it stands', async () => {
+    await bokfor('Sommarläger 😀');
+    const ar = [...(await lasTillstand(db)).rakenskapsar.values()][0]!;
+
+    const fel = await exporteraSie(db, ar.id).catch((orsak: unknown) => orsak);
+    expect(fel).toBeInstanceOf(OkodbartTeckenError);
+    expect((fel as Error).message).toContain('Det står här:');
+    expect((fel as Error).message).toContain('Sommarläger');
   });
 });

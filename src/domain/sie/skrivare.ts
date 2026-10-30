@@ -1,5 +1,6 @@
 import { kronorString, type Ore } from '../belopp/ore';
 import type { Datum } from '../tid/datum';
+import { medPC8Motsvarigheter } from './pc8';
 import type { Siedokument, Siekonto, Siesaldo, Sieverifikat } from './parser';
 
 /**
@@ -13,6 +14,8 @@ import type { Siedokument, Siekonto, Siesaldo, Sieverifikat } from './parser';
  *
  * The result is text. Turning it into the bytes a SIE file actually contains
  * is kodaPC8's job, and it will refuse anything the character set cannot hold.
+ * Text is first put through medPC8Motsvarigheter, so a dash or a curly quote
+ * that has a plain equivalent is written as that rather than stopping the file.
  */
 export function skrivSie(dokument: Siedokument): string {
   const rader: string[] = [
@@ -100,7 +103,8 @@ function sieDatum(varde: Datum): string {
 }
 
 function citera(text: string): string {
-  return `"${text.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`;
+  const enkel = medPC8Motsvarigheter(text);
+  return `"${enkel.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`;
 }
 
 /** Sorts accounts by number, which is the order every SIE file uses. */
