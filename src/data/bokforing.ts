@@ -12,12 +12,14 @@ import type { Uuid } from '../domain/id/uuidv7';
 import type { Anlaggningstillgang } from '../domain/anlaggning/anlaggningstillgang';
 import type { Fastighetstillgang } from '../domain/anlaggning/fastighetstillgang';
 import type { Djurlagerinventering } from '../domain/lager/djurlager';
+import type { Projekt } from '../domain/projekt/projekt';
 import type { Underlag } from '../domain/underlag/underlag';
 import type { BokfortVerifikat, Verifikatutkast } from '../domain/verifikat/verifikat';
 import type { KonteraDatabase } from './db';
 import {
   ANLAGGNING_TABLE,
   DJURLAGER_TABLE,
+  PROJEKT_TABLE,
   FASTIGHET_TABLE,
   HANDELSE_TABLE,
   KONTO_TABLE,
@@ -147,6 +149,7 @@ export async function tillampa(
       db.table(ANLAGGNING_TABLE),
       db.table(FASTIGHET_TABLE),
       db.table(DJURLAGER_TABLE),
+      db.table(PROJEKT_TABLE),
     ],
     async () => {
       const redanTillampad = await db.table(HANDELSE_TABLE).get(handelse.id);
@@ -207,6 +210,9 @@ export async function tillampa(
           case 'djurlager':
             await db.table<Djurlagerinventering, Uuid>(DJURLAGER_TABLE).put(effekt.post);
             break;
+          case 'projekt':
+            await db.table<Projekt, Uuid>(PROJEKT_TABLE).put(effekt.post);
+            break;
         }
       }
 
@@ -262,6 +268,7 @@ export async function lasTillstand(db: KonteraDatabase): Promise<Bokforingstills
     anlaggningar,
     fastigheter,
     djurlagerinventeringar,
+    projekt,
   ] = await Promise.all([
     db.table<Konto, Kontonummer>(KONTO_TABLE).toArray(),
     db.table<Rakenskapsar, Uuid>(RAKENSKAPSAR_TABLE).toArray(),
@@ -272,6 +279,7 @@ export async function lasTillstand(db: KonteraDatabase): Promise<Bokforingstills
     db.table<Anlaggningstillgang, Uuid>(ANLAGGNING_TABLE).toArray(),
     db.table<Fastighetstillgang, Uuid>(FASTIGHET_TABLE).toArray(),
     db.table<Djurlagerinventering, Uuid>(DJURLAGER_TABLE).toArray(),
+    db.table<Projekt, Uuid>(PROJEKT_TABLE).toArray(),
   ]);
 
   return {
@@ -286,6 +294,7 @@ export async function lasTillstand(db: KonteraDatabase): Promise<Bokforingstills
     djurlagerinventeringar: new Map(
       djurlagerinventeringar.map((post) => [post.id, post]),
     ),
+    projekt: new Map(projekt.map((post) => [post.id, post])),
   };
 }
 
@@ -457,6 +466,7 @@ async function laddaUppslag(
   const anlaggningsposter = new Map<Uuid, Anlaggningstillgang>();
   const fastighetsposter = new Map<Uuid, Fastighetstillgang>();
   const djurlagerposter = new Map<Uuid, Djurlagerinventering>();
+  const projektposter = new Map<Uuid, Projekt>();
 
   if (
     handelse.typ === 'rakenskapsar.momslast' ||
@@ -555,6 +565,15 @@ async function laddaUppslag(
     }
   }
 
+  if (handelse.typ === 'projekt.skapat' || handelse.typ === 'projekt.andrat') {
+    const id =
+      handelse.typ === 'projekt.skapat' ? handelse.projekt.id : handelse.projektId;
+    const post = await db.table<Projekt, Uuid>(PROJEKT_TABLE).get(id);
+    if (post !== undefined) {
+      projektposter.set(post.id, post);
+    }
+  }
+
   return {
     rakenskapsar: (id) => arPoster.get(id),
     verifikat: (id) => verifikatPoster.get(id),
@@ -563,6 +582,7 @@ async function laddaUppslag(
     anlaggning: (id) => anlaggningsposter.get(id),
     fastighet: (id) => fastighetsposter.get(id),
     djurlager: (id) => djurlagerposter.get(id),
+    projekt: (id) => projektposter.get(id),
   };
 }
 

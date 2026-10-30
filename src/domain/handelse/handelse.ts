@@ -12,6 +12,7 @@ import {
 import type { Ore } from '../belopp/ore';
 import type { Djurlagerinventering } from '../lager/djurlager';
 import type { Konto, Kontonummer } from '../konto/konto';
+import { andraProjekt, type Projekt } from '../projekt/projekt';
 import type { Konteringsmall } from '../mall/konteringsmall';
 import type { Ingaendebalans, Rakenskapsar } from '../rakenskapsar/rakenskapsar';
 import type { Datum } from '../tid/datum';
@@ -178,6 +179,14 @@ export type Handelse =
   | (Handelsehuvud & {
       readonly typ: 'djurlager.inventerat';
       readonly inventering: Djurlagerinventering;
+    })
+  | (Handelsehuvud & { readonly typ: 'projekt.skapat'; readonly projekt: Projekt })
+  | (Handelsehuvud & {
+      /** The name, or whether the project is over; the code never changes. */
+      readonly typ: 'projekt.andrat';
+      readonly projektId: Uuid;
+      readonly namn?: string;
+      readonly avslutat?: boolean;
     });
 
 export type Handelsetyp = Handelse['typ'];
@@ -193,6 +202,7 @@ export interface Bokforingstillstand {
   readonly anlaggningar: ReadonlyMap<Uuid, Anlaggningstillgang>;
   readonly fastigheter: ReadonlyMap<Uuid, Fastighetstillgang>;
   readonly djurlagerinventeringar: ReadonlyMap<Uuid, Djurlagerinventering>;
+  readonly projekt: ReadonlyMap<Uuid, Projekt>;
 }
 
 /**
@@ -242,7 +252,8 @@ export type Effekt =
       readonly tabell: 'djurlager';
       readonly atgard: 'satt';
       readonly post: Djurlagerinventering;
-    };
+    }
+  | { readonly tabell: 'projekt'; readonly atgard: 'satt'; readonly post: Projekt };
 
 /**
  * What {@link effekter} needs to know about the books before it can say what
@@ -260,6 +271,7 @@ export interface Tillstandsuppslag {
   anlaggning(id: Uuid): Anlaggningstillgang | undefined;
   fastighet(id: Uuid): Fastighetstillgang | undefined;
   djurlager(id: Uuid): Djurlagerinventering | undefined;
+  projekt(id: Uuid): Projekt | undefined;
 }
 
 export class LoggkonfliktError extends Error {
@@ -479,6 +491,35 @@ export function effekter(
       return [{ tabell: 'djurlager', atgard: 'satt', post: handelse.inventering }];
     }
 
+    case 'projekt.skapat': {
+      if (uppslag.projekt(handelse.projekt.id) !== undefined) {
+        throw new LoggkonfliktError(
+          `Projekt ${handelse.projekt.id} skapas två gånger i händelseloggen.`,
+        );
+      }
+      return [{ tabell: 'projekt', atgard: 'satt', post: handelse.projekt }];
+    }
+
+    case 'projekt.andrat': {
+      const projekt = uppslag.projekt(handelse.projektId);
+      if (projekt === undefined) {
+        throw new LoggkonfliktError(
+          `Projekt ${handelse.projektId} ändras i händelseloggen utan att ha skapats. ` +
+            'Loggen är ofullständig.',
+        );
+      }
+      return [
+        {
+          tabell: 'projekt',
+          atgard: 'satt',
+          post: andraProjekt(projekt, {
+            ...(handelse.namn === undefined ? {} : { namn: handelse.namn }),
+            ...(handelse.avslutat === undefined ? {} : { avslutat: handelse.avslutat }),
+          }),
+        },
+      ];
+    }
+
     case 'verifikat.bokfort': {
       const id = handelse.verifikat.id;
       if (uppslag.verifikat(id) !== undefined) {
@@ -547,6 +588,7 @@ export function bygg(handelser: Iterable<Handelse>): Bokforingstillstand {
   const anlaggningar = new Map<Uuid, Anlaggningstillgang>();
   const fastigheter = new Map<Uuid, Fastighetstillgang>();
   const djurlagerinventeringar = new Map<Uuid, Djurlagerinventering>();
+  const projekt = new Map<Uuid, Projekt>();
   const sedda = new Set<Uuid>();
 
   const uppslag: Tillstandsuppslag = {
@@ -557,6 +599,7 @@ export function bygg(handelser: Iterable<Handelse>): Bokforingstillstand {
     anlaggning: (id) => anlaggningar.get(id),
     fastighet: (id) => fastigheter.get(id),
     djurlager: (id) => djurlagerinventeringar.get(id),
+    projekt: (id) => projekt.get(id),
   };
 
   for (const handelse of iLoggordning(handelser)) {
@@ -610,6 +653,9 @@ export function bygg(handelser: Iterable<Handelse>): Bokforingstillstand {
         case 'djurlager':
           djurlagerinventeringar.set(effekt.post.id, effekt.post);
           break;
+        case 'projekt':
+          projekt.set(effekt.post.id, effekt.post);
+          break;
       }
     }
   }
@@ -624,6 +670,7 @@ export function bygg(handelser: Iterable<Handelse>): Bokforingstillstand {
     anlaggningar,
     fastigheter,
     djurlagerinventeringar,
+    projekt,
   };
 }
 

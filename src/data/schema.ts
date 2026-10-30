@@ -47,6 +47,7 @@ export const SYNKKO_TABLE = 'synkko';
 export const ANLAGGNING_TABLE = 'anlaggning';
 export const FASTIGHET_TABLE = 'fastighet';
 export const DJURLAGER_TABLE = 'djurlager';
+export const PROJEKT_TABLE = 'projekt';
 
 export const schemaVersions: readonly SchemaVersion[] = [
   {
@@ -171,6 +172,15 @@ export const schemaVersions: readonly SchemaVersion[] = [
     stores: {
       [FASTIGHET_TABLE]: 'id',
       [DJURLAGER_TABLE]: 'id',
+    },
+  },
+  {
+    version: 8,
+    description: 'Projekt, which a konteringsrad can be booked on (Etapp 10).',
+    stores: {
+      // A view of the log like the others, and so safe to rebuild. Read whole:
+      // a handful of projects, looked up by id from the rows that point at them.
+      [PROJEKT_TABLE]: 'id',
     },
   },
 ];

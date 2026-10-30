@@ -2,6 +2,12 @@ import type { Handelse } from '../domain/handelse/handelse';
 import type { Uuid } from '../domain/id/uuidv7';
 import type { Konto } from '../domain/konto/konto';
 import type { Konteringsmall } from '../domain/mall/konteringsmall';
+import {
+  kodenFinns,
+  OgiltigtProjektError,
+  skapaProjekt,
+  type Projekt,
+} from '../domain/projekt/projekt';
 import { paverkarMomsdeklarationen } from '../domain/moms/momsrapport';
 import {
   kontrolleraBokforingsbart,
@@ -25,7 +31,7 @@ import {
 import { lasLogg, lasTillstand, tillampa, type VerifikatRad } from './bokforing';
 import type { KonteraDatabase } from './db';
 import { newIdentifier } from './id';
-import { RAKENSKAPSAR_TABLE, VERIFIKAT_TABLE } from './schema';
+import { PROJEKT_TABLE, RAKENSKAPSAR_TABLE, VERIFIKAT_TABLE } from './schema';
 
 /**
  * What every command needs before it can write to the log: which device is
@@ -78,11 +84,86 @@ export async function skrivRakenskapsar(
   await tillampa(db, { ...huvud(kontext), typ: 'rakenskapsar.skapat', rakenskapsar });
 }
 
+export class OkantProjektError extends Error {
+  constructor(projektId: Uuid) {
+    super(`Projektet ${projektId} finns inte i den här boken.`);
+    this.name = 'OkantProjektError';
+  }
+}
+
+export class AvslutatProjektError extends Error {
+  constructor(projekt: Projekt) {
+    super(
+      `Projektet ${projekt.kod} (${projekt.namn}) är avslutat och tar inga fler ` +
+        'bokningar. Öppna det igen om något ska bokföras på det.',
+    );
+    this.name = 'AvslutatProjektError';
+  }
+}
+
+/**
+ * Whether every project a line points at exists, and is still open.
+ *
+ * Checked where lines are saved and booked, because the domain has no register
+ * to look in. A reversal is let through for a project that has since been
+ * finished: undoing a booking is not a new booking on the project, and refusing
+ * it would leave a mistake on a finished project with no way to correct it.
+ */
+async function kontrolleraProjekt(
+  db: KonteraDatabase,
+  konteringar: Verifikatutkast['konteringar'],
+  tillatAvslutat = false,
+): Promise<void> {
+  for (const projektId of new Set(konteringar.flatMap((rad) => rad.projekt ?? []))) {
+    const projekt = await db.table<Projekt, Uuid>(PROJEKT_TABLE).get(projektId);
+    if (projekt === undefined) {
+      throw new OkantProjektError(projektId);
+    }
+    if (projekt.avslutat && !tillatAvslutat) {
+      throw new AvslutatProjektError(projekt);
+    }
+  }
+}
+
+/** Creates a project. Its code is how it is told apart in a file, so no two share one. */
+export async function skrivProjekt(
+  db: KonteraDatabase,
+  kontext: Skrivkontext,
+  uppgifter: { readonly kod: string; readonly namn: string },
+): Promise<Projekt> {
+  const finns = await db.table<Projekt, Uuid>(PROJEKT_TABLE).toArray();
+  if (kodenFinns(uppgifter.kod, finns)) {
+    throw new OgiltigtProjektError(
+      `Det finns redan ett projekt med koden ${uppgifter.kod.trim()}.`,
+    );
+  }
+  const projekt = skapaProjekt({ id: nyttId(kontext), ...uppgifter });
+  await tillampa(db, { ...huvud(kontext), typ: 'projekt.skapat', projekt });
+  return projekt;
+}
+
+/** Renames a project, or finishes or reopens it. The code stays. */
+export async function andraProjektet(
+  db: KonteraDatabase,
+  kontext: Skrivkontext,
+  projektId: Uuid,
+  andring: { readonly namn?: string; readonly avslutat?: boolean },
+): Promise<void> {
+  await tillampa(db, {
+    ...huvud(kontext),
+    typ: 'projekt.andrat',
+    projektId,
+    ...(andring.namn === undefined ? {} : { namn: andring.namn }),
+    ...(andring.avslutat === undefined ? {} : { avslutat: andring.avslutat }),
+  });
+}
+
 export async function sparaUtkast(
   db: KonteraDatabase,
   kontext: Skrivkontext,
   utkast: Verifikatutkast,
 ): Promise<void> {
+  await kontrolleraProjekt(db, utkast.konteringar);
   await tillampa(db, { ...huvud(kontext), typ: 'utkast.sparat', utkast });
 }
 
@@ -305,6 +386,7 @@ export async function bokforUtkast(
     utkast.datum,
     paverkarMomsdeklarationen(utkast.konteringar),
   );
+  await kontrolleraProjekt(db, utkast.konteringar, utkast.annullerar !== undefined);
 
   const verifikat = bokfor(utkast, {
     serie,

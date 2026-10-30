@@ -133,6 +133,7 @@ describe('tillampa', () => {
       'konteringsmall',
       'konto',
       'meta',
+      'projekt',
       'rakenskapsar',
       'synkko',
       'underlag',

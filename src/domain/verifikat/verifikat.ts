@@ -20,6 +20,13 @@ export interface Kontering {
   readonly belopp: Ore;
   /** Per-line note. SIE carries one on #TRANS and some imports use it. */
   readonly text?: string;
+  /**
+   * The project this line belongs to, if it belongs to one. One at most, and
+   * the line stays an ordinary line without it: most are. Whether the project
+   * exists and is still open is the books' to check (src/data), as the domain
+   * has no register to look in.
+   */
+  readonly projekt?: Uuid;
 }
 
 /** A verifikat that has not been booked yet, and so has no number. */

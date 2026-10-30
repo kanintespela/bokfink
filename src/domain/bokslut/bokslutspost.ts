@@ -376,5 +376,6 @@ export function bokslutspostKonteringar(
  * and its moms is not declared twice.
  */
 export function aterforing(konteringar: readonly Kontering[]): Kontering[] {
-  return konteringar.map((rad) => ({ konto: rad.konto, belopp: negate(rad.belopp) }));
+  // The whole row, turned: a project the item was booked on goes back with it.
+  return konteringar.map((rad) => ({ ...rad, belopp: negate(rad.belopp) }));
 }

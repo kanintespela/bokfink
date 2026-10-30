@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { oreFromKronor } from '../belopp/ore';
+import type { Uuid } from '../id/uuidv7';
 import { kontonummer } from '../konto/konto';
 import {
   aterforing,
@@ -248,5 +249,19 @@ describe('en förenings poster vid årets slut', () => {
         balanskonto: kontonummer('1600'),
       }),
     ).toThrow('tar inte upp');
+  });
+});
+
+describe('aterforing och projekt', () => {
+  it('turns a line round with its project, so the reversal belongs where the item did', () => {
+    const projekt = '019b76da-a800-7000-8000-000000000042' as Uuid;
+    const tillbaka = aterforing([
+      { konto: kontonummer('1600'), belopp: kr('40000'), projekt },
+      { konto: kontonummer('3710'), belopp: kr('-40000'), projekt },
+    ]);
+    expect(tillbaka).toEqual([
+      { konto: '1600', belopp: kr('-40000'), projekt },
+      { konto: '3710', belopp: kr('40000'), projekt },
+    ]);
   });
 });
