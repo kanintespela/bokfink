@@ -2,7 +2,8 @@ import 'fake-indexeddb/auto';
 
 import { describe, expect, it } from 'vitest';
 
-import { kontonITradet } from '../domain/beslutstrad/beslutstrad';
+import { allaLov, kontonITradet } from '../domain/beslutstrad/beslutstrad';
+import { FORENINGSTRAD } from '../domain/beslutstrad/foreningstrad';
 import type { Handelse } from '../domain/handelse/handelse';
 import type { Uuid } from '../domain/id/uuidv7';
 import { skapaKonto } from '../domain/konto/konto';
@@ -133,5 +134,14 @@ describe('forberedBokforing och bokens profil', () => {
 
     const konton = [...(await lasTillstand(db)).konton.keys()].map(String);
     expect(konton.sort()).toEqual(GRUNDKONTON.map((konto) => konto.nummer).sort());
+  });
+});
+
+describe('FORENINGENS_GRUNDKONTON och trädet', () => {
+  // A leaf that books on an account a new association's book lacks cannot be booked at all.
+  it("holds every account the association's questions book on", () => {
+    const grund = new Set(FORENINGENS_GRUNDKONTON.map((konto) => konto.nummer));
+    const behovs = allaLov(FORENINGSTRAD).flatMap((lov) => [lov.konto, ...lov.betalsatt]);
+    expect([...new Set(behovs)].filter((konto) => !grund.has(konto))).toEqual([]);
   });
 });

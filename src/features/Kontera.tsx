@@ -155,6 +155,7 @@ import { vantandeMomsdeklarationer } from '../domain/moms/deklarationsdag';
 import { vantandeFakturor } from '../domain/underlag/forfallodag';
 import { skrivIcs } from '../domain/kalender/ics';
 import { arMomsregistrerad, type Bokprofil } from '../domain/bok/bokprofil';
+import { beslutstradFor } from '../domain/beslutstrad/tradval';
 import { paminnelser } from '../domain/kalender/paminnelser';
 import type { Momsperiod } from '../domain/moms/period';
 import type { Redovisningsmetod } from '../domain/moms/redovisningsmetod';
@@ -718,12 +719,16 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
     }
   }
   const foreslagetLov =
-    forslagsmall === undefined ? undefined : lovForMallId(forslagsmall.mall);
+    forslagsmall === undefined
+      ? undefined
+      : lovForMallId(forslagsmall.mall, beslutstradFor(laddat.profil));
   /*
    * The leaves as templates at today's rates, for matching a receipt's words.
    * The receipt suggests what it is; the rate is settled in the form.
    */
-  const lovmallar = allaLov().map((lov) => lovTillMall(lov, momsForLov(lov, idag).sats));
+  const lovmallar = allaLov(beslutstradFor(laddat.profil)).map((lov) =>
+    lovTillMall(lov, momsForLov(lov, idag).sats),
+  );
   const halvtPbb = (() => {
     const ar = delar(idag).ar;
     try {
@@ -1505,6 +1510,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
             )}
 
             <BokforUtgift
+              profil={laddat.profil}
               // Remounted when a receipt or a bank line starts a new entry,
               // so nothing from the last one is left in the fields - but not
               // when a photograph is attached to the entry in progress, which

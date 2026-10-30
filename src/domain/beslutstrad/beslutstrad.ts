@@ -49,7 +49,7 @@ export interface Lov {
 export interface Hanvisning {
   readonly typ: 'hanvisning';
   readonly id: string;
-  readonly till: 'moms' | 'lager' | 'periodisering' | 'anlaggning';
+  readonly till: 'moms' | 'lager' | 'periodisering' | 'anlaggning' | 'egetkapital';
   readonly text: string;
 }
 
@@ -109,7 +109,7 @@ const LIVSMEDEL =
   'Skatteverket 2026: 6 % från 1 april 2026 till och med 31 december 2027, dessförinnan 12 %. ' +
   BAS_K1;
 
-function lov(
+export function lov(
   uppgifter: Omit<Lov, 'typ' | 'konto' | 'betalsatt'> & {
     readonly konto: string;
     readonly betalsatt: readonly Kontonummer[];
@@ -118,7 +118,7 @@ function lov(
   return { ...uppgifter, typ: 'lov', konto: K(uppgifter.konto) };
 }
 
-function fast(sats: Momssats): Momsval {
+export function fast(sats: Momssats): Momsval {
   return { typ: 'fast', sats };
 }
 

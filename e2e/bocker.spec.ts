@@ -154,3 +154,40 @@ test('an association sets funds aside for a purpose without touching the result'
   await page.getByTestId('bokfor-reservering').click();
   await expect(page.getByTestId('summa-reserverat')).toContainText('15 000');
 });
+
+test("books an association's bill by answering what happened, with no moms split off", async ({
+  page,
+}) => {
+  await page.clock.install({ time: new Date('2026-10-22T10:00:00+02:00') });
+  await page.clock.resume();
+
+  await oppnaBocker(page);
+  await page.getByLabel('Namn på den nya boken').fill('Bygdegårdsföreningen');
+  await page.getByRole('button', { name: 'Ideell förening' }).click();
+  await page.getByRole('button', { name: 'Skapa och öppna boken' }).click();
+  await expect(page.getByTestId('aktiv-bok')).toContainText('Bygdegårdsföreningen');
+
+  await page.goto('/#bokfor');
+  await expect(page.getByRole('heading', { name: 'Vad har hänt?' })).toBeVisible();
+  // Nothing about animals, machines or egna uttag: the association's own questions.
+  await expect(
+    page.getByTestId('svar').getByRole('button', { name: 'Moms' }),
+  ).toHaveCount(0);
+
+  await page
+    .getByTestId('svar')
+    .getByRole('button', { name: 'Pengar ut', exact: true })
+    .click();
+  await page.getByTestId('svar').getByRole('button', { name: 'Fastigheten' }).click();
+  await page.getByTestId('svar').getByRole('button', { name: /^El/ }).click();
+
+  await expect(page.getByTestId('valt-lov')).toContainText('5020');
+  await page.getByLabel('Att betala').fill('1250');
+  // A firm would show the VAT inside 1 250 kr; an association that is not
+  // registered pays it as part of the cost.
+  await expect(page.getByTestId('momsdelning')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Bankkontot' })).toBeVisible();
+
+  await page.locator('main').getByRole('button', { name: 'Bokför', exact: true }).click();
+  await expect(page.getByTestId('senast-bokfort')).toContainText('A1');
+});

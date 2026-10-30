@@ -3,17 +3,18 @@ import { useMemo, useRef, useState } from 'react';
 import { formatKronor, kronorString, subtract, type Ore } from '../../domain/belopp/ore';
 import {
   allaLov,
-  BESLUTSTRAD,
-  BETALSATTSNAMN,
   lovMallId,
   lovTillMall,
   momsForLov,
   stigTill,
+  type Fraga,
   type Hanvisning,
   type Lov,
   type Momssats,
   type Nod,
 } from '../../domain/beslutstrad/beslutstrad';
+import { beslutstradFor, betalsattsnamnFor } from '../../domain/beslutstrad/tradval';
+import type { Bokprofil } from '../../domain/bok/bokprofil';
 import type { Konto, Kontonummer } from '../../domain/konto/konto';
 import {
   delaMedUnderlag,
@@ -93,6 +94,8 @@ interface Props {
   readonly onAndraKontering?: (start: Friforslag) => void;
   /** Goes to the screen a leaf says the thing is done on. */
   readonly onHanvisning: (till: Hanvisning['till']) => void;
+  /** What kind of book this is, which decides the questions and accounts offered. */
+  readonly profil: Bokprofil;
   readonly onBokfor: (val: {
     mall: Konteringsmall;
     brutto: Ore;
@@ -128,6 +131,7 @@ const GENVAGAR = 4;
  * suggestion the person approves rather than an automatic booking.
  */
 export function BokforUtgift({
+  profil,
   idag,
   anvandning,
   forvaltBetalkonto,
@@ -190,7 +194,9 @@ export function BokforUtgift({
   const [beskar, setBeskar] = useState<{ fil: File; url: string } | undefined>();
   const kamera = useRef<HTMLInputElement>(null);
 
-  const lov = useMemo(() => allaLov(), []);
+  const rot = useMemo(() => beslutstradFor(profil), [profil]);
+  const betalsattsnamn = useMemo(() => betalsattsnamnFor(profil), [profil]);
+  const lov = useMemo(() => allaLov(rot), [rot]);
   /*
    * Every leaf as a template at the rate it proposes today, which is what
    * search ranks. The rate a booking uses is worked out again from its date.
@@ -390,7 +396,7 @@ export function BokforUtgift({
   }
 
   if (vald === undefined || mall === undefined || moms === undefined) {
-    const nod = folj(stig);
+    const nod = folj(stig, rot);
     return (
       <section aria-label="Vad har hänt?">
         {underlag !== undefined && (
@@ -438,7 +444,11 @@ export function BokforUtgift({
             className="falt"
             type="search"
             autoComplete="off"
-            placeholder="Till exempel foder, diesel eller lamm"
+            placeholder={
+              profil === 'forening'
+                ? 'Till exempel el, medlemsavgift eller hyra'
+                : 'Till exempel foder, diesel eller lamm'
+            }
             value={sok}
             onChange={(handelse) => setSok(handelse.target.value)}
           />
@@ -456,7 +466,7 @@ export function BokforUtgift({
                   <Lovknapp
                     lov={kandidat}
                     text={kandidat.namn}
-                    under={(stigTill(kandidat.id) ?? []).join(' › ')}
+                    under={(stigTill(kandidat.id, rot) ?? []).join(' › ')}
                     konton={konton}
                     idag={idag}
                     onValj={valjLov}
@@ -741,14 +751,14 @@ export function BokforUtgift({
                 aria-pressed={aktivtBetalkonto === konto}
                 onClick={() => setBetalkonto(konto)}
               >
-                {BETALSATTSNAMN.get(konto) ?? konto}
+                {betalsattsnamn.get(konto) ?? konto}
               </button>
             ))}
           </div>
         </div>
       ) : (
         <p className="hjalptext">
-          {ord.konto}: {BETALSATTSNAMN.get(vald.betalsatt[0]!) ?? vald.betalsatt[0]}
+          {ord.konto}: {betalsattsnamn.get(vald.betalsatt[0]!) ?? vald.betalsatt[0]}
         </p>
       )}
 
@@ -863,11 +873,11 @@ export function BokforUtgift({
 }
 
 /** The node the answers so far lead to. */
-function folj(stig: readonly number[]): Nod {
-  let nod: Nod = BESLUTSTRAD;
+function folj(stig: readonly number[], rot: Fraga): Nod {
+  let nod: Nod = rot;
   for (const index of stig) {
     if (nod.typ !== 'fraga' || nod.svar[index] === undefined) {
-      return BESLUTSTRAD;
+      return rot;
     }
     nod = nod.svar[index].till;
   }
