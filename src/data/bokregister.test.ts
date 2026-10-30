@@ -2,7 +2,13 @@ import 'fake-indexeddb/auto';
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { BOK_ID_NYCKEL, lasBokId, URSPRUNGLIG_BOK } from './bokidentitet';
+import {
+  BOK_ID_NYCKEL,
+  BOK_PROFIL_NYCKEL,
+  lasBokId,
+  lasBokprofil,
+  URSPRUNGLIG_BOK,
+} from './bokidentitet';
 import {
   Bokregister,
   bytNamnPaBok,
@@ -101,7 +107,12 @@ describe('bokregistret', () => {
   });
 
   it('creates a book in a database of its own that knows which book it is', async () => {
-    const forening = await skapaBok(register, kontext, 'Bygdegårdsföreningen');
+    const forening = await skapaBok(
+      register,
+      kontext,
+      'Bygdegårdsföreningen',
+      'forening',
+    );
 
     expect(forening.databas).not.toBe(URSPRUNGLIG_DATABAS);
     const db = new KonteraDatabase(forening.databas);
@@ -118,15 +129,39 @@ describe('bokregistret', () => {
     expect(aktiv.databas).toBe(URSPRUNGLIG_DATABAS);
   });
 
+  it('writes the profile it was given into the book, and nowhere else', async () => {
+    const forening = await skapaBok(register, kontext, 'Föreningen', 'forening');
+    const firma = await skapaBok(register, kontext, 'Firman', 'enskild_firma');
+
+    for (const [bok, profil] of [
+      [forening, 'forening'],
+      [firma, 'enskild_firma'],
+    ] as const) {
+      const db = new KonteraDatabase(bok.databas);
+      expect(await db.getMeta(BOK_PROFIL_NYCKEL)).toBe(profil);
+      expect(await lasBokprofil(db)).toBe(profil);
+      db.close();
+    }
+    // The register knows names and databases, not what kind of book it is.
+    expect(Object.keys(forening)).not.toContain('profil');
+  });
+
+  it('takes the original book, which recorded no profile, for a firm', async () => {
+    const db = new KonteraDatabase(URSPRUNGLIG_DATABAS);
+    expect(await db.getMeta(BOK_PROFIL_NYCKEL)).toBeUndefined();
+    expect(await lasBokprofil(db)).toBe('enskild_firma');
+    db.close();
+  });
+
   it('refuses a second book with a name already taken', async () => {
-    await expect(skapaBok(register, kontext, 'min bokföring')).rejects.toBeInstanceOf(
-      OgiltigtBoknamnError,
-    );
+    await expect(
+      skapaBok(register, kontext, 'min bokföring', 'enskild_firma'),
+    ).rejects.toBeInstanceOf(OgiltigtBoknamnError);
     expect(await register.bocker.count()).toBe(1);
   });
 
   it('remembers the chosen book', async () => {
-    const forening = await skapaBok(register, kontext, 'Föreningen');
+    const forening = await skapaBok(register, kontext, 'Föreningen', 'forening');
     await valjBok(register, forening.id);
 
     expect((await lasBocker(register, kontext)).aktiv.id).toBe(forening.id);

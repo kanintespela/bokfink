@@ -1,6 +1,7 @@
 import Dexie, { type Table } from 'dexie';
 
-import { BOK_ID_NYCKEL, URSPRUNGLIG_BOK } from './bokidentitet';
+import type { Bokprofil } from '../domain/bok/bokprofil';
+import { BOK_ID_NYCKEL, BOK_PROFIL_NYCKEL, URSPRUNGLIG_BOK } from './bokidentitet';
 import { KonteraDatabase } from './db';
 import { newIdentifier } from './id';
 
@@ -164,8 +165,10 @@ export async function lasBocker(
 /**
  * Starts a new, empty book.
  *
- * Its database is created here with the identity written into it, so that
- * every backup it ever makes says which book it is a copy of. Making it
+ * Its database is created here with the identity and the profile written into
+ * it, so that every backup it ever makes says which book it is a copy of and
+ * what kind of book that is. The profile is given here and nowhere else: a
+ * book's kind is not changed afterwards (see bokprofil.ts). Making it
  * ready to book - a fiscal year, the starting accounts - happens when it is
  * first opened, exactly as for the original.
  */
@@ -173,6 +176,7 @@ export async function skapaBok(
   register: Bokregister,
   kontext: Registerkontext,
   namn: string,
+  profil: Bokprofil,
 ): Promise<Bok> {
   const { bocker } = await lasBocker(register, kontext);
   const id = (kontext.nyttId ?? newIdentifier)();
@@ -186,6 +190,7 @@ export async function skapaBok(
   const db = new KonteraDatabase(bok.databas);
   try {
     await db.setMeta(BOK_ID_NYCKEL, id);
+    await db.setMeta(BOK_PROFIL_NYCKEL, profil);
   } finally {
     db.close();
   }

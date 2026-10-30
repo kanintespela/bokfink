@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { LANGSTA_BOKNAMN, type Bok } from '../../data/bokregister';
+import { BOKPROFILER, BOKPROFILNAMN, type Bokprofil } from '../../domain/bok/bokprofil';
 import { Uppgiftsstatus, useUppgift } from '../data/uppgift';
 
 /** The books on this device, and what can be done with them. */
@@ -9,7 +10,7 @@ export interface Bokval {
   readonly aktiv: Bok;
   /** Opens another book. The whole app starts over in it. */
   readonly onValj: (id: string) => Promise<void>;
-  readonly onSkapa: (namn: string) => Promise<void>;
+  readonly onSkapa: (namn: string, profil: Bokprofil) => Promise<void>;
   readonly onBytNamn: (namn: string) => Promise<void>;
 }
 
@@ -23,6 +24,12 @@ export interface Bokval {
  */
 export function Bocker({ bocker, aktiv, onValj, onSkapa, onBytNamn }: Bokval) {
   const [nyttNamn, setNyttNamn] = useState('');
+  /*
+   * Nothing chosen to begin with. The choice cannot be changed once the book
+   * exists, so a preselected answer would be one that is wrong for whoever
+   * does not look.
+   */
+  const [nyProfil, setNyProfil] = useState<Bokprofil | undefined>();
   const [namn, setNamn] = useState(aktiv.namn);
   const { arbetar, besked, fel, kor } = useUppgift();
 
@@ -91,7 +98,13 @@ export function Bocker({ bocker, aktiv, onValj, onSkapa, onBytNamn }: Bokval) {
         onSubmit={(handelse) => {
           handelse.preventDefault();
           void kor(async () => {
-            await onSkapa(nyttNamn);
+            if (nyProfil === undefined) {
+              throw new Error(
+                'Välj om boken är en enskild firma eller en ideell förening.',
+              );
+            }
+            await onSkapa(nyttNamn, nyProfil);
+            setNyProfil(undefined);
             return 'Boken är skapad och öppnad.';
           });
         }}
@@ -107,6 +120,25 @@ export function Bocker({ bocker, aktiv, onValj, onSkapa, onBytNamn }: Bokval) {
             value={nyttNamn}
             onChange={(handelse) => setNyttNamn(handelse.target.value)}
           />
+        </div>
+        <div className="faltgrupp" role="group" aria-labelledby="bokprofil">
+          <span id="bokprofil">Vad är det för bok?</span>
+          <div className="segment">
+            {BOKPROFILER.map((profil) => (
+              <button
+                key={profil}
+                type="button"
+                aria-pressed={nyProfil === profil}
+                onClick={() => setNyProfil(profil)}
+              >
+                {BOKPROFILNAMN[profil]}
+              </button>
+            ))}
+          </div>
+          <p className="hjalptext">
+            Det går inte att ändra efteråt, eftersom reglerna, kontona och bokslutet
+            skiljer sig. Skapa i stället en ny bok om du valde fel innan du bokfört något.
+          </p>
         </div>
         <p className="hjalptext">
           Den nya boken börjar tom, med ett räkenskapsår och grundkonton. Har föreningen

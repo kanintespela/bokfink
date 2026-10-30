@@ -37,6 +37,7 @@ test('keeps a second book apart from the first', async ({ page }) => {
   await expect(page.getByRole('button', { name: /Firman/ })).toBeVisible();
 
   await page.getByLabel('Namn på den nya boken').fill('Bygdegårdsföreningen');
+  await page.getByRole('button', { name: 'Ideell förening' }).click();
   await page.getByRole('button', { name: 'Skapa och öppna boken' }).click();
 
   // The new book is open, said on the screen, and holds nothing of the firm's.
@@ -62,10 +63,24 @@ test('keeps a second book apart from the first', async ({ page }) => {
 test('refuses a second book with a name already taken', async ({ page }) => {
   await oppnaBocker(page);
   await page.getByLabel('Namn på den nya boken').fill('min bokföring');
+  await page.getByRole('button', { name: 'Enskild firma' }).click();
   await page.getByRole('button', { name: 'Skapa och öppna boken' }).click();
 
   await expect(page.getByTestId('datautbyte-fel')).toContainText(
     'Det finns redan en bok som heter Min bokföring.',
+  );
+  await expect(page.getByTestId('aktiv-bok')).toHaveCount(0);
+});
+
+test('will not create a book before it is said what kind of book it is', async ({
+  page,
+}) => {
+  await oppnaBocker(page);
+  await page.getByLabel('Namn på den nya boken').fill('Bygdegårdsföreningen');
+  await page.getByRole('button', { name: 'Skapa och öppna boken' }).click();
+
+  await expect(page.getByTestId('datautbyte-fel')).toContainText(
+    'Välj om boken är en enskild firma eller en ideell förening.',
   );
   await expect(page.getByTestId('aktiv-bok')).toHaveCount(0);
 });

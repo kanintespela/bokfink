@@ -1,3 +1,4 @@
+import { tolkaBokprofil, type Bokprofil } from '../domain/bok/bokprofil';
 import type { KonteraDatabase } from './db';
 
 /** The metadata key a database's book identity is kept under. */
@@ -29,4 +30,29 @@ export async function lasBokId(db: KonteraDatabase): Promise<string> {
 export function bokIdIMeta(meta: readonly { key: string; value: unknown }[]): string {
   const rad = meta.find((kandidat) => kandidat.key === BOK_ID_NYCKEL);
   return typeof rad?.value === 'string' ? rad.value : URSPRUNGLIG_BOK;
+}
+
+/** The metadata key a database's book profile is kept under. */
+export const BOK_PROFIL_NYCKEL = 'bokprofil';
+
+/**
+ * What kind of books a database holds.
+ *
+ * Kept next to the identity, in the book's own metadata, rather than in the
+ * register: a backup carries it, so a book restored onto a new device is the
+ * same kind of book, and clearing the register cannot turn an association into
+ * a firm. A database that recorded none is a book from before there were two
+ * kinds, and a firm's.
+ */
+export async function lasBokprofil(db: KonteraDatabase): Promise<Bokprofil> {
+  return tolkaBokprofil(await db.getMeta<unknown>(BOK_PROFIL_NYCKEL));
+}
+
+/** The profile carried by a backup's metadata, read the same way. */
+export function bokprofilIMeta(
+  meta: readonly { key: string; value: unknown }[],
+): Bokprofil {
+  return tolkaBokprofil(
+    meta.find((kandidat) => kandidat.key === BOK_PROFIL_NYCKEL)?.value,
+  );
 }

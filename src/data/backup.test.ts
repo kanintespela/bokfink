@@ -25,7 +25,13 @@ import { dekryptera, harledNyckel, kryptera, nyttSalt } from '../platform/krypto
 import { tillBase64 } from './base64';
 import { arKrypterad, laspaket, paketera } from './kryptokopia';
 import { lasFil, sparaUnderlag } from './underlag';
-import { BOK_ID_NYCKEL, lasBokId, URSPRUNGLIG_BOK } from './bokidentitet';
+import {
+  BOK_ID_NYCKEL,
+  BOK_PROFIL_NYCKEL,
+  lasBokId,
+  lasBokprofil,
+  URSPRUNGLIG_BOK,
+} from './bokidentitet';
 import { KonteraDatabase } from './db';
 import { forberedBokforing, GRUNDKONTON } from './uppstart';
 import { fastKlocka } from '../domain/tid/klocka';
@@ -471,6 +477,43 @@ describe('en säkerhetskopia från en annan bok', () => {
     await importera(nyBok, kopia);
     expect(await lasBokId(nyBok)).toBe(URSPRUNGLIG_BOK);
     nyBok.close();
+  });
+
+  it('gives an empty association book the profile of the firm it takes the identity of', async () => {
+    // A copy from before profiles existed records none: it is a firm's.
+    const kopia = las(await exporteraSomText(firman));
+    expect(kopia.meta.some((rad) => rad.key === BOK_PROFIL_NYCKEL)).toBe(false);
+    const foreningen = await nyDb();
+    await foreningen.setMeta(BOK_ID_NYCKEL, 'foreningen');
+    await foreningen.setMeta(BOK_PROFIL_NYCKEL, 'forening');
+
+    await importera(foreningen, kopia);
+    expect(await lasBokprofil(foreningen)).toBe('enskild_firma');
+    foreningen.close();
+  });
+
+  it("carries an association's profile to the device it is restored onto", async () => {
+    await firman.setMeta(BOK_ID_NYCKEL, 'foreningen');
+    await firman.setMeta(BOK_PROFIL_NYCKEL, 'forening');
+    const kopia = las(await exporteraSomText(firman));
+    const nyEnhet = await nyDb();
+    await nyEnhet.setMeta(BOK_ID_NYCKEL, 'ny-bok');
+    await nyEnhet.setMeta(BOK_PROFIL_NYCKEL, 'enskild_firma');
+
+    await importera(nyEnhet, kopia);
+    expect(await lasBokprofil(nyEnhet)).toBe('forening');
+    nyEnhet.close();
+  });
+
+  it('refuses a copy whose profile this version does not know', async () => {
+    await firman.setMeta(BOK_ID_NYCKEL, 'annan');
+    await firman.setMeta(BOK_PROFIL_NYCKEL, 'stiftelse');
+    const kopia = las(await exporteraSomText(firman));
+    const nyEnhet = await nyDb();
+    await nyEnhet.setMeta(BOK_ID_NYCKEL, 'ny-bok');
+
+    await expect(importera(nyEnhet, kopia)).rejects.toThrow(/inte känner till/);
+    nyEnhet.close();
   });
 
   it('is not what a copy of the same book is, whichever device took it', async () => {

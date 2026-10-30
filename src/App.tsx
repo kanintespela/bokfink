@@ -77,8 +77,8 @@ export function App() {
             bocker: bocker.bocker,
             aktiv,
             onValj: valj,
-            onSkapa: async (namn) => {
-              const ny = await skapaBok(register, registerkontext, namn);
+            onSkapa: async (namn, profil) => {
+              const ny = await skapaBok(register, registerkontext, namn, profil);
               await valj(ny.id);
             },
             onBytNamn: async (namn) => {

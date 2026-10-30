@@ -5,7 +5,13 @@ import type { Uuid } from '../domain/id/uuidv7';
 import { sha256, type Sha256 } from '../domain/underlag/underlag';
 import { franBase64, tillBase64 } from './base64';
 import { lasLogg, tillampaAlla } from './bokforing';
-import { BOK_ID_NYCKEL, bokIdIMeta, lasBokId } from './bokidentitet';
+import {
+  BOK_ID_NYCKEL,
+  BOK_PROFIL_NYCKEL,
+  bokIdIMeta,
+  bokprofilIMeta,
+  lasBokId,
+} from './bokidentitet';
 import type { KonteraDatabase } from './db';
 import {
   FIL_TABLE,
@@ -217,6 +223,12 @@ export async function importera(
       throw new AnnanBokError();
     }
     await db.setMeta(BOK_ID_NYCKEL, kopiansBok);
+    /*
+     * The profile goes with the identity, also when the copy records none: an
+     * empty association book that took an old firm's identity and kept its
+     * own profile would be a firm's books under an association's screens.
+     */
+    await db.setMeta(BOK_PROFIL_NYCKEL, bokprofilIMeta(kopia.meta));
   }
 
   for (const rad of kopia.meta) {
