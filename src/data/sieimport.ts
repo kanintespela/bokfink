@@ -1,5 +1,11 @@
 import { avkodaPC8 } from '../domain/sie/pc8';
-import { tolkaSie, type Siedokument, type Siekonto } from '../domain/sie/parser';
+import {
+  PROJEKTDIMENSION,
+  tolkaSie,
+  type Siedokument,
+  type Siekonto,
+} from '../domain/sie/parser';
+import { projektkodFranSie, projektnamnFranSie } from '../domain/projekt/projekt';
 import {
   harledKontotyp,
   kontonummer,
@@ -16,13 +22,14 @@ import { verifikatserie } from '../domain/verifikat/serie';
 import { bokfor, skapaUtkast, type Kontering } from '../domain/verifikat/verifikat';
 import type { Rakenskapsar } from '../domain/rakenskapsar/rakenskapsar';
 import type { Uuid } from '../domain/id/uuidv7';
-import { tillampa, type VerifikatRad } from './bokforing';
+import { lasTillstand, tillampa, type VerifikatRad } from './bokforing';
 import type { KonteraDatabase } from './db';
 import { newIdentifier } from './id';
 import {
   avslutaRakenskapsar,
   sattIngaendeBalanser,
   skrivKonto,
+  skrivProjekt,
   skrivRakenskapsar,
   type Skrivkontext,
 } from './kommandon';
@@ -32,6 +39,8 @@ export interface Importresultat {
   readonly rakenskapsar: number;
   readonly konton: number;
   readonly verifikat: number;
+  /** Projects made from the file's project objects; those already there are reused. */
+  readonly projekt: number;
   /** Verifikat already present, counted rather than duplicated. */
   readonly redanImporterade: number;
   readonly avslutadeAr: number;
@@ -85,6 +94,7 @@ export async function importeraSieFiler(
   let nyaAr = 0;
   let nyaKonton = 0;
   let nyaVerifikat = 0;
+  let nyaProjekt = 0;
   let redanImporterade = 0;
 
   for (const doc of iOrdning) {
@@ -141,6 +151,9 @@ export async function importeraSieFiler(
       }
     }
 
+    const projekt = await projektFranFil(db, kontext, doc, varningar);
+    nyaProjekt += projekt.nya;
+
     for (const ver of doc.verifikat) {
       const serie = verifikatserie(ver.serie);
       const nummer = Number(ver.nummer);
@@ -159,6 +172,7 @@ export async function importeraSieFiler(
         konto: kontonummer(trans.konto),
         belopp: trans.belopp,
         ...(trans.text === undefined ? {} : { text: trans.text }),
+        ...projektPaRad(trans, projekt.efterObjekt),
       }));
 
       const verifikat = bokfor(
@@ -197,6 +211,7 @@ export async function importeraSieFiler(
     rakenskapsar: nyaAr,
     konton: nyaKonton,
     verifikat: nyaVerifikat,
+    projekt: nyaProjekt,
     redanImporterade,
     avslutadeAr,
     varningar,
@@ -309,4 +324,105 @@ async function avslutaTidigareAr(
     }
   }
   return antal;
+}
+
+/**
+ * The project of a line: the object it names in the project dimension, if the
+ * file made one of it. A line names at most one object per dimension.
+ */
+function projektPaRad(
+  trans: Siedokument['verifikat'][number]['transaktioner'][number],
+  efterObjekt: ReadonlyMap<string, Uuid>,
+): { projekt?: Uuid } {
+  const val = trans.objekt.find((kandidat) => kandidat.dimension === PROJEKTDIMENSION);
+  const id = val === undefined ? undefined : efterObjekt.get(val.objekt);
+  return id === undefined ? {} : { projekt: id };
+}
+
+/**
+ * Projects for the project objects of a file, found or made.
+ *
+ * Dimension 6 is Projekt in SIE (4C, punkt 8.17) and is the only dimension
+ * this program has a place for: every object in it becomes a project, whether
+ * or not a line in this file uses it, since they are the association's list.
+ * A project that is already there under the same code - from an earlier file
+ * or an earlier import of this one - is reused, so a second year does not
+ * make a second set. Other dimensions are said not to be read, once each,
+ * rather than dropped without a word.
+ *
+ * An object number that does not fit a project code (see projektkodFranSie)
+ * is written as one that does, and said.
+ */
+async function projektFranFil(
+  db: KonteraDatabase,
+  kontext: Skrivkontext,
+  doc: Siedokument,
+  varningar: string[],
+): Promise<{ efterObjekt: ReadonlyMap<string, Uuid>; nya: number }> {
+  const namnPaObjekt = new Map<string, string>();
+  for (const objekt of doc.objekt) {
+    if (objekt.dimension === PROJEKTDIMENSION) {
+      namnPaObjekt.set(objekt.nummer, objekt.namn);
+    }
+  }
+  const andraDimensioner = new Set<string>();
+  for (const ver of doc.verifikat) {
+    for (const trans of ver.transaktioner) {
+      for (const val of trans.objekt) {
+        if (val.dimension === PROJEKTDIMENSION) {
+          // An object a line uses but the file never declared is still a project.
+          if (!namnPaObjekt.has(val.objekt)) {
+            namnPaObjekt.set(val.objekt, '');
+          }
+        } else {
+          andraDimensioner.add(val.dimension);
+        }
+      }
+    }
+  }
+  for (const nummer of [...andraDimensioner].sort()) {
+    const namn = doc.dimensioner.find((dimension) => dimension.nummer === nummer)?.namn;
+    varningar.push(
+      `Filen använder dimension ${nummer}${namn === undefined ? '' : ` (${namn})`}, ` +
+        'som inte läses in. Bokfink har bara projekt, som är dimension 6.',
+    );
+  }
+
+  const redan = new Map(
+    [...(await lasTillstand(db)).projekt.values()].map((projekt) => [
+      projekt.kod.toLocaleLowerCase('sv'),
+      projekt,
+    ]),
+  );
+  const efterObjekt = new Map<string, Uuid>();
+  let nya = 0;
+
+  for (const [nummer, namn] of namnPaObjekt) {
+    const kod = projektkodFranSie(nummer);
+    if (kod === undefined) {
+      varningar.push(
+        `Projektet "${nummer}" i filen har ett nummer som inte går att använda som projektkod. ` +
+          'Rader på det fick inget projekt.',
+      );
+      continue;
+    }
+    if (kod !== nummer) {
+      varningar.push(
+        `Projektnumret "${nummer}" skrevs som ${kod}, eftersom en projektkod bara får innehålla bokstäver, siffror och . - _.`,
+      );
+    }
+    const finns = redan.get(kod.toLocaleLowerCase('sv'));
+    if (finns !== undefined) {
+      efterObjekt.set(nummer, finns.id);
+      continue;
+    }
+    const skapat = await skrivProjekt(db, kontext, {
+      kod,
+      namn: projektnamnFranSie(namn, kod),
+    });
+    redan.set(kod.toLocaleLowerCase('sv'), skapat);
+    efterObjekt.set(nummer, skapat.id);
+    nya += 1;
+  }
+  return { efterObjekt, nya };
 }

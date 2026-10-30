@@ -24,9 +24,32 @@ export interface Siesaldo {
   readonly belopp: Ore;
 }
 
+/** One object a line belongs to: which dimension, and which object in it. */
+export interface Sieobjektval {
+  readonly dimension: string;
+  readonly objekt: string;
+}
+
+/** A dimension the file declares: 6 is the project one, and others are kept as they are. */
+export interface Siedimension {
+  readonly nummer: string;
+  readonly namn: string;
+}
+
+export interface Sieobjekt {
+  readonly dimension: string;
+  readonly nummer: string;
+  readonly namn: string;
+}
+
+/** SIE's reserved dimension number for Projekt (SIE 4C, punkt 8.17). */
+export const PROJEKTDIMENSION = '6';
+
 export interface Sietransaktion {
   readonly konto: string;
   readonly belopp: Ore;
+  /** The objects the line is booked on, at most one per dimension. */
+  readonly objekt: readonly Sieobjektval[];
   readonly datum?: Datum;
   readonly text?: string;
 }
@@ -52,6 +75,8 @@ export interface Siedokument {
   readonly utgaende: readonly Siesaldo[];
   readonly resultat: readonly Siesaldo[];
   readonly verifikat: readonly Sieverifikat[];
+  readonly dimensioner: readonly Siedimension[];
+  readonly objekt: readonly Sieobjekt[];
   /** Labels the reader knows nothing about, kept so nothing is lost silently. */
   readonly okandaEtiketter: readonly string[];
 }
@@ -124,6 +149,8 @@ export function tolkaSie(text: string): Siedokument {
   const utgaende: Siesaldo[] = [];
   const resultat: Siesaldo[] = [];
   const verifikat: Sieverifikat[] = [];
+  const dimensioner: Siedimension[] = [];
+  const objekt: Sieobjekt[] = [];
   const okanda = new Set<string>();
 
   let oppet: { post: Sieverifikat; transaktioner: Sietransaktion[] } | undefined;
@@ -190,6 +217,21 @@ export function tolkaSie(text: string): Siedokument {
         break;
       }
 
+      case 'DIM':
+        dimensioner.push({
+          nummer: kravFalt(post, 0, 'dimensionsnummer'),
+          namn: kravFalt(post, 1, 'dimensionsnamn'),
+        });
+        break;
+
+      case 'OBJEKT':
+        objekt.push({
+          dimension: kravFalt(post, 0, 'dimensionsnummer'),
+          nummer: kravFalt(post, 1, 'objektnummer'),
+          namn: falt[2] ?? '',
+        });
+        break;
+
       case 'IB':
         ingaende.push(saldo(post));
         break;
@@ -226,7 +268,7 @@ export function tolkaSie(text: string): Siedokument {
         const transtext = falt[4];
         oppet.transaktioner.push({
           konto: kravFalt(post, 0, 'kontonummer'),
-          // Field 1 is the dimension list, which this program does not use yet.
+          objekt: tolkaObjektlista(falt[1] ?? '{}', rad),
           belopp: belopp(kravFalt(post, 2, 'belopp'), rad),
           ...(transdatum === undefined || transdatum === ''
             ? {}
@@ -282,6 +324,8 @@ export function tolkaSie(text: string): Siedokument {
     utgaende,
     resultat,
     verifikat,
+    dimensioner,
+    objekt,
     okandaEtiketter: [...okanda].sort(),
   };
 }
@@ -320,4 +364,30 @@ function sieDatum(text: string, rad: number): Datum {
   } catch (orsak) {
     throw new SieError(rad, orsak instanceof Error ? orsak.message : String(orsak));
   }
+}
+
+/**
+ * The object list of a #TRANS: `{}` for none, `{6 "P2026"}` for the project
+ * P2026, `{"1" "456" "6" "P2026"}` for two. Dimension and object numbers come in
+ * pairs, each quoted or not (SIE 4C, punkt 9).
+ */
+export function tolkaObjektlista(text: string, rad: number): Sieobjektval[] {
+  const kropp = text.trim();
+  if (!kropp.startsWith('{') || !kropp.endsWith('}')) {
+    throw new SieError(rad, `"${text}" är ingen objektlista. Den ska stå inom { }.`);
+  }
+  const delar = [...kropp.slice(1, -1).matchAll(/"((?:[^"\\]|\\.)*)"|(\S+)/g)].map(
+    (traff) => (traff[1] ?? traff[2] ?? '').replaceAll(/\\(.)/g, '$1'),
+  );
+  if (delar.length % 2 !== 0) {
+    throw new SieError(
+      rad,
+      `objektlistan ${text} har en dimension utan objekt, eller tvärtom. De ska komma i par.`,
+    );
+  }
+  const lista: Sieobjektval[] = [];
+  for (let i = 0; i < delar.length; i += 2) {
+    lista.push({ dimension: delar[i]!, objekt: delar[i + 1]! });
+  }
+  return lista;
 }

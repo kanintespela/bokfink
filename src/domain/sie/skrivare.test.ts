@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { ore, oreFromKronor } from '../belopp/ore';
 import { datum } from '../tid/datum';
 import { avkodaPC8, kodaPC8 } from './pc8';
-import { tolkaSie, type Siedokument } from './parser';
+import { tolkaObjektlista, tolkaSie, type Siedokument } from './parser';
 import { skrivSie } from './skrivare';
 
 const tomt: Siedokument = {
@@ -16,6 +16,8 @@ const tomt: Siedokument = {
   utgaende: [],
   resultat: [],
   verifikat: [],
+  dimensioner: [],
+  objekt: [],
   okandaEtiketter: [],
 };
 
@@ -77,6 +79,15 @@ const arbDokument: fc.Arbitrary<Siedokument> = fc
               fc.record({
                 konto: fc.integer({ min: 1000, max: 8999 }).map(String),
                 belopp: fc.integer({ min: -9_999_999, max: 9_999_999 }).map(ore),
+                objekt: fc.constantFrom(
+                  [],
+                  [{ dimension: '6', objekt: 'P2026' }],
+                  [{ dimension: '6', objekt: 'Ungdomsläger "1"' }],
+                  [
+                    { dimension: '1', objekt: '456' },
+                    { dimension: '6', objekt: 'LEADER-28' },
+                  ],
+                ),
               }),
               { minLength: 1, maxLength: 4 },
             ),
@@ -131,8 +142,8 @@ describe('skrivSie', () => {
             text: 'Inköp av mineralfoder',
             registrerad: datum('2026-01-12'),
             transaktioner: [
-              { konto: '2013', belopp: oreFromKronor('-520.31') },
-              { konto: '4010', belopp: oreFromKronor('416.25') },
+              { konto: '2013', belopp: oreFromKronor('-520.31'), objekt: [] },
+              { konto: '4010', belopp: oreFromKronor('416.25'), objekt: [] },
             ],
           },
         ],
@@ -163,7 +174,7 @@ describe('skrivSie', () => {
             nummer: '1',
             datum: datum('2026-01-09'),
             text: 'Faktura "9"',
-            transaktioner: [{ konto: '1930', belopp: ore(0) }],
+            transaktioner: [{ konto: '1930', belopp: ore(0), objekt: [] }],
           },
         ],
       }),
@@ -197,5 +208,85 @@ describe('the round trip', () => {
       }),
       { numRuns: 100 },
     );
+  });
+});
+
+describe('projekt som objekt', () => {
+  const MED_PROJEKT = med({
+    dimensioner: [{ nummer: '6', namn: 'Projekt' }],
+    objekt: [
+      { dimension: '6', nummer: 'P2026', namn: 'Ungdomsläger 2026' },
+      { dimension: '6', nummer: 'LEADER-28', namn: 'Ventilation' },
+    ],
+    verifikat: [
+      {
+        serie: 'A',
+        nummer: '1',
+        datum: datum('2026-06-01'),
+        text: 'Elräkning',
+        transaktioner: [
+          {
+            konto: '5020',
+            belopp: oreFromKronor('1000'),
+            objekt: [{ dimension: '6', objekt: 'P2026' }],
+          },
+          { konto: '1930', belopp: oreFromKronor('-1000'), objekt: [] },
+        ],
+      },
+    ],
+  });
+
+  it('declares the dimension and its objects, and puts the object on the line', () => {
+    const text = skrivSie(MED_PROJEKT);
+    expect(text).toContain('#DIM 6 "Projekt"');
+    expect(text).toContain('#OBJEKT 6 "P2026" "Ungdomsläger 2026"');
+    expect(text).toContain('#OBJEKT 6 "LEADER-28" "Ventilation"');
+    expect(text).toContain('#TRANS 5020 {6 "P2026"} 1000.00');
+    // The other line is an ordinary one.
+    expect(text).toContain('#TRANS 1930 {} -1000.00');
+    // The declarations come before the balances, as the format has them.
+    expect(text.indexOf('#OBJEKT')).toBeLessThan(text.indexOf('#VER'));
+  });
+
+  it('reads them back as they were written', () => {
+    const tillbaka = tolkaSie(skrivSie(MED_PROJEKT));
+    expect(tillbaka.dimensioner).toEqual(MED_PROJEKT.dimensioner);
+    expect(tillbaka.objekt).toEqual(MED_PROJEKT.objekt);
+    expect(tillbaka.verifikat[0]?.transaktioner[0]?.objekt).toEqual([
+      { dimension: '6', objekt: 'P2026' },
+    ]);
+    expect(tillbaka.verifikat[0]?.transaktioner[1]?.objekt).toEqual([]);
+  });
+
+  it('writes nothing about dimensions when there are no projects', () => {
+    const text = skrivSie(med({}));
+    expect(text).not.toContain('#DIM');
+    expect(text).not.toContain('#OBJEKT');
+  });
+});
+
+describe('tolkaObjektlista', () => {
+  const lista = (text: string) => tolkaObjektlista(text, 1);
+
+  it('reads the forms the format allows: quoted or not, one pair or several', () => {
+    expect(lista('{}')).toEqual([]);
+    expect(lista('{6 "P2026"}')).toEqual([{ dimension: '6', objekt: 'P2026' }]);
+    expect(lista('{"6" "P2026"}')).toEqual([{ dimension: '6', objekt: 'P2026' }]);
+    expect(lista('{6 P2026}')).toEqual([{ dimension: '6', objekt: 'P2026' }]);
+    expect(lista('{"1" "456" "6" "P2026"}')).toEqual([
+      { dimension: '1', objekt: '456' },
+      { dimension: '6', objekt: 'P2026' },
+    ]);
+  });
+
+  it('keeps a space and an escaped quote inside an object number', () => {
+    expect(lista('{6 "Läger 1"}')).toEqual([{ dimension: '6', objekt: 'Läger 1' }]);
+    expect(lista('{6 "a\\"b"}')).toEqual([{ dimension: '6', objekt: 'a"b' }]);
+  });
+
+  it('refuses a dimension without an object, and a list with no braces', () => {
+    expect(() => lista('{6}')).toThrow('i par');
+    expect(() => lista('{1 "a" 6}')).toThrow('i par');
+    expect(() => lista('6 "P2026"')).toThrow('ingen objektlista');
   });
 });

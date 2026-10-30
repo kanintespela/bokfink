@@ -96,6 +96,35 @@ export function andraProjekt(
   };
 }
 
+/**
+ * A project code made from an object number in another program's file.
+ *
+ * Other programs allow spaces, slashes and long numbers in an object number,
+ * which a code here does not (see {@link projektkod}). What cannot stay is
+ * written as a dash and the code is cut to length; nothing is left that has
+ * to be guessed at. Undefined when nothing of the number is usable.
+ */
+export function projektkodFranSie(objektnummer: string): string | undefined {
+  const kod = objektnummer
+    .trim()
+    .replaceAll(/[^\p{L}\p{N}._-]+/gu, '-')
+    .replaceAll(/-{2,}/g, '-')
+    .replaceAll(/^-+|-+$/g, '')
+    .slice(0, LANGSTA_PROJEKTKOD)
+    .replaceAll(/-+$/g, '');
+  return kod.length === 0 ? undefined : kod;
+}
+
+/** A project name from an object name in a file: without quotes, folded and cut to length. */
+export function projektnamnFranSie(objektnamn: string, reserv: string): string {
+  const namn = objektnamn
+    .replaceAll('"', "'")
+    .trim()
+    .replaceAll(/\s+/g, ' ')
+    .slice(0, LANGSTA_PROJEKTNAMN);
+  return namn.length === 0 ? reserv : namn;
+}
+
 /** Whether another project already has this code, ignoring case. */
 export function kodenFinns(kod: string, projekt: Iterable<Projekt>): boolean {
   const sokt = kod.trim().toLocaleLowerCase('sv');

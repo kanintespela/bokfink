@@ -52,6 +52,15 @@ export function skrivSie(dokument: Siedokument): string {
     }
   }
 
+  for (const dimension of dokument.dimensioner) {
+    rader.push(`#DIM ${dimension.nummer} ${citera(dimension.namn)}`);
+  }
+  for (const objekt of dokument.objekt) {
+    rader.push(
+      `#OBJEKT ${objekt.dimension} ${citera(objekt.nummer)} ${citera(objekt.namn)}`,
+    );
+  }
+
   rader.push(...saldon('IB', dokument.ingaende));
   rader.push(...saldon('UB', dokument.utgaende));
   rader.push(...saldon('RES', dokument.resultat));
@@ -77,7 +86,10 @@ function verifikatrader(ver: Sieverifikat): string[] {
   const rader = [huvud.trimEnd(), '{'];
 
   for (const trans of ver.transaktioner) {
-    let rad = `#TRANS ${trans.konto} {} ${belopp(trans.belopp)}`;
+    const objekt = trans.objekt
+      .map((val) => `${val.dimension} ${citera(val.objekt)}`)
+      .join(' ');
+    let rad = `#TRANS ${trans.konto} {${objekt}} ${belopp(trans.belopp)}`;
     if (trans.datum !== undefined || trans.text !== undefined) {
       rad += ` ${trans.datum === undefined ? sieDatum(ver.datum) : sieDatum(trans.datum)}`;
       rad += ` ${citera(trans.text ?? '')}`;

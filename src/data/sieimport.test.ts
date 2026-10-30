@@ -13,6 +13,7 @@ import { kodaPC8 } from '../domain/sie/pc8';
 import { lasTillstand, skyddaBokfordaVerifikat } from './bokforing';
 import { KonteraDatabase } from './db';
 import { bokforUtkast, skrivRakenskapsar, type Skrivkontext } from './kommandon';
+import { exporteraSie } from './sieexport';
 import { importeraSieFiler } from './sieimport';
 
 let raknare = 0;
@@ -303,5 +304,165 @@ describe('ingående balanser på ett år som redan finns', () => {
     await importeraSieFiler(db, kontext, [fil]);
     const res = await importeraSieFiler(db, kontext, [fil]);
     expect(res.varningar).toEqual([]);
+  });
+});
+
+describe('importeraSieFiler och projekt', () => {
+  let db: KonteraDatabase;
+
+  beforeEach(async () => {
+    db = new KonteraDatabase(`kontera-sieimport-projekt-${(raknare += 1)}`);
+    skyddaBokfordaVerifikat(db);
+    await db.open();
+  });
+
+  /** A booking of 520.31 for feed where the cost line names the given object list. */
+  const medProjekt = (nr: number, ar: number, objektlista: string) => [
+    `#VER "A" ${nr} ${ar}0109 "Inköp av kraftfoder" ${ar}0109 ""`,
+    '{',
+    '#TRANS 2013 {} -520.31',
+    `#TRANS 4010 ${objektlista} 520.31`,
+    '}',
+  ];
+
+  const DEKLARATION = ['#DIM 6 "Projekt"', '#OBJEKT 6 "P2026" "Ungdomsläger 2026"'];
+
+  it('makes a project of each project object and puts it on the lines that name it', async () => {
+    const resultat = await importeraSieFiler(db, kontext, [
+      siefil(2026, {
+        ib: DEKLARATION,
+        verifikat: medProjekt(1, 2026, '{6 "P2026"}'),
+      }),
+    ]);
+
+    expect(resultat.projekt).toBe(1);
+    const tillstand = await lasTillstand(db);
+    const [projekt] = [...tillstand.projekt.values()];
+    expect(projekt).toMatchObject({
+      kod: 'P2026',
+      namn: 'Ungdomsläger 2026',
+      avslutat: false,
+    });
+
+    const [verifikat] = [...tillstand.verifikat.values()];
+    expect(verifikat?.konteringar.find((rad) => rad.konto === '4010')?.projekt).toBe(
+      projekt?.id,
+    );
+    // The line with no object stays an ordinary line.
+    expect(verifikat?.konteringar.find((rad) => rad.konto === '2013')).not.toHaveProperty(
+      'projekt',
+    );
+  });
+
+  it('makes a project of every declared object, used or not, since they are the list', async () => {
+    await importeraSieFiler(db, kontext, [
+      siefil(2026, {
+        ib: [...DEKLARATION, '#OBJEKT 6 "OANVANT" "Aldrig bokat"'],
+        verifikat: medProjekt(1, 2026, '{6 "P2026"}'),
+      }),
+    ]);
+    expect(
+      [...(await lasTillstand(db)).projekt.values()].map((p) => p.kod).sort(),
+    ).toEqual(['OANVANT', 'P2026']);
+  });
+
+  it('reuses a project a second year names, instead of making another', async () => {
+    const resultat = await importeraSieFiler(db, kontext, [
+      siefil(2025, { ib: DEKLARATION, verifikat: medProjekt(1, 2025, '{6 "P2026"}') }),
+      siefil(2026, { ib: DEKLARATION, verifikat: medProjekt(1, 2026, '{6 "P2026"}') }),
+    ]);
+    expect(resultat.projekt).toBe(1);
+    expect((await lasTillstand(db)).projekt.size).toBe(1);
+
+    // And the same file again adds none.
+    const igen = await importeraSieFiler(db, kontext, [
+      siefil(2026, { ib: DEKLARATION, verifikat: medProjekt(1, 2026, '{6 "P2026"}') }),
+    ]);
+    expect(igen.projekt).toBe(0);
+    expect((await lasTillstand(db)).projekt.size).toBe(1);
+  });
+
+  it('makes a project of an object a line uses but the file never declared', async () => {
+    await importeraSieFiler(db, kontext, [
+      siefil(2026, { verifikat: medProjekt(1, 2026, '{6 "X1"}') }),
+    ]);
+    expect([...(await lasTillstand(db)).projekt.values()]).toMatchObject([
+      { kod: 'X1', namn: 'X1' },
+    ]);
+  });
+
+  it('writes an object number that is not a usable code as one that is, and says so', async () => {
+    const resultat = await importeraSieFiler(db, kontext, [
+      siefil(2026, {
+        ib: ['#DIM 6 "Projekt"', '#OBJEKT 6 "Läger 1/2026" "Läger"'],
+        verifikat: medProjekt(1, 2026, '{6 "Läger 1/2026"}'),
+      }),
+    ]);
+    const [projekt] = [...(await lasTillstand(db)).projekt.values()];
+    expect(projekt?.kod).toBe('Läger-1-2026');
+    expect(resultat.varningar.join(' ')).toContain(
+      '"Läger 1/2026" skrevs som Läger-1-2026',
+    );
+    const [verifikat] = [...(await lasTillstand(db)).verifikat.values()];
+    expect(verifikat?.konteringar.find((rad) => rad.konto === '4010')?.projekt).toBe(
+      projekt?.id,
+    );
+  });
+
+  it('says that another dimension is not read, once, and leaves its lines without a project', async () => {
+    const resultat = await importeraSieFiler(db, kontext, [
+      siefil(2026, {
+        ib: ['#DIM 1 "Kostnadsställe"', '#OBJEKT 1 "456" "Fastigheten"'],
+        verifikat: [
+          ...medProjekt(1, 2026, '{1 "456"}'),
+          ...medProjekt(2, 2026, '{1 "456"}'),
+        ],
+      }),
+    ]);
+    expect(resultat.projekt).toBe(0);
+    const varningar = resultat.varningar.filter((text) => text.includes('dimension 1'));
+    expect(varningar).toHaveLength(1);
+    expect(varningar[0]).toContain('Kostnadsställe');
+    for (const verifikat of (await lasTillstand(db)).verifikat.values()) {
+      expect(verifikat.konteringar.every((rad) => rad.projekt === undefined)).toBe(true);
+    }
+  });
+
+  it('keeps the project when a line names two dimensions', async () => {
+    await importeraSieFiler(db, kontext, [
+      siefil(2026, {
+        ib: DEKLARATION,
+        verifikat: medProjekt(1, 2026, '{"1" "456" "6" "P2026"}'),
+      }),
+    ]);
+    const tillstand = await lasTillstand(db);
+    const [projekt] = [...tillstand.projekt.values()];
+    const [verifikat] = [...tillstand.verifikat.values()];
+    expect(verifikat?.konteringar.find((rad) => rad.konto === '4010')?.projekt).toBe(
+      projekt?.id,
+    );
+  });
+
+  it('gives the same projects back out, and a second book reads them in again', async () => {
+    await importeraSieFiler(db, kontext, [
+      siefil(2026, { ib: DEKLARATION, verifikat: medProjekt(1, 2026, '{6 "P2026"}') }),
+    ]);
+    const ar = [...(await lasTillstand(db)).rakenskapsar.values()][0]!;
+    const fil = await exporteraSie(db, ar.id);
+
+    const ny = new KonteraDatabase(`kontera-sieimport-projekt-${(raknare += 1)}`);
+    skyddaBokfordaVerifikat(ny);
+    await ny.open();
+    await importeraSieFiler(ny, kontext, [fil]);
+
+    const tillstand = await lasTillstand(ny);
+    expect([...tillstand.projekt.values()]).toMatchObject([
+      { kod: 'P2026', namn: 'Ungdomsläger 2026' },
+    ]);
+    const [verifikat] = [...tillstand.verifikat.values()];
+    expect(
+      verifikat?.konteringar.filter((rad) => rad.projekt !== undefined),
+    ).toHaveLength(1);
+    ny.close();
   });
 });

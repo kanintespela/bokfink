@@ -1192,8 +1192,15 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
                 return (
                   `${resultat.verifikat} verifikat och ${resultat.konton} konton ` +
                   `importerade från ${filer.length} fil${filer.length === 1 ? '' : 'er'}.` +
+                  (resultat.projekt > 0
+                    ? ` ${resultat.projekt} projekt lades upp.`
+                    : '') +
                   (resultat.redanImporterade > 0
                     ? ` ${resultat.redanImporterade} fanns redan.`
+                    : '') +
+                  // Hard rule 11: what the importer had to leave out or change is said.
+                  (resultat.varningar.length > 0
+                    ? ` Observera: ${resultat.varningar.join(' ')}`
                     : '')
                 );
               }}

@@ -1,6 +1,12 @@
 import { isZero } from '../domain/belopp/ore';
 import { kodaPC8, OkodbartTeckenError } from '../domain/sie/pc8';
-import type { Siedokument, Siekonto, Siesaldo, Sieverifikat } from '../domain/sie/parser';
+import {
+  PROJEKTDIMENSION,
+  type Siedokument,
+  type Siekonto,
+  type Siesaldo,
+  type Sieverifikat,
+} from '../domain/sie/parser';
 import { skrivSie } from '../domain/sie/skrivare';
 import {
   aretsResultatposter,
@@ -57,6 +63,10 @@ export async function byggSiedokument(
 
   const saldon = beraknaSaldon(ar.ingaendeBalanser, iAret);
   const foregaende = tidigareAr(tillstand.rakenskapsar, ar);
+  const projektkoder = new Map([...tillstand.projekt.values()].map((p) => [p.id, p.kod]));
+  const projekt = [...tillstand.projekt.values()].sort((a, b) =>
+    a.kod.localeCompare(b.kod),
+  );
 
   return {
     sietyp: 4,
@@ -97,7 +107,17 @@ export async function byggSiedokument(
         konto: saldo.konto,
         belopp: saldo.forandring,
       })),
-    verifikat: iAret.map(tillSieverifikat),
+    // The project dimension is declared when there are projects, with every
+    // project as an object, so a reader has the whole list and not just the
+    // ones this year happens to use.
+    dimensioner:
+      projekt.length === 0 ? [] : [{ nummer: PROJEKTDIMENSION, namn: 'Projekt' }],
+    objekt: projekt.map((post) => ({
+      dimension: PROJEKTDIMENSION,
+      nummer: post.kod,
+      namn: post.namn,
+    })),
+    verifikat: iAret.map((verifikat) => tillSieverifikat(verifikat, projektkoder)),
     okandaEtiketter: [],
   };
 }
@@ -130,18 +150,25 @@ function tillSiekonto(konto: Konto): Siekonto {
   };
 }
 
-function tillSieverifikat(verifikat: BokfortVerifikat): Sieverifikat {
+function tillSieverifikat(
+  verifikat: BokfortVerifikat,
+  projektkoder: ReadonlyMap<Uuid, string>,
+): Sieverifikat {
   return {
     serie: verifikat.serie,
     nummer: String(verifikat.nummer),
     datum: verifikat.datum,
     text: verifikat.beskrivning,
     registrerad: verifikat.bokfortDatum,
-    transaktioner: verifikat.konteringar.map((rad) => ({
-      konto: rad.konto,
-      belopp: rad.belopp,
-      ...(rad.text === undefined ? {} : { text: rad.text }),
-    })),
+    transaktioner: verifikat.konteringar.map((rad) => {
+      const kod = rad.projekt === undefined ? undefined : projektkoder.get(rad.projekt);
+      return {
+        konto: rad.konto,
+        belopp: rad.belopp,
+        objekt: kod === undefined ? [] : [{ dimension: PROJEKTDIMENSION, objekt: kod }],
+        ...(rad.text === undefined ? {} : { text: rad.text }),
+      };
+    }),
   };
 }
 

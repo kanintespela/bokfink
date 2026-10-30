@@ -8,7 +8,9 @@ import {
   LANGSTA_PROJEKTNAMN,
   OgiltigtProjektError,
   projektkod,
+  projektkodFranSie,
   projektnamn,
+  projektnamnFranSie,
   skapaProjekt,
 } from './projekt';
 
@@ -72,5 +74,54 @@ describe('kodenFinns', () => {
     const projekt = [skapaProjekt({ id, kod: 'Leader-28', namn: 'Leader' })];
     expect(kodenFinns('LEADER-28 ', projekt)).toBe(true);
     expect(kodenFinns('leader-29', projekt)).toBe(false);
+  });
+});
+
+describe('projektkodFranSie', () => {
+  it('keeps a code that already fits', () => {
+    expect(projektkodFranSie('P2026')).toBe('P2026');
+    expect(projektkodFranSie('LEADER-28')).toBe('LEADER-28');
+  });
+
+  it('writes what does not fit as a dash, once, and not at the ends', () => {
+    expect(projektkodFranSie('Läger 1/2026')).toBe('Läger-1-2026');
+    expect(projektkodFranSie('  a  b  ')).toBe('a-b');
+    expect(projektkodFranSie('/x/')).toBe('x');
+    expect(projektkodFranSie('a"b{c}')).toBe('a-b-c');
+  });
+
+  it('cuts to length without leaving a dash at the end', () => {
+    const kod = projektkodFranSie('abcdefghi jklmnopqrs tuvwxyz');
+    expect(kod).toBe('abcdefghi-jklmnopqrs');
+    expect(kod?.length).toBeLessThanOrEqual(LANGSTA_PROJEKTKOD);
+    expect(projektkodFranSie('abcdefghijklmnopqrs/xyz')).toBe('abcdefghijklmnopqrs');
+  });
+
+  it('is undefined when nothing of the number can be used', () => {
+    expect(projektkodFranSie('')).toBeUndefined();
+    expect(projektkodFranSie('  /// ')).toBeUndefined();
+  });
+
+  it('always gives a code projektkod accepts', () => {
+    for (const nummer of ['Läger 1/2026', 'a"b', '  x  ', 'Ä-Ö.1_2', 'a'.repeat(50)]) {
+      const kod = projektkodFranSie(nummer);
+      expect(kod, nummer).toBeDefined();
+      expect(() => projektkod(kod!), nummer).not.toThrow();
+    }
+  });
+});
+
+describe('projektnamnFranSie', () => {
+  it('turns a quote into an apostrophe, folds spaces and cuts to length', () => {
+    expect(projektnamnFranSie('Det "stora"  lägret', 'P1')).toBe("Det 'stora' lägret");
+    expect(projektnamnFranSie('x'.repeat(100), 'P1')).toHaveLength(LANGSTA_PROJEKTNAMN);
+    expect(() =>
+      projektnamn(projektnamnFranSie('Det "stora" lägret', 'P1')),
+    ).not.toThrow();
+  });
+
+  it('falls back on the code when the file gives no name', () => {
+    expect(projektnamnFranSie('', 'P1')).toBe('P1');
+    expect(projektnamnFranSie('   ', 'P1')).toBe('P1');
   });
 });
