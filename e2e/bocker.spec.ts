@@ -84,3 +84,40 @@ test('will not create a book before it is said what kind of book it is', async (
   );
   await expect(page.getByTestId('aktiv-bok')).toHaveCount(0);
 });
+
+test('an association book has no owner screens and no moms until it is registered', async ({
+  page,
+}) => {
+  await oppnaBocker(page);
+  await page.getByLabel('Namn på den nya boken').fill('Bygdegårdsföreningen');
+  await page.getByRole('button', { name: 'Ideell förening' }).click();
+  await page.getByRole('button', { name: 'Skapa och öppna boken' }).click();
+  await expect(page.getByTestId('aktiv-bok')).toContainText('Bygdegårdsföreningen');
+
+  // Under Mer: no NE-bilaga, owner's equity, K1 statement, animal stock or moms.
+  await page.goto('/#mer');
+  for (const dold of [
+    'NE-bilaga',
+    'Eget kapital',
+    'Förenklat årsbokslut',
+    'Djurlager',
+    'Moms',
+  ]) {
+    await expect(page.getByRole('button', { name: dold, exact: true })).toHaveCount(0);
+  }
+  await expect(page.getByRole('button', { name: 'Företaget' })).toBeVisible();
+
+  // An address that belongs to the other kind of book opens the overview.
+  await page.goto('/#nebilaga');
+  await expect(page.getByRole('heading', { name: 'NE-bilaga' })).toHaveCount(0);
+  await page.goto('/#moms');
+  await expect(page.getByRole('heading', { name: 'Moms', exact: true })).toHaveCount(0);
+
+  // Saying the association is registered for moms brings the moms view back.
+  await page.goto('/#foretag');
+  await expect(page.getByLabel('Redovisningsperiod för moms')).toHaveCount(0);
+  await page.getByLabel('Momsregistrering').selectOption('ja');
+  await expect(page.getByLabel('Redovisningsperiod för moms')).toBeVisible();
+  await page.goto('/#mer');
+  await expect(page.getByRole('button', { name: 'Moms', exact: true })).toBeVisible();
+});

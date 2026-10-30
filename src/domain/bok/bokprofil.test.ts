@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  arMomsregistrerad,
   BOKPROFILER,
   BOKPROFILNAMN,
+  harFunktion,
   STANDARD_BOKPROFIL,
   tolkaBokprofil,
 } from './bokprofil';
@@ -30,5 +32,44 @@ describe('tolkaBokprofil', () => {
       'Enskild firma',
       'Ideell förening',
     ]);
+  });
+});
+
+describe('harFunktion', () => {
+  it('gives an enskild firma everything that belongs to its owner', () => {
+    for (const funktion of [
+      'nebilaga',
+      'egnaUttag',
+      'djurlager',
+      'k1Bokslut',
+      'inkomstdeklarationsdag',
+    ] as const) {
+      expect(harFunktion('enskild_firma', funktion)).toBe(true);
+    }
+  });
+
+  it("gives an association none of the owner's features", () => {
+    for (const funktion of [
+      'nebilaga',
+      'egnaUttag',
+      'djurlager',
+      'k1Bokslut',
+      'inkomstdeklarationsdag',
+    ] as const) {
+      expect(harFunktion('forening', funktion)).toBe(false);
+    }
+  });
+});
+
+describe('arMomsregistrerad', () => {
+  it('takes a firm to be registered whatever was said', () => {
+    expect(arMomsregistrerad('enskild_firma', undefined)).toBe(true);
+    expect(arMomsregistrerad('enskild_firma', false)).toBe(true);
+  });
+
+  it('takes an association not to be until it is said so', () => {
+    expect(arMomsregistrerad('forening', undefined)).toBe(false);
+    expect(arMomsregistrerad('forening', false)).toBe(false);
+    expect(arMomsregistrerad('forening', true)).toBe(true);
   });
 });

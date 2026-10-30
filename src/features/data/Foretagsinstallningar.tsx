@@ -1,3 +1,4 @@
+import type { Bokprofil } from '../../domain/bok/bokprofil';
 import type { Momsperiod } from '../../domain/moms/period';
 import {
   METODBESKRIVNING,
@@ -7,6 +8,10 @@ import {
 import { PERIODNAMN } from '../moms/namn';
 
 interface Props {
+  readonly profil: Bokprofil;
+  /** Whether the book has moms to declare; for a firm it always does. */
+  readonly momsregistrerad: boolean;
+  readonly onMomsregistrerad: (registrerad: boolean) => Promise<void>;
   readonly organisationsnummer: string;
   readonly onOrganisationsnummer: (nummer: string) => Promise<void>;
   readonly momsperiod: Momsperiod;
@@ -24,6 +29,9 @@ interface Props {
  * the first two things on a screen opened to file a declaration.
  */
 export function Foretagsinstallningar({
+  profil,
+  momsregistrerad,
+  onMomsregistrerad,
   organisationsnummer,
   onOrganisationsnummer,
   momsperiod,
@@ -48,26 +56,63 @@ export function Foretagsinstallningar({
         />
       </div>
 
-      <p>
-        För enskild firma är det innehavarens personnummer, med eller utan sekelsiffror.
-        Det behövs bara för momsdeklarationen och lämnar aldrig enheten.
-      </p>
+      {profil === 'forening' ? (
+        <p>
+          Föreningens organisationsnummer. Det behövs bara för momsdeklarationen, om
+          föreningen har någon, och lämnar aldrig enheten.
+        </p>
+      ) : (
+        <p>
+          För enskild firma är det innehavarens personnummer, med eller utan sekelsiffror.
+          Det behövs bara för momsdeklarationen och lämnar aldrig enheten.
+        </p>
+      )}
 
-      <div className="faltgrupp">
-        <label htmlFor="momsperiod">Redovisningsperiod för moms</label>
-        <select
-          id="momsperiod"
-          className="falt"
-          value={momsperiod}
-          onChange={(handelse) => void onMomsperiod(handelse.target.value as Momsperiod)}
-        >
-          {(Object.keys(PERIODNAMN) as Momsperiod[]).map((kandidat) => (
-            <option key={kandidat} value={kandidat}>
-              {PERIODNAMN[kandidat]}
-            </option>
-          ))}
-        </select>
-      </div>
+      {profil === 'forening' && (
+        <>
+          <div className="faltgrupp">
+            <label htmlFor="momsregistrerad">Momsregistrering</label>
+            <select
+              id="momsregistrerad"
+              className="falt"
+              value={momsregistrerad ? 'ja' : 'nej'}
+              onChange={(handelse) =>
+                void onMomsregistrerad(handelse.target.value === 'ja')
+              }
+            >
+              <option value="nej">Föreningen är inte momsregistrerad</option>
+              <option value="ja">Föreningen är momsregistrerad</option>
+            </select>
+          </div>
+          <p className="hjalptext" data-testid="momsregistrering-hjalp">
+            Medlemsavgifter och bidrag har ingen moms. En förening som inte är
+            momsregistrerad får inte dra av momsen på sina inköp, så den räknas som en del
+            av kostnaden. Slå på momsregistrering om föreningen har registrerat sig hos
+            Skatteverket, till exempel för att den har valt frivillig skattskyldighet för
+            uthyrning av en lokal.
+          </p>
+        </>
+      )}
+
+      {momsregistrerad && (
+        <div className="faltgrupp">
+          <label htmlFor="momsperiod">Redovisningsperiod för moms</label>
+          <select
+            id="momsperiod"
+            className="falt"
+            value={momsperiod}
+            onChange={(handelse) =>
+              void onMomsperiod(handelse.target.value as Momsperiod)
+            }
+          >
+            {(Object.keys(PERIODNAMN) as Momsperiod[]).map((kandidat) => (
+              <option key={kandidat} value={kandidat}>
+                {PERIODNAMN[kandidat]}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div className="faltgrupp">
         <label htmlFor="metod">Redovisningsmetod</label>

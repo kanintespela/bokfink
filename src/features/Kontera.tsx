@@ -52,6 +52,7 @@ import {
   forUtgaendeBalanserTillNastaAr,
   skapaNastaRakenskapsar,
 } from '../data/arsavslut';
+import { lasBokprofil } from '../data/bokidentitet';
 import { forberedBokforing } from '../data/uppstart';
 import {
   kasseraUtkast,
@@ -151,6 +152,7 @@ import { kodaLatin1 } from '../domain/export/latin1';
 import { vantandeMomsdeklarationer } from '../domain/moms/deklarationsdag';
 import { vantandeFakturor } from '../domain/underlag/forfallodag';
 import { skrivIcs } from '../domain/kalender/ics';
+import { arMomsregistrerad, type Bokprofil } from '../domain/bok/bokprofil';
 import { paminnelser } from '../domain/kalender/paminnelser';
 import type { Momsperiod } from '../domain/moms/period';
 import type { Redovisningsmetod } from '../domain/moms/redovisningsmetod';
@@ -173,7 +175,7 @@ import { Foretagsinstallningar } from './data/Foretagsinstallningar';
 import { Sakerhetskopia } from './data/Sakerhetskopia';
 import { Rapporter } from './handelser/Rapporter';
 import { Verifikatlista } from './verifikat/Verifikatlista';
-import { useVy } from '../ui/vy';
+import { doldaVyer, useVy, type Vy } from '../ui/vy';
 import { Mer } from './mer/Mer';
 import { Tillbaka } from '../ui/Tillbaka';
 import { Varumarke } from '../ui/Varumarke';
@@ -210,6 +212,10 @@ interface Laddat {
   readonly rakenskapsar: readonly Rakenskapsar[];
   readonly aktuelltAr: Rakenskapsar | undefined;
   readonly momsperiod: Momsperiod;
+  /** What kind of book this is, which decides the screens it has. */
+  readonly profil: Bokprofil;
+  /** Whether there is moms to declare; always so for a firm. */
+  readonly momsregistrerad: boolean;
   readonly organisationsnummer: string;
   readonly metod: Redovisningsmetod;
   readonly kvitton: readonly Underlag[];
@@ -293,7 +299,7 @@ const ASSISTENT_LASTID_MS = 5 * 60 * 1000;
 const ASSISTENT_BESKED_MS = 60 * 60 * 1000;
 
 export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval }) {
-  const [vy, setVy] = useVy();
+  const [begardVy, setVy] = useVy();
   const filprefix = useFilprefix();
   // Stable, so the NE screen reads a year once rather than on every render.
   const lasNeJusteringar = useCallback((arId: Uuid) => lasNejusteringar(db, arId), [db]);
@@ -305,6 +311,17 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
     [db],
   );
   const [laddat, setLaddat] = useState<Laddat | undefined>();
+  /*
+   * The view shown is the one asked for unless this kind of book has no use
+   * for it, in which case it is the overview - the same as an address that
+   * never existed. Until the book is read nothing is hidden, and nothing is
+   * shown either.
+   */
+  const dolda =
+    laddat === undefined
+      ? new Set<Vy>()
+      : doldaVyer(laddat.profil, laddat.momsregistrerad);
+  const vy: Vy = dolda.has(begardVy) ? 'attgora' : begardVy;
   const [fel, setFel] = useState<string | undefined>();
   const [senast, setSenast] = useState<string | undefined>();
   const [bilder, setBilder] = useState<readonly Kvittobild[]>([]);
@@ -370,6 +387,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
       }
     }
 
+    const profil = await lasBokprofil(db);
     const poster = ar === undefined ? [] : await lasVerifikat(db, ar.id);
     return {
       anvandning,
@@ -391,6 +409,11 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
       rakenskapsar: [...tillstand.rakenskapsar.values()],
       aktuelltAr: ar,
       momsperiod: (await db.getMeta<Momsperiod>('momsperiod')) ?? 'kvartal',
+      profil,
+      momsregistrerad: arMomsregistrerad(
+        profil,
+        await db.getMeta<boolean>('momsregistrerad'),
+      ),
       organisationsnummer: (await db.getMeta<string>('organisationsnummer')) ?? '',
       metod:
         (await db.getMeta<Redovisningsmetod>('redovisningsmetod')) ?? 'kontantmetoden',
@@ -888,11 +911,12 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
             utkast={laddat.utkast.length}
             kvitton={laddat.kvitton.length}
             dagarSedanBackup={laddat.dagarSedanBackup}
-            momsdeklarationer={vantandeMomsdeklarationer(
-              laddat.rakenskapsar,
-              laddat.momsperiod,
-              idag,
-            )}
+            momsdeklarationer={
+              laddat.momsregistrerad
+                ? vantandeMomsdeklarationer(laddat.rakenskapsar, laddat.momsperiod, idag)
+                : []
+            }
+            visaMoms={laddat.momsregistrerad}
             fakturor={vantandeFakturor(laddat.kvitton, idag)}
             onSnabbBackup={async (losenfras) => {
               // Same names and wording as the Säkerhetskopia screen, so a
@@ -1072,8 +1096,13 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
         {vy === 'mer' && (
           <Mer
             onValj={setVy}
+            dolda={dolda}
+            profil={laddat.profil}
+            momsregistrerad={laddat.momsregistrerad}
             onKalender={async () => {
               const poster = paminnelser({
+                profil: laddat.profil,
+                momsregistrerad: laddat.momsregistrerad,
                 rakenskapsar: laddat.rakenskapsar,
                 momsperiod: laddat.momsperiod,
                 underlag: laddat.kvitton,
@@ -1241,6 +1270,12 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
           <>
             <Tillbaka onTillbaka={() => setVy('mer')} />
             <Foretagsinstallningar
+              profil={laddat.profil}
+              momsregistrerad={laddat.momsregistrerad}
+              onMomsregistrerad={async (registrerad) => {
+                await db.setMeta('momsregistrerad', registrerad);
+                setLaddat(await hamta());
+              }}
               organisationsnummer={laddat.organisationsnummer}
               onOrganisationsnummer={async (nummer) => {
                 await db.setMeta('organisationsnummer', nummer);
@@ -1571,6 +1606,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
             rakenskapsar={laddat.rakenskapsar}
             allaVerifikat={laddat.allaVerifikat}
             idag={idag}
+            visaMoms={laddat.momsregistrerad}
           />
         )}
 

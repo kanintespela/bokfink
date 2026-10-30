@@ -41,9 +41,13 @@ function faktura(n: number, forfallodag: string, text?: string) {
   return text === undefined ? post : sattText(post, text);
 }
 
+/** Every book had these dates before there were two kinds. */
+const FIRMA = { profil: 'enskild_firma', momsregistrerad: true } as const;
+
 describe('paminnelser', () => {
   it('lists every date ahead, soonest first', () => {
     const poster = paminnelser({
+      ...FIRMA,
       rakenskapsar: [
         ar('2025-01-01', '2025-12-31', true),
         ar('2026-01-01', '2026-06-30'),
@@ -71,6 +75,7 @@ describe('paminnelser', () => {
 
   it('keeps the inkomstdeklaration of a closed year until its day has passed', () => {
     const poster = paminnelser({
+      ...FIRMA,
       rakenskapsar: [ar('2025-01-01', '2025-12-31', true)],
       momsperiod: 'kvartal',
       underlag: [],
@@ -81,6 +86,7 @@ describe('paminnelser', () => {
 
   it('names an invoice without a readable supplier plainly', () => {
     const [post] = paminnelser({
+      ...FIRMA,
       rakenskapsar: [],
       momsperiod: 'kvartal',
       underlag: [faktura(2, '2026-10-30')],
@@ -88,5 +94,37 @@ describe('paminnelser', () => {
     });
     expect(post?.rubrik).toBe('Betala faktura');
     expect(post?.beskrivning).toContain('faktura-2.pdf');
+  });
+
+  describe('i en förening', () => {
+    const underlag = [faktura(1, '2026-10-20')];
+    const rakenskapsar = [ar('2025-01-01', '2025-12-31', true), ar('2026-01-01')];
+
+    it('has no momsdeklaration while it is not registered for moms, and no NE date ever', () => {
+      const poster = paminnelser({
+        profil: 'forening',
+        momsregistrerad: false,
+        rakenskapsar,
+        momsperiod: 'kvartal',
+        underlag,
+        idag: datum('2026-10-04'),
+      });
+      expect(poster.map((post) => post.uid)).toEqual([`faktura-${id(1)}@kontera`]);
+    });
+
+    it("has the momsdeklarationer of a registered one, still without the owner's inkomstdeklaration", () => {
+      const poster = paminnelser({
+        profil: 'forening',
+        momsregistrerad: true,
+        rakenskapsar,
+        momsperiod: 'kvartal',
+        underlag: [],
+        idag: datum('2026-10-04'),
+      });
+      expect(poster.map((post) => post.uid)).toEqual([
+        'moms-2026-07-01@kontera',
+        'moms-2026-10-01@kontera',
+      ]);
+    });
   });
 });

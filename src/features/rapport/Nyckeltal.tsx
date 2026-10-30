@@ -21,6 +21,8 @@ interface Props {
   readonly verifikat: readonly BokfortVerifikat[];
   readonly rakenskapsar: readonly Rakenskapsar[];
   readonly idag: Datum;
+  /** False for a book with no moms, which owes none and so shows no figure. */
+  readonly visaMoms?: boolean;
 }
 
 /**
@@ -31,7 +33,13 @@ interface Props {
  * order, because the figure is what is looked at and the picture is what
  * explains it.
  */
-export function Nyckeltal({ konton, verifikat, rakenskapsar, idag }: Props) {
+export function Nyckeltal({
+  konton,
+  verifikat,
+  rakenskapsar,
+  idag,
+  visaMoms = true,
+}: Props) {
   const ar = useMemo(
     () => [...rakenskapsar].sort((a, b) => b.start.localeCompare(a.start)),
     [rakenskapsar],
@@ -95,9 +103,13 @@ export function Nyckeltal({ konton, verifikat, rakenskapsar, idag }: Props) {
           {formatKronor(tal.likvida)}
         </dd>
 
-        <dt>{tal.moms < 0 ? 'Moms att få tillbaka' : 'Moms att betala'}</dt>
-        {/* Shown as the amount it is, with the direction in the heading. */}
-        <dd>{formatKronor(tal.moms < 0 ? negate(tal.moms) : tal.moms)}</dd>
+        {visaMoms && (
+          <>
+            <dt>{tal.moms < 0 ? 'Moms att få tillbaka' : 'Moms att betala'}</dt>
+            {/* Shown as the amount it is, with the direction in the heading. */}
+            <dd>{formatKronor(tal.moms < 0 ? negate(tal.moms) : tal.moms)}</dd>
+          </>
+        )}
       </dl>
 
       <h3>Resultat per månad</h3>

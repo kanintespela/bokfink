@@ -12,6 +12,8 @@ interface Props {
   readonly verifikat: readonly BokfortVerifikat[];
   readonly rakenskapsar: readonly Rakenskapsar[];
   readonly idag: Datum;
+  /** False for a book with no moms, which owes none and so shows no figure. */
+  readonly visaMoms: boolean;
   /** The full reports, with the pictures behind these figures. */
   readonly onRapporter: () => void;
 }
@@ -25,7 +27,13 @@ interface Props {
  * same ones Nyckeltal shows, from the same functions, and the card leads
  * there for the months and the pictures.
  */
-export function Lagesbild({ verifikat, rakenskapsar, idag, onRapporter }: Props) {
+export function Lagesbild({
+  verifikat,
+  rakenskapsar,
+  idag,
+  visaMoms,
+  onRapporter,
+}: Props) {
   const tal = useMemo(() => {
     const aret =
       rakenskapsar.find((ar) => idag >= ar.start && idag <= ar.slut) ??
@@ -64,8 +72,12 @@ export function Lagesbild({ verifikat, rakenskapsar, idag, onRapporter }: Props)
             {formatKronor(tal.likvida)}
           </dd>
 
-          <dt>{tal.moms < 0 ? 'Moms att få tillbaka' : 'Moms att betala'}</dt>
-          <dd>{formatKronor(tal.moms < 0 ? negate(tal.moms) : tal.moms)}</dd>
+          {visaMoms && (
+            <>
+              <dt>{tal.moms < 0 ? 'Moms att få tillbaka' : 'Moms att betala'}</dt>
+              <dd>{formatKronor(tal.moms < 0 ? negate(tal.moms) : tal.moms)}</dd>
+            </>
+          )}
         </dl>
         <button type="button" className="knapp knapp--text" onClick={onRapporter}>
           Visa rapporter

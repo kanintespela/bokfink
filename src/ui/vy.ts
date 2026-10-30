@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 
+import { harFunktion, type Bokprofil } from '../domain/bok/bokprofil';
+
 /**
  * The views along the bottom bar.
  *
@@ -63,6 +65,33 @@ export const VYNAMN: Record<Vy, string> = {
   arsbokslut: 'Förenklat årsbokslut',
   nebilaga: 'NE-bilaga',
 };
+
+/**
+ * The views a book has no use for, and so does not show.
+ *
+ * Hidden rather than refused: the address of a hidden view opens the overview,
+ * the same as an address that never existed, so a bookmark from the other kind
+ * of book does not land on a screen that does not apply.
+ */
+export function doldaVyer(profil: Bokprofil, momsregistrerad: boolean): ReadonlySet<Vy> {
+  const dolda = new Set<Vy>();
+  if (!momsregistrerad) {
+    dolda.add('moms');
+  }
+  if (!harFunktion(profil, 'nebilaga')) {
+    dolda.add('nebilaga');
+  }
+  if (!harFunktion(profil, 'egnaUttag')) {
+    dolda.add('egetkapital');
+  }
+  if (!harFunktion(profil, 'djurlager')) {
+    dolda.add('lager');
+  }
+  if (!harFunktion(profil, 'k1Bokslut')) {
+    dolda.add('arsbokslut');
+  }
+  return dolda;
+}
 
 /**
  * Which view is showing, kept in the address so the phone's back gesture

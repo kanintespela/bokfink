@@ -1,3 +1,4 @@
+import { harFunktion, type Bokprofil } from '../bok/bokprofil';
 import { kommandeMomsdeklarationer } from '../moms/deklarationsdag';
 import type { Momsperiod } from '../moms/period';
 import type { Rakenskapsar } from '../rakenskapsar/rakenskapsar';
@@ -9,6 +10,9 @@ import type { Underlag } from '../underlag/underlag';
 import type { Kalenderpost } from './ics';
 
 export interface Paminnelseunderlag {
+  readonly profil: Bokprofil;
+  /** False for a book with no moms to declare, so no declaration dates. */
+  readonly momsregistrerad: boolean;
   readonly rakenskapsar: readonly Rakenskapsar[];
   readonly momsperiod: Momsperiod;
   /** The receipts and invoices waiting to be booked. */
@@ -22,27 +26,34 @@ export interface Paminnelseunderlag {
  *
  * Only what Kontera already knows goes in: the momsdeklarationer of the open
  * years, the inkomstdeklaration for every year in the books, and the invoices
- * with a due date. A year not created yet has no dates, so the file is worth
+ * with a due date. A book that is not registered for moms has no momsdeklaration
+ * dates, and one that does not file the owner's NE-bilaga has no
+ * inkomstdeklaration date: the association's own deadline is not known here and
+ * a date that is wrong is worse than none. A year not created yet has no dates, so the file is worth
  * exporting again after each new räkenskapsår.
  */
 export function paminnelser({
+  profil,
+  momsregistrerad,
   rakenskapsar,
   momsperiod,
   underlag,
   idag,
 }: Paminnelseunderlag): Kalenderpost[] {
-  const moms = kommandeMomsdeklarationer(rakenskapsar, momsperiod, idag).map(
-    ({ period, sistaDag }): Kalenderpost => ({
-      uid: `moms-${period.fran}@kontera`,
-      datum: sistaDag,
-      rubrik: `Momsdeklaration ${period.namn}`,
-      beskrivning:
-        `Sista dag att deklarera och betala momsen för ${period.fran} – ${period.till}. ` +
-        'Lås perioden i Bokfink när deklarationen är inlämnad.',
-    }),
-  );
+  const moms = (
+    momsregistrerad ? kommandeMomsdeklarationer(rakenskapsar, momsperiod, idag) : []
+  ).map(({ period, sistaDag }): Kalenderpost => ({
+    uid: `moms-${period.fran}@kontera`,
+    datum: sistaDag,
+    rubrik: `Momsdeklaration ${period.namn}`,
+    beskrivning:
+      `Sista dag att deklarera och betala momsen för ${period.fran} – ${period.till}. ` +
+      'Lås perioden i Bokfink när deklarationen är inlämnad.',
+  }));
 
-  const beskattningsar = [...new Set(rakenskapsar.map((post) => ar(post.slut)))];
+  const beskattningsar = harFunktion(profil, 'inkomstdeklarationsdag')
+    ? [...new Set(rakenskapsar.map((post) => ar(post.slut)))]
+    : [];
   const inkomst = beskattningsar
     .map((beskattningsar) => ({
       beskattningsar,

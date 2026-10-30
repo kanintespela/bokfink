@@ -38,6 +38,8 @@ interface Props {
   readonly dagarSedanBackup: number | undefined;
   /** Ended quarters not yet locked as declared, oldest first. */
   readonly momsdeklarationer: readonly VantandeMomsdeklaration[];
+  /** False for a book with no moms, which then shows no moms figure. */
+  readonly visaMoms: boolean;
   /** Waiting invoices with a due date, the one due first at the top. */
   readonly fakturor: readonly VantandeFaktura[];
   /**
@@ -72,6 +74,7 @@ export function AttGoraSida({
   kvitton,
   dagarSedanBackup,
   momsdeklarationer,
+  visaMoms,
   fakturor,
   onSnabbBackup,
   onMoms,
@@ -243,6 +246,7 @@ export function AttGoraSida({
         verifikat={verifikat}
         rakenskapsar={rakenskapsar}
         idag={idag}
+        visaMoms={visaMoms}
         onRapporter={onRapporter}
       />
 

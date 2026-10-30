@@ -47,3 +47,62 @@ export function tolkaBokprofil(varde: unknown): Bokprofil {
   }
   return profil;
 }
+
+/**
+ * What a book can do beyond the bookkeeping every book has.
+ *
+ * Each of these belongs to the owner of an enskild firma and means nothing to
+ * an association, which has no owner to draw money out and files no NE-bilaga.
+ * A feature is listed here rather than tested for with `profil === ...` where
+ * it is used, so the next profile has one place to say what it has.
+ */
+export type Profilfunktion =
+  /** The NE-bilaga, the owner's part of the inkomstdeklaration. */
+  | 'nebilaga'
+  /** Egna uttag och insättningar (2013, 2017) and the owner's equity page. */
+  | 'egnaUttag'
+  /** The animal stock register. */
+  | 'djurlager'
+  /** The year-end statement for an enskild näringsidkare (BFNAR 2006:1, K1). */
+  | 'k1Bokslut'
+  /** The deadline for the owner's inkomstdeklaration with NE-bilaga. */
+  | 'inkomstdeklarationsdag';
+
+const FUNKTIONER: Record<Bokprofil, ReadonlySet<Profilfunktion>> = {
+  enskild_firma: new Set<Profilfunktion>([
+    'nebilaga',
+    'egnaUttag',
+    'djurlager',
+    'k1Bokslut',
+    'inkomstdeklarationsdag',
+  ]),
+  /*
+   * An association is not under K1 (BFNAR 2010:1 applies) and does not file
+   * the NE-bilaga: Skatteverket has it file Inkomstdeklaration 3. Its own
+   * year-end statement and equity page come with their own stages and show
+   * up here when they exist.
+   */
+  forening: new Set<Profilfunktion>(),
+};
+
+export function harFunktion(profil: Bokprofil, funktion: Profilfunktion): boolean {
+  return FUNKTIONER[profil].has(funktion);
+}
+
+/**
+ * Whether the book is registered for moms.
+ *
+ * A firm that keeps books in Bokfink is, as far as the app is built: the moms
+ * screens, the declaration dates and the VAT accounts have always been there
+ * for it. An association is not by default. Membership fees and grants carry
+ * no moms, and a förening that is not registered cannot deduct the moms it
+ * pays (Skatteverket, "Moms för ideella föreningar"), so the owner says
+ * when it is - for example after choosing frivillig skattskyldighet for a
+ * rented-out hall.
+ */
+export function arMomsregistrerad(
+  profil: Bokprofil,
+  uppgiven: boolean | undefined,
+): boolean {
+  return profil === 'enskild_firma' ? true : uppgiven === true;
+}

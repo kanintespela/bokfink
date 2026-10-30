@@ -31,6 +31,8 @@ interface Props {
   readonly rakenskapsar: readonly Rakenskapsar[];
   readonly allaVerifikat: readonly BokfortVerifikat[];
   readonly idag: Datum;
+  /** False for a book with no moms, which then has no moms figure to show. */
+  readonly visaMoms?: boolean;
 }
 
 /**
@@ -80,6 +82,7 @@ export function Rapporter(props: Props) {
           verifikat={props.allaVerifikat}
           rakenskapsar={props.rakenskapsar}
           idag={props.idag}
+          visaMoms={props.visaMoms ?? true}
         />
       )}
 

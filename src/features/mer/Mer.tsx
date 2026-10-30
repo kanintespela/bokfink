@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { type Bokprofil, harFunktion } from '../../domain/bok/bokprofil';
 import { VYNAMN, type Vy } from '../../ui/vy';
 
 /**
@@ -35,11 +36,15 @@ const GRUPPER: readonly { readonly rubrik: string; readonly vyer: readonly Vy[] 
 
 interface Props {
   readonly onValj: (vy: Vy) => void;
+  /** Views this kind of book has no use for, which are left out. */
+  readonly dolda: ReadonlySet<Vy>;
+  readonly profil: Bokprofil;
+  readonly momsregistrerad: boolean;
   /** Shares the coming deadlines as a calendar file and says what happened. */
   readonly onKalender: () => Promise<string>;
 }
 
-export function Mer({ onValj, onKalender }: Props) {
+export function Mer({ onValj, dolda, profil, momsregistrerad, onKalender }: Props) {
   const [arbetar, setArbetar] = useState(false);
   const [besked, setBesked] = useState<string | undefined>();
   const [fel, setFel] = useState<string | undefined>();
@@ -62,48 +67,65 @@ export function Mer({ onValj, onKalender }: Props) {
     <section aria-label="Mer">
       <h2>Mer</h2>
 
-      {GRUPPER.map(({ rubrik, vyer }) => (
-        <div key={rubrik}>
-          <h3>{rubrik}</h3>
-          <ul className="lista">
-            {vyer.map((vy) => (
-              <li key={vy}>
-                <button type="button" className="listrad" onClick={() => onValj(vy)}>
-                  {VYNAMN[vy]}
-                </button>
-              </li>
-            ))}
-            {rubrik === 'Löpande' && (
-              <li>
-                <button
-                  type="button"
-                  className="listrad"
-                  disabled={arbetar}
-                  data-testid="exportera-kalender"
-                  onClick={() => void exporteraKalender()}
-                >
-                  <span className="listrad__text">
-                    <span>Lägg in datumen i kalendern</span>
-                    <span className="listrad__sekundar">
-                      Moms, inkomstdeklaration och fakturor, med påminnelse en vecka före
+      {GRUPPER.map(({ rubrik, vyer: alla }) => {
+        const vyer = alla.filter((vy) => !dolda.has(vy));
+        return (
+          <div key={rubrik}>
+            <h3>{rubrik}</h3>
+            <ul className="lista">
+              {vyer.map((vy) => (
+                <li key={vy}>
+                  <button type="button" className="listrad" onClick={() => onValj(vy)}>
+                    {VYNAMN[vy]}
+                  </button>
+                </li>
+              ))}
+              {rubrik === 'Löpande' && (
+                <li>
+                  <button
+                    type="button"
+                    className="listrad"
+                    disabled={arbetar}
+                    data-testid="exportera-kalender"
+                    onClick={() => void exporteraKalender()}
+                  >
+                    <span className="listrad__text">
+                      <span>Lägg in datumen i kalendern</span>
+                      <span className="listrad__sekundar">
+                        {kalenderbeskrivning(profil, momsregistrerad)}
+                      </span>
                     </span>
-                  </span>
-                </button>
-              </li>
+                  </button>
+                </li>
+              )}
+            </ul>
+            {rubrik === 'Löpande' && besked !== undefined && (
+              <p className="hjalptext" role="status" data-testid="kalender-besked">
+                {besked}
+              </p>
             )}
-          </ul>
-          {rubrik === 'Löpande' && besked !== undefined && (
-            <p className="hjalptext" role="status" data-testid="kalender-besked">
-              {besked}
-            </p>
-          )}
-          {rubrik === 'Löpande' && fel !== undefined && (
-            <p role="alert" data-testid="kalender-fel">
-              {fel}
-            </p>
-          )}
-        </div>
-      ))}
+            {rubrik === 'Löpande' && fel !== undefined && (
+              <p role="alert" data-testid="kalender-fel">
+                {fel}
+              </p>
+            )}
+          </div>
+        );
+      })}
     </section>
   );
+}
+
+/** What the calendar file holds, which depends on what the book has dates for. */
+function kalenderbeskrivning(profil: Bokprofil, momsregistrerad: boolean): string {
+  const delar = [
+    ...(momsregistrerad ? ['moms'] : []),
+    ...(harFunktion(profil, 'inkomstdeklarationsdag') ? ['inkomstdeklaration'] : []),
+    'fakturor',
+  ];
+  const text =
+    delar.length === 1
+      ? 'Fakturor'
+      : `${delar.slice(0, -1).join(', ')} och ${delar.at(-1)}`;
+  return `${text[0]?.toUpperCase()}${text.slice(1)}, med påminnelse en vecka före`;
 }
