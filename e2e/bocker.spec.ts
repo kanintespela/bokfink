@@ -96,13 +96,7 @@ test('an association book has no owner screens and no moms until it is registere
 
   // Under Mer: no NE-bilaga, owner's equity, K1 statement, animal stock or moms.
   await page.goto('/#mer');
-  for (const dold of [
-    'NE-bilaga',
-    'Eget kapital',
-    'Förenklat årsbokslut',
-    'Djurlager',
-    'Moms',
-  ]) {
+  for (const dold of ['NE-bilaga', 'Förenklat årsbokslut', 'Djurlager', 'Moms']) {
     await expect(page.getByRole('button', { name: dold, exact: true })).toHaveCount(0);
   }
   await expect(page.getByRole('button', { name: 'Företaget' })).toBeVisible();
@@ -120,4 +114,42 @@ test('an association book has no owner screens and no moms until it is registere
   await expect(page.getByLabel('Redovisningsperiod för moms')).toBeVisible();
   await page.goto('/#mer');
   await expect(page.getByRole('button', { name: 'Moms', exact: true })).toBeVisible();
+});
+
+test('an association sets funds aside for a purpose without touching the result', async ({
+  page,
+}) => {
+  await page.clock.install({ time: new Date('2026-10-22T10:00:00+02:00') });
+  await page.clock.resume();
+
+  await oppnaBocker(page);
+  await page.getByLabel('Namn på den nya boken').fill('Bygdegårdsföreningen');
+  await page.getByRole('button', { name: 'Ideell förening' }).click();
+  await page.getByRole('button', { name: 'Skapa och öppna boken' }).click();
+  await expect(page.getByTestId('aktiv-bok')).toContainText('Bygdegårdsföreningen');
+
+  // The association's own page, not the owner's uttag and insättningar.
+  await page.goto('/#mer');
+  await page.getByRole('button', { name: 'Eget kapital', exact: true }).click();
+  await expect(page.getByTestId('inga-reserverade')).toBeVisible();
+  await expect(page.getByText('Eget uttag')).toHaveCount(0);
+
+  await page.getByLabel(/Konto för ändamålet/).fill('2030');
+  await page.getByLabel('Namn på ändamålet').fill('Underhåll av lokalen');
+  await page.getByLabel('Belopp', { exact: true }).fill('20000');
+  await page.getByTestId('bokfor-reservering').click();
+  await expect(page.getByTestId('foreningskapital-besked')).toContainText('bokfört');
+
+  await expect(page.getByTestId('reserverade-medel')).toContainText(
+    '2030 Underhåll av lokalen',
+  );
+  await expect(page.getByTestId('summa-reserverat')).toContainText('20 000');
+
+  // Setting funds aside moves capital inside equity: the total does not change.
+  await page.getByRole('button', { name: 'Frigör' }).click();
+  await page.getByLabel(/Konto för ändamålet/).fill('2030');
+  await expect(page.getByTestId('kontonamn')).toContainText('Underhåll av lokalen');
+  await page.getByLabel('Belopp', { exact: true }).fill('5000');
+  await page.getByTestId('bokfor-reservering').click();
+  await expect(page.getByTestId('summa-reserverat')).toContainText('15 000');
 });

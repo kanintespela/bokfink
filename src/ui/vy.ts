@@ -81,7 +81,7 @@ export function doldaVyer(profil: Bokprofil, momsregistrerad: boolean): Readonly
   if (!harFunktion(profil, 'nebilaga')) {
     dolda.add('nebilaga');
   }
-  if (!harFunktion(profil, 'egnaUttag')) {
+  if (!harFunktion(profil, 'egnaUttag') && !harFunktion(profil, 'foreningskapital')) {
     dolda.add('egetkapital');
   }
   if (!harFunktion(profil, 'djurlager')) {

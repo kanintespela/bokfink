@@ -17,6 +17,7 @@ import { dagarMellan, datum, type Datum } from '../domain/tid/datum';
 import type { Verifikatserie } from '../domain/verifikat/serie';
 import { skapaUtkast, type BokfortVerifikat } from '../domain/verifikat/verifikat';
 import { lasTillstand, tillampa } from './bokforing';
+import { lasReserveradeKonton } from './foreningskapital';
 import type { KonteraDatabase } from './db';
 import {
   bokforUtkast,
@@ -146,7 +147,10 @@ export async function forUtgaendeBalanserTillNastaAr(
 
   await sattIngaendeBalanser(db, kontext, nastaArId, balanser);
 
-  const konteringar = omforingAvEgetKapitalUnderkonton(balanser);
+  const konteringar = omforingAvEgetKapitalUnderkonton(
+    balanser,
+    await lasReserveradeKonton(db),
+  );
   const nastaArsStart = nastaRakenskapsarsperiod(ar).start;
   const befintlig = [...tillstand.verifikat.values()].find(
     (v) => v.datum === nastaArsStart && arEgetKapitalomforing(v.konteringar),

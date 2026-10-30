@@ -53,6 +53,7 @@ import {
   skapaNastaRakenskapsar,
 } from '../data/arsavslut';
 import { lasBokprofil } from '../data/bokidentitet';
+import { bokforReservering, foreningskapitalFor } from '../data/foreningskapital';
 import { forberedBokforing } from '../data/uppstart';
 import {
   kasseraUtkast,
@@ -122,6 +123,7 @@ import type { Djurlagerinventering } from '../domain/lager/djurlager';
 import { Anlaggningssida } from './anlaggning/Anlaggningssida';
 import { Lagersida } from './lager/Lagersida';
 import { Bokslutspostsida } from './bokslut/Bokslutspostsida';
+import { Foreningskapitalsida } from './bokslut/Foreningskapitalsida';
 import { Egetkapitalsida } from './bokslut/Egetkapitalsida';
 import { Arsbokslutsida } from './bokslut/Arsbokslutsida';
 import { lasRutval, sparaRutval } from '../data/rutval';
@@ -1865,7 +1867,29 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
           />
         )}
 
-        {vy === 'egetkapital' && (
+        {vy === 'egetkapital' && laddat.profil === 'forening' && (
+          <Foreningskapitalsida
+            onTillbaka={() => setVy('mer')}
+            rakenskapsar={laddat.rakenskapsar}
+            konton={laddat.konton}
+            idag={idag}
+            onHamta={(ar) => foreningskapitalFor(db, ar)}
+            onBokfor={async ({ datum, konto, namn, belopp, riktning }) => {
+              const verifikat = await bokforReservering(db, await skrivkontext(db), {
+                datum,
+                serie: verifikatserie(laddat.serie),
+                konto,
+                namn,
+                belopp,
+                riktning,
+              });
+              setLaddat(await hamta());
+              return `${beteckning(verifikat)} bokfört.`;
+            }}
+          />
+        )}
+
+        {vy === 'egetkapital' && laddat.profil !== 'forening' && (
           <Egetkapitalsida
             onTillbaka={() => setVy('mer')}
             rakenskapsar={laddat.rakenskapsar}

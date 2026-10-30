@@ -61,6 +61,8 @@ export type Profilfunktion =
   | 'nebilaga'
   /** Egna uttag och insättningar (2013, 2017) and the owner's equity page. */
   | 'egnaUttag'
+  /** The association's eget kapital, with the funds set aside inside it. */
+  | 'foreningskapital'
   /** The animal stock register. */
   | 'djurlager'
   /** The year-end statement for an enskild näringsidkare (BFNAR 2006:1, K1). */
@@ -79,10 +81,10 @@ const FUNKTIONER: Record<Bokprofil, ReadonlySet<Profilfunktion>> = {
   /*
    * An association is not under K1 (BFNAR 2010:1 applies) and does not file
    * the NE-bilaga: Skatteverket has it file Inkomstdeklaration 3. Its own
-   * year-end statement and equity page come with their own stages and show
-   * up here when they exist.
+   * year-end statement comes with its own stage and shows up here when it
+   * exists. Its equity page is BFNAR 2010:1 punkt 6.66-6.67.
    */
-  forening: new Set<Profilfunktion>(),
+  forening: new Set<Profilfunktion>(['foreningskapital']),
 };
 
 export function harFunktion(profil: Bokprofil, funktion: Profilfunktion): boolean {

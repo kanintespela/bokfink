@@ -61,6 +61,13 @@ describe('harFunktion', () => {
   });
 });
 
+describe('foreningens eget kapital', () => {
+  it('belongs to an association and not to a firm', () => {
+    expect(harFunktion('forening', 'foreningskapital')).toBe(true);
+    expect(harFunktion('enskild_firma', 'foreningskapital')).toBe(false);
+  });
+});
+
 describe('arMomsregistrerad', () => {
   it('takes a firm to be registered whatever was said', () => {
     expect(arMomsregistrerad('enskild_firma', undefined)).toBe(true);

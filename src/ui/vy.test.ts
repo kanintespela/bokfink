@@ -7,9 +7,13 @@ describe('doldaVyer', () => {
     expect([...doldaVyer('enskild_firma', true)]).toEqual([]);
   });
 
+  it('keeps the equity view for an association, which has its own page for it', () => {
+    expect(doldaVyer('forening', false).has('egetkapital')).toBe(false);
+  });
+
   it('hides what belongs to an owner, and moms, from an association without moms', () => {
     expect([...doldaVyer('forening', false)].sort()).toEqual(
-      ['arsbokslut', 'egetkapital', 'lager', 'moms', 'nebilaga'].sort(),
+      ['arsbokslut', 'lager', 'moms', 'nebilaga'].sort(),
     );
   });
 

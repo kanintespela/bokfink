@@ -105,14 +105,22 @@ export function arEgetKapitalomforing(konteringar: readonly Kontering[]): boolea
  * saldo från ett år till nästa. Ingen pengarörelse, ingen påverkan på
  * resultatet: bara en flytt av det saldo bokföringen redan har.
  *
+ * Konton i `bevarade` flyttas inte. Det är föreningens reserverade medel
+ * (foreningskapital.ts): att vika in dem i 2010 vid årsskiftet vore att
+ * upphäva reserveringen, som ska stå kvar tills föreningen själv frigör den.
+ *
  * Tomt när inget underkonto har ett saldo att flytta - se
  * {@link arEgetKapitalUnderkonto}.
  */
 export function omforingAvEgetKapitalUnderkonton(
   ingaendeBalanser: readonly Ingaendebalans[],
+  bevarade: readonly Kontonummer[] = [],
 ): Kontering[] {
   const underkonton = ingaendeBalanser.filter(
-    (post) => arEgetKapitalUnderkonto(post.konto) && !isZero(post.belopp),
+    (post) =>
+      arEgetKapitalUnderkonto(post.konto) &&
+      !bevarade.includes(post.konto) &&
+      !isZero(post.belopp),
   );
   if (underkonton.length === 0) {
     return [];
