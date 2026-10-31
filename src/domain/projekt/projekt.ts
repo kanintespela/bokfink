@@ -1,4 +1,6 @@
+import type { Ore } from '../belopp/ore';
 import type { Uuid } from '../id/uuidv7';
+import { kontoklass, type Kontonummer } from '../konto/konto';
 import type { Kontering } from '../verifikat/verifikat';
 
 /**
@@ -15,6 +17,23 @@ export interface Projekt {
   readonly namn: string;
   /** A finished project takes no more bookings; what was booked on it stays. */
   readonly avslutat: boolean;
+  /**
+   * What the project is expected to take in and cost, account by account, for
+   * the whole of it. Absent while none is set.
+   */
+  readonly budget?: readonly Budgetpost[];
+}
+
+/**
+ * One line of a project's budget: an income or cost account and an amount.
+ *
+ * The amount is read the way the statement reads it - income and cost both as
+ * positive amounts - so that a budget of 40 000 kr for material is compared
+ * with 40 000 kr of material and not with a minus sign.
+ */
+export interface Budgetpost {
+  readonly konto: Kontonummer;
+  readonly belopp: Ore;
 }
 
 export class OgiltigtProjektError extends Error {
@@ -83,18 +102,58 @@ export function skapaProjekt(uppgifter: {
 }
 
 /**
+ * A budget as it is stored: lines for income and cost accounts, each once, in
+ * account order. Class 3 is income and classes 4-7 are cost; financial items
+ * (class 8) and the balance sheet are not budgeted per project.
+ */
+export function budgetposter(poster: readonly Budgetpost[]): Budgetpost[] {
+  const sedda = new Set<Kontonummer>();
+  for (const post of poster) {
+    const klass = kontoklass(post.konto);
+    if (klass < 3 || klass > 7) {
+      throw new OgiltigtProjektError(
+        `Konto ${post.konto} går inte att budgetera: en projektbudget gäller intäkter (klass 3) och kostnader (klass 4–7).`,
+      );
+    }
+    if (post.belopp <= 0) {
+      throw new OgiltigtProjektError(
+        `Beloppet för konto ${post.konto} måste vara större än noll. Lämna bort kontot om det inte ska budgeteras.`,
+      );
+    }
+    if (sedda.has(post.konto)) {
+      throw new OgiltigtProjektError(`Konto ${post.konto} finns två gånger i budgeten.`);
+    }
+    sedda.add(post.konto);
+  }
+  return [...poster].sort((a, b) => a.konto.localeCompare(b.konto));
+}
+
+/**
  * The same project with a new name or finished or reopened. The code is not an
  * argument: it identifies the project in every file that has left the app.
  */
 export function andraProjekt(
   projekt: Projekt,
-  andring: { readonly namn?: string; readonly avslutat?: boolean },
+  andring: {
+    readonly namn?: string;
+    readonly avslutat?: boolean;
+    /** Replaces the whole budget; an empty one takes it away. */
+    readonly budget?: readonly Budgetpost[];
+  },
 ): Projekt {
-  return {
+  const andrat: Projekt = {
     ...projekt,
     ...(andring.namn === undefined ? {} : { namn: projektnamn(andring.namn) }),
     ...(andring.avslutat === undefined ? {} : { avslutat: andring.avslutat }),
   };
+  if (andring.budget === undefined) {
+    return andrat;
+  }
+  const utanBudget = Object.fromEntries(
+    Object.entries(andrat).filter(([falt]) => falt !== 'budget'),
+  ) as unknown as Projekt;
+  const budget = budgetposter(andring.budget);
+  return budget.length === 0 ? utanBudget : { ...utanBudget, budget };
 }
 
 /**

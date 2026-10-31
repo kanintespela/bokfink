@@ -6,6 +6,7 @@ import {
   kodenFinns,
   OgiltigtProjektError,
   skapaProjekt,
+  type Budgetpost,
   type Projekt,
 } from '../domain/projekt/projekt';
 import { paverkarMomsdeklarationen } from '../domain/moms/momsrapport';
@@ -143,12 +144,19 @@ export async function skrivProjekt(
   return projekt;
 }
 
-/** Renames a project, or finishes or reopens it. The code stays. */
+/**
+ * Renames a project, finishes or reopens it, or sets its budget. The code stays.
+ * A budget replaces the one before, and an empty one takes it away.
+ */
 export async function andraProjektet(
   db: KonteraDatabase,
   kontext: Skrivkontext,
   projektId: Uuid,
-  andring: { readonly namn?: string; readonly avslutat?: boolean },
+  andring: {
+    readonly namn?: string;
+    readonly avslutat?: boolean;
+    readonly budget?: readonly Budgetpost[];
+  },
 ): Promise<void> {
   await tillampa(db, {
     ...huvud(kontext),
@@ -156,6 +164,7 @@ export async function andraProjektet(
     projektId,
     ...(andring.namn === undefined ? {} : { namn: andring.namn }),
     ...(andring.avslutat === undefined ? {} : { avslutat: andring.avslutat }),
+    ...(andring.budget === undefined ? {} : { budget: andring.budget }),
   });
 }
 

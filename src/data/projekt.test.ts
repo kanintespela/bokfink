@@ -112,6 +112,56 @@ describe('projekt', () => {
   });
 });
 
+describe('budget på ett projekt', () => {
+  const budget = [
+    { konto: kontonummer('6100'), belopp: kr('10000') },
+    { konto: kontonummer('3980'), belopp: kr('20000') },
+  ];
+
+  it('is set, read back in account order, replaced and taken away', async () => {
+    const db = await bok();
+    const projekt = await skrivProjekt(db, kontext, { kod: 'P2026', namn: 'Läger' });
+
+    await andraProjektet(db, kontext, projekt.id, { budget });
+    expect(
+      (await lasTillstand(db)).projekt.get(projekt.id)?.budget?.map((post) => post.konto),
+    ).toEqual(['3980', '6100']);
+
+    await andraProjektet(db, kontext, projekt.id, { budget: [budget[0]!] });
+    expect((await lasTillstand(db)).projekt.get(projekt.id)?.budget).toEqual([budget[0]]);
+
+    await andraProjektet(db, kontext, projekt.id, { budget: [] });
+    expect((await lasTillstand(db)).projekt.get(projekt.id)).toEqual(projekt);
+  });
+
+  it('is refused for an account that cannot be budgeted, and nothing changes', async () => {
+    const db = await bok();
+    const projekt = await skrivProjekt(db, kontext, { kod: 'P2026', namn: 'Läger' });
+    await expect(
+      andraProjektet(db, kontext, projekt.id, {
+        budget: [{ konto: kontonummer('1930'), belopp: kr('100') }],
+      }),
+    ).rejects.toBeInstanceOf(OgiltigtProjektError);
+    expect((await lasTillstand(db)).projekt.get(projekt.id)).toEqual(projekt);
+  });
+
+  it('survives a rebuild from the log and a backup, and a rename leaves it alone', async () => {
+    const db = await bok();
+    const projekt = await skrivProjekt(db, kontext, { kod: 'P2026', namn: 'Läger' });
+    await andraProjektet(db, kontext, projekt.id, { budget });
+    await andraProjektet(db, kontext, projekt.id, { namn: 'Sommarläger' });
+
+    const franLogg = bygg(await lasLogg(db)).projekt.get(projekt.id);
+    const franTabell = (await lasTillstand(db)).projekt.get(projekt.id);
+    expect(franLogg).toEqual(franTabell);
+    expect(franLogg?.budget).toHaveLength(2);
+
+    const ny = await nyDb();
+    await importera(ny, await exportera(db), { hasha: hashaFil });
+    expect((await lasTillstand(ny)).projekt.get(projekt.id)).toEqual(franTabell);
+  });
+});
+
 describe('en konteringsrad på ett projekt', () => {
   it('is booked with its project and reads back with it', async () => {
     const db = await bok();

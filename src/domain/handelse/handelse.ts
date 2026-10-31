@@ -12,7 +12,7 @@ import {
 import type { Ore } from '../belopp/ore';
 import type { Djurlagerinventering } from '../lager/djurlager';
 import type { Konto, Kontonummer } from '../konto/konto';
-import { andraProjekt, type Projekt } from '../projekt/projekt';
+import { andraProjekt, type Budgetpost, type Projekt } from '../projekt/projekt';
 import type { Konteringsmall } from '../mall/konteringsmall';
 import type { Ingaendebalans, Rakenskapsar } from '../rakenskapsar/rakenskapsar';
 import type { Datum } from '../tid/datum';
@@ -190,6 +190,8 @@ export type Handelse =
       readonly projektId: Uuid;
       readonly namn?: string;
       readonly avslutat?: boolean;
+      /** The whole budget, which replaces the one before; empty takes it away. */
+      readonly budget?: readonly Budgetpost[];
     });
 
 export type Handelsetyp = Handelse['typ'];
@@ -518,6 +520,7 @@ export function effekter(
           post: andraProjekt(projekt, {
             ...(handelse.namn === undefined ? {} : { namn: handelse.namn }),
             ...(handelse.avslutat === undefined ? {} : { avslutat: handelse.avslutat }),
+            ...(handelse.budget === undefined ? {} : { budget: handelse.budget }),
           }),
         },
       ];
