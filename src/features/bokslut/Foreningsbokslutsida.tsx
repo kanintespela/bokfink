@@ -61,7 +61,7 @@ export function Foreningsbokslutsida({
 }: Props) {
   const aren = [...rakenskapsar].sort((a, b) => b.start.localeCompare(a.start));
   const [arId, setArId] = useState(aren[0]?.id);
-  const [data, setData] = useState<Foreningsarsbokslut | undefined>();
+  const [hamtat, setHamtat] = useState<Foreningsarsbokslut | undefined>();
   const [uppdatering, setUppdatering] = useState(0);
   const [arbetar, setArbetar] = useState(false);
   const [besked, setBesked] = useState<string | undefined>();
@@ -70,6 +70,9 @@ export function Foreningsbokslutsida({
   const [nyRoll, setNyRoll] = useState('');
 
   const ar = aren.find((kandidat) => kandidat.id === arId) ?? aren[0];
+  // Only the chosen year's figures are shown: another year's never stand in for
+  // them while they load, and choosing the same year again changes nothing.
+  const data = hamtat?.ar.id === ar?.id ? hamtat : undefined;
 
   useEffect(() => {
     if (ar === undefined) {
@@ -77,9 +80,9 @@ export function Foreningsbokslutsida({
     }
     let avbruten = false;
     onHamta(ar).then(
-      (hamtat) => {
+      (resultat) => {
         if (!avbruten) {
-          setData(hamtat);
+          setHamtat(resultat);
         }
       },
       (orsak: unknown) => {
@@ -131,10 +134,7 @@ export function Foreningsbokslutsida({
             id="foreningsbokslut-ar"
             className="falt"
             value={ar.id}
-            onChange={(handelse) => {
-              setData(undefined);
-              setArId(handelse.target.value as typeof ar.id);
-            }}
+            onChange={(handelse) => setArId(handelse.target.value as typeof ar.id)}
           >
             {aren.map((kandidat) => (
               <option key={kandidat.id} value={kandidat.id}>

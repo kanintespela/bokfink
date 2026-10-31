@@ -229,6 +229,29 @@ test("takes up an association's decided grant at the year's end and reverses it"
   await expect(page.getByTestId('bokslutspost-besked')).toContainText('2026-12-31');
 });
 
+test('keeps the bokslut on screen when the year already chosen is chosen again', async ({
+  page,
+}) => {
+  await page.clock.install({ time: new Date('2026-10-22T10:00:00+02:00') });
+  await page.clock.resume();
+
+  await oppnaBocker(page);
+  await page.getByLabel('Namn på den nya boken').fill('Bygdegårdsföreningen');
+  await page.getByRole('button', { name: 'Ideell förening' }).click();
+  await page.getByRole('button', { name: 'Skapa och öppna boken' }).click();
+  await expect(page.getByTestId('aktiv-bok')).toContainText('Bygdegårdsföreningen');
+
+  await page.goto('/#arsbokslut');
+  const bokslut = page.getByTestId('foreningsbokslut');
+  await expect(bokslut).toBeVisible();
+
+  // A change event for the year that is already chosen: the form is not
+  // reloaded by it, so it must not be emptied by it either.
+  await page.getByLabel('Räkenskapsår').selectOption({ label: '2026' });
+  await expect(bokslut).toBeVisible();
+  await expect(bokslut).toContainText('Förenklat årsbokslut för räkenskapsåret');
+});
+
 test("sets an association's year out on the form of bilaga 2, ready to sign", async ({
   page,
 }) => {
