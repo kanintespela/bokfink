@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
 
 import { lasZip } from '../src/domain/arkiv/zipTestReader';
+import { bygg as byggTestZip } from '../src/domain/arkiv/zipTestByggare';
 
 /**
  * Finds what to book by searching, scoped to the results so it cannot match
@@ -1147,5 +1148,63 @@ test('says so when the passphrase is wrong', async ({ page }) => {
 
   await expect(page.getByTestId('datautbyte-fel')).toContainText(
     'gick inte att låsa upp',
+  );
+});
+
+/*
+ * SIE-gruppen's own sample file comes as a zip, and a zip is a normal way to
+ * move a file. The archive is built here with a deflated entry, the way a
+ * program writes one, and the browser has to open it.
+ */
+test('imports the SIE file inside a zip', async ({ page }) => {
+  await tillFiler(page);
+
+  const sie = [
+    '#FLAGGA 0',
+    '#FORMAT PC8',
+    '#SIETYP 4',
+    '#RAR 0 20260101 20261231',
+    '#KONTO 1930 "Foretagskonto"',
+    '#KONTO 3010 "Forsaljning"',
+    '#KTYP 1930 T',
+    '#KTYP 3010 I',
+    '#VER "A" 3 20260115 "Forsaljning av lamm" 20260115 ""',
+    '{',
+    '#TRANS 1930 {} 500.00',
+    '#TRANS 3010 {} -500.00',
+    '}',
+    '',
+  ].join('\r\n');
+  const zip = byggTestZip([
+    { namn: 'LASMIG.txt', data: new TextEncoder().encode('Exempel') },
+    { namn: 'Bokforing 2026.SE', data: new TextEncoder().encode(sie) },
+  ]);
+
+  await page.getByTestId('siefiler').setInputFiles({
+    name: 'sie.zip',
+    mimeType: 'application/zip',
+    buffer: Buffer.from(zip),
+  });
+
+  await expect(page.getByTestId('datautbyte-besked')).toContainText('Bokforing 2026.SE');
+  await expect(page.getByTestId('datautbyte-besked')).toContainText('1 verifikat');
+  await tillVerifikat(page);
+  await expect(
+    page.getByTestId('verifikatlista').getByRole('button').first(),
+  ).toContainText('A3');
+});
+
+test('says what is wrong with a zip that holds no SIE file', async ({ page }) => {
+  await tillFiler(page);
+
+  const zip = byggTestZip([{ namn: 'bild.png', data: new TextEncoder().encode('x') }]);
+  await page.getByTestId('siefiler').setInputFiles({
+    name: 'foton.zip',
+    mimeType: 'application/zip',
+    buffer: Buffer.from(zip),
+  });
+
+  await expect(page.getByTestId('datautbyte-fel')).toContainText(
+    'foton.zip innehåller ingen SIE-fil',
   );
 });

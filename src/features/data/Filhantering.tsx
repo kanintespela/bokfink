@@ -4,7 +4,9 @@ import type { Importfil } from '../../data/underlagsimport';
 import type { Importrad } from '../../domain/underlag/underlagsimport';
 import type { Rakenskapsar } from '../../domain/rakenskapsar/rakenskapsar';
 import type { Uuid } from '../../domain/id/uuidv7';
+import { siefilerUrValda } from '../../domain/arkiv/zipLasare';
 import { delaEllerSpara, lasValdaFiler, type Valdfil } from '../../platform/fil';
+import { inflateRaw } from '../../platform/zip';
 import { Uppgiftsstatus, useUppgift } from './uppgift';
 import { useFilprefix } from '../../ui/bok';
 
@@ -62,23 +64,31 @@ export function Filhantering({
       <input
         ref={filvaljare}
         type="file"
-        accept=".se,.si,.sie"
+        accept=".se,.si,.sie,.zip"
         multiple
         hidden
         data-testid="siefiler"
         onChange={(handelse) => {
           const valda = handelse.target.files;
           void kor(async () => {
-            const filer = await lasValdaFiler(valda);
-            if (filer.length === 0) {
-              return 'Ingen fil valdes.';
+            try {
+              const filer = await lasValdaFiler(valda);
+              if (filer.length === 0) {
+                return 'Ingen fil valdes.';
+              }
+              // A zip is opened for the SIE files in it; anything else goes straight on.
+              const { filer: sie, urZip } = await siefilerUrValda(filer, inflateRaw);
+              const resultat = await onImportera(sie);
+              return urZip.length === 0
+                ? resultat
+                : `Öppnade zip-filen och hittade ${urZip.join(', ')}. ${resultat}`;
+            } finally {
+              if (filvaljare.current !== null) {
+                // Cleared so picking the same files again still fires a change, also
+                // after a file that was refused.
+                filvaljare.current.value = '';
+              }
             }
-            const resultat = await onImportera(filer.map((fil) => fil.innehall));
-            if (filvaljare.current !== null) {
-              // Cleared so picking the same files again still fires a change.
-              filvaljare.current.value = '';
-            }
-            return resultat;
           });
         }}
       />
@@ -92,6 +102,9 @@ export function Filhantering({
         >
           Importera SIE-filer
         </button>
+      </p>
+      <p className="hjalptext">
+        Välj en eller flera SIE-filer (.se), eller en zip-fil som innehåller dem.
       </p>
 
       {/*
