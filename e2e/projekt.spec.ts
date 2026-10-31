@@ -6,7 +6,7 @@ async function oppnaProjekt(page: Page) {
     .getByRole('navigation', { name: 'Vyer' })
     .getByRole('button', { name: 'Mer' })
     .click();
-  await page.getByRole('button', { name: 'Projekt' }).click();
+  await page.getByRole('button', { name: 'Projekt', exact: true }).click();
 }
 
 test('creates a project, renames it, finishes it and opens it again', async ({
@@ -331,4 +331,69 @@ test('has no project statement while the book has no project', async ({ page }) 
   await page.goto('/#rapporter');
   await expect(page.getByRole('button', { name: 'Huvudbok' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Projekt', exact: true })).toHaveCount(0);
+});
+
+test('shares a common cost out on a project without changing the account', async ({
+  page,
+}) => {
+  await page.clock.install({ time: new Date('2026-04-05T10:00:00+02:00') });
+  await page.clock.resume();
+
+  await oppnaProjekt(page);
+  await page.getByLabel('Kod').fill('LEADER-28');
+  await page.getByLabel('Namn', { exact: true }).fill('Ny scen');
+  await page.getByTestId('skapa-projekt').click();
+  await expect(page.getByTestId('projektlista')).toContainText('LEADER-28');
+
+  // 1 000 kr of office supplies, on no project.
+  await bokforRader(
+    page,
+    'Kontorsmaterial',
+    [
+      { konto: '6100', sida: 'Debet', belopp: '1000' },
+      { konto: '1930', sida: 'Kredit', belopp: '1000' },
+    ],
+    'A1',
+  );
+
+  await page.goto('/#fordelning');
+  const el = page.getByTestId('kostnader-per-konto').getByRole('listitem').first();
+  await expect(el).toContainText('6100');
+  await expect(el).toContainText('Totalt 1 000,00');
+  await expect(el).toContainText('inget projekt 1 000,00');
+
+  await page.getByTestId('fordela-6100').click();
+  // More than there is to move is said, and the button stays off.
+  await page.getByLabel('Belopp').fill('1500');
+  await expect(page.getByTestId('fordela-hinder')).toContainText('mer än de 1 000,00 kr');
+  await expect(page.getByTestId('bokfor-fordelning')).toBeDisabled();
+
+  await page.getByLabel('Belopp').fill('300');
+  await expect(page.getByTestId('fordela-hinder')).toBeHidden();
+  await page.getByTestId('bokfor-fordelning').click();
+  await expect(page.getByTestId('datautbyte-besked')).toContainText('A2');
+
+  // The account is where it was; 300 kr moved from "no project" to the project.
+  await expect(el).toContainText('Totalt 1 000,00');
+  await expect(el).toContainText('på projekt 300,00');
+  await expect(el).toContainText('inget projekt 700,00');
+
+  await page.goto('/#rapporter');
+  await page.getByRole('button', { name: 'Projekt', exact: true }).click();
+  await expect(page.getByTestId('pu-kostnader')).toContainText('300,00');
+
+  // And back again.
+  await page.goto('/#fordelning');
+  await page.getByTestId('fordela-6100').click();
+  await page.getByLabel('Flytta').selectOption('fran_projekt');
+  await page.getByLabel('Belopp').fill('100');
+  await page.getByTestId('bokfor-fordelning').click();
+  await expect(page.getByTestId('datautbyte-besked')).toContainText('A3');
+  await expect(el).toContainText('på projekt 200,00');
+  await expect(el).toContainText('inget projekt 800,00');
+});
+
+test('asks for a project before sharing anything out', async ({ page }) => {
+  await page.goto('/#fordelning');
+  await expect(page.getByTestId('fordela-inga-projekt')).toBeVisible();
 });

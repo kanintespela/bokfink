@@ -159,6 +159,8 @@ import { Utkastlista } from './utkast/Utkastlista';
 import { FriKontering, type Friforslag } from './bokfor/FriKontering';
 import { Kontosida } from './konton/Kontosida';
 import { Projektsida } from './projekt/Projektsida';
+import { Fordelningssida } from './projekt/Fordelningssida';
+import { fordelningsKonteringar } from '../domain/projekt/fordelning';
 import type { Projekt } from '../domain/projekt/projekt';
 import { Momssida } from './moms/Momssida';
 import { beraknaMomsrapport } from '../domain/moms/momsrapport';
@@ -1193,6 +1195,44 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
             onAndra={async (id, andring) => {
               await andraProjektet(db, await skrivkontext(db), id, andring);
               setLaddat(await hamta());
+            }}
+          />
+        )}
+
+        {vy === 'fordelning' && (
+          <Fordelningssida
+            onTillbaka={() => setVy('mer')}
+            rakenskapsar={laddat.rakenskapsar}
+            konton={laddat.konton}
+            projekt={laddat.projekt}
+            verifikat={laddat.allaVerifikat}
+            idag={idag}
+            onFordela={async ({
+              datum,
+              konto,
+              belopp,
+              projekt,
+              riktning,
+              beskrivning,
+            }) => {
+              const verifikat = await bokforUtkast(
+                db,
+                await skrivkontext(db),
+                skapaUtkast({
+                  id: newIdentifier(),
+                  datum,
+                  beskrivning,
+                  konteringar: fordelningsKonteringar({
+                    konto,
+                    belopp,
+                    projekt,
+                    riktning,
+                  }),
+                }),
+                verifikatserie(laddat.serie),
+              );
+              setLaddat(await hamta());
+              return `Bokfört som ${beteckning(verifikat)}.`;
             }}
           />
         )}

@@ -17,7 +17,7 @@ const GRUPPER: readonly { readonly rubrik: string; readonly vyer: readonly Vy[] 
   { rubrik: 'Löpande', vyer: ['moms', 'rapporter', 'bank'] },
   {
     rubrik: 'Bokslut',
-    vyer: ['periodisering', 'egetkapital', 'arsbokslut', 'nebilaga'],
+    vyer: ['periodisering', 'fordelning', 'egetkapital', 'arsbokslut', 'nebilaga'],
   },
   { rubrik: 'Register', vyer: ['anlaggning', 'lager', 'projekt'] },
   {
