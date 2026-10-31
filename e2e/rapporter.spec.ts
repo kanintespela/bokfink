@@ -116,6 +116,76 @@ test('hands the report over as a file a spreadsheet can open', async ({ page }) 
   expect(innehall).toContain('Periodens resultat;;;5000,00');
 });
 
+test('hands over the result per account for the whole year, to build a budget on', async ({
+  page,
+}) => {
+  await bokforNagot(page);
+  await page.goto('/#rapporter');
+  await page.getByRole('button', { name: 'Resultat', exact: true }).click();
+
+  // The whole year goes into the file whichever period is on screen.
+  await page.getByLabel('Period', { exact: true }).selectOption({ label: 'Månad' });
+
+  const nedladdning = page.waitForEvent('download');
+  await page.getByTestId('budgetunderlag-csv').click();
+  const fil = await nedladdning;
+  expect(fil.suggestedFilename()).toMatch(/^kontera-resultat-per-konto-2026\.csv$/);
+
+  const innehall = await fil.createReadStream().then(async (strom) => {
+    const bitar: Buffer[] = [];
+    for await (const bit of strom) {
+      bitar.push(bit as Buffer);
+    }
+    return Buffer.concat(bitar).toString('utf8');
+  });
+  expect(innehall.charCodeAt(0)).toBe(0xfeff);
+  // No year before in this book, so one column of figures and no empty second one.
+  expect(innehall).toContain('Rubrik;Konto;Kontonamn;Belopp 2026-01-01–2026-12-31\r\n');
+  expect(innehall).toContain(
+    'Rörelsens intäkter;3000;Försäljning och utfört arbete samt övriga momspliktiga intäkter;10000,00',
+  );
+  // A cost is negative, as in the report.
+  expect(innehall).toMatch(/;4000;[^;]*;-5000,00/);
+
+  // The other export on the page is still the period's own report.
+  const period = page.waitForEvent('download');
+  await page.getByTestId('exportera-csv').click();
+  expect((await period).suggestedFilename()).toMatch(/^kontera-resultat-2026-01-/);
+});
+
+test('puts last year beside the new one when there is a year before', async ({
+  page,
+}) => {
+  // Booked in December, read in January: 2027 is the year on screen and 2026 the one before.
+  await page.clock.install({ time: new Date('2026-12-20T10:00:00+01:00') });
+  await page.clock.resume();
+  await bokforNagot(page);
+  await page.clock.setSystemTime(new Date('2027-01-20T10:00:00+01:00'));
+  await page.goto('/#rapporter');
+  await page.reload();
+  await page.getByRole('button', { name: 'Resultat', exact: true }).click();
+  await page.getByLabel('Räkenskapsår').selectOption({ label: '2027' });
+
+  const nedladdning = page.waitForEvent('download');
+  await page.getByTestId('budgetunderlag-csv').click();
+  const fil = await nedladdning;
+  const innehall = await fil.createReadStream().then(async (strom) => {
+    const bitar: Buffer[] = [];
+    for await (const bit of strom) {
+      bitar.push(bit as Buffer);
+    }
+    return Buffer.concat(bitar).toString('utf8');
+  });
+
+  expect(innehall).toContain(
+    'Rubrik;Konto;Kontonamn;Belopp 2027-01-01–2027-12-31;Belopp 2026-01-01–2026-12-31\r\n',
+  );
+  // Nothing is booked in 2027 yet, so those figures are blank, not zero.
+  expect(innehall).toContain(
+    'Rörelsens intäkter;3000;Försäljning och utfört arbete samt övriga momspliktiga intäkter;;10000,00',
+  );
+});
+
 test('hands the same report over as JSON for a program', async ({ page }) => {
   await bokforNagot(page);
   await page.goto('/#rapporter');

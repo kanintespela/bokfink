@@ -14,6 +14,7 @@ import { belopp, skrivCsv } from './csv';
 import {
   budgetTabell,
   huvudbokTabell,
+  resultatPerKontoTabell,
   projektutdragTabell,
   resultatrakningTabell,
   tillJson,
@@ -249,5 +250,75 @@ describe('budgetTabell', () => {
       belopp(kr('3000')),
       belopp(kr('7000')),
     ]);
+  });
+});
+
+describe('resultatPerKontoTabell', () => {
+  const resultat = (poster: readonly (readonly [string, string, string])[]) =>
+    beraknaResultatrakning(
+      beraknaSaldon(
+        [],
+        [
+          bokfor(
+            skapaUtkast({
+              id: '019b76da-a800-7000-8000-0000000000b1' as Uuid,
+              datum: datum('2026-05-01'),
+              beskrivning: 'Test',
+              konteringar: poster.map(([konto, , belopp]) => ({
+                konto: kontonummer(konto),
+                belopp: kr(belopp),
+              })),
+            }),
+            {
+              serie: verifikatserie('A'),
+              nummer: 9,
+              bokfortDatum: datum('2026-05-01'),
+              kalla: 'manuell',
+            },
+          ),
+        ],
+      ),
+      new Map(),
+    );
+
+  /*
+   * 2026: membership fees 30 000 (3610, kredit) and electricity 1 250 (5020, debet).
+   * 2025: fees 28 000 and rent 6 000 (5010). Income is positive and cost negative.
+   */
+  const detta = resultat([
+    ['3610', 'Medlemsavgifter', '-30000'],
+    ['5020', 'El', '1250'],
+    ['1930', 'Bank', '28750'],
+  ]);
+  const forra = resultat([
+    ['3610', 'Medlemsavgifter', '-28000'],
+    ['5010', 'Lokalhyra', '6000'],
+    ['1930', 'Bank', '22000'],
+  ]);
+
+  it('lists every account either year has, blank where a year has nothing on it', () => {
+    const tabell = resultatPerKontoTabell(
+      { period: '2026', rapport: detta },
+      { period: '2025', rapport: forra },
+    );
+
+    expect(tabell[0]).toEqual([
+      'Rubrik',
+      'Konto',
+      'Kontonamn',
+      'Belopp 2026',
+      'Belopp 2025',
+    ]);
+    expect(tabell.slice(1).map((rad) => [rad[1], rad[3], rad[4]])).toEqual([
+      ['3610', belopp(kr('30000')), belopp(kr('28000'))],
+      ['5010', undefined, belopp(kr('-6000'))],
+      ['5020', belopp(kr('-1250')), undefined],
+    ]);
+  });
+
+  it('leaves out the second column when there is no year before', () => {
+    const tabell = resultatPerKontoTabell({ period: '2026', rapport: detta });
+    expect(tabell[0]).toEqual(['Rubrik', 'Konto', 'Kontonamn', 'Belopp 2026']);
+    expect(tabell.every((rad) => rad.length === 4)).toBe(true);
   });
 });

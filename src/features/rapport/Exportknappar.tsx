@@ -6,6 +6,11 @@ interface Props {
   readonly tabell: Tabell;
   /** Becomes the file name, so it has to say what the file is. */
   readonly namn: string;
+  /**
+   * Starts the test ids of the two buttons, `exportera-csv` and `exportera-json`
+   * by default, so that a screen with two exports can tell them apart.
+   */
+  readonly idprefix?: string;
 }
 
 /**
@@ -16,7 +21,7 @@ interface Props {
  * open formats that outlive this app, which is the point of having them at
  * all - the promise is that leaving Kontera costs nothing.
  */
-export function Exportknappar({ tabell, namn }: Props) {
+export function Exportknappar({ tabell, namn, idprefix = 'exportera' }: Props) {
   async function exportera(format: 'csv' | 'json') {
     await delaEllerSpara(
       `${namn}.${format}`,
@@ -32,7 +37,7 @@ export function Exportknappar({ tabell, namn }: Props) {
       <button
         type="button"
         className="knapp knapp--text"
-        data-testid="exportera-csv"
+        data-testid={`${idprefix}-csv`}
         onClick={() => void exportera('csv')}
       >
         Exportera som CSV
@@ -40,7 +45,7 @@ export function Exportknappar({ tabell, namn }: Props) {
       <button
         type="button"
         className="knapp knapp--text"
-        data-testid="exportera-json"
+        data-testid={`${idprefix}-json`}
         onClick={() => void exportera('json')}
       >
         Som JSON

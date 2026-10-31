@@ -230,6 +230,69 @@ export function budgetTabell(
   return rader;
 }
 
+/**
+ * The result account by account for a year and the one before, as a starting
+ * point for a budget made in a spreadsheet.
+ *
+ * Every account that came to something in either year is a row, with the
+ * heading of the result statement it sits under; an account only one year has
+ * is blank in the other column rather than zero, since blank is what "nothing
+ * booked" looks like and zero is a figure. Signs are those of the income
+ * statement - income positive, cost negative - so the sheet reads like the
+ * report it came from. Without a year before, there is no second column to
+ * show, instead of a column of blanks that suggests there is history.
+ */
+export function resultatPerKontoTabell(
+  aret: { readonly period: string; readonly rapport: Resultatrakning },
+  foregaende?: { readonly period: string; readonly rapport: Resultatrakning },
+): Tabell {
+  const rubrik = new Map<Kontonummer, string>();
+  const namn = new Map<Kontonummer, string>();
+  const perAr = (underlag: { readonly rapport: Resultatrakning } | undefined) => {
+    const belopp = new Map<Kontonummer, Ore>();
+    for (const grupp of underlag?.rapport.grupper ?? []) {
+      for (const post of grupp.poster) {
+        belopp.set(post.konto, post.belopp);
+        if (!rubrik.has(post.konto)) {
+          rubrik.set(post.konto, grupp.rubrik);
+          namn.set(post.konto, post.namn);
+        }
+      }
+    }
+    return belopp;
+  };
+  // This year first, so a heading and a name come from it where both have the account.
+  const detta = perAr(aret);
+  const tidigare = perAr(foregaende);
+
+  const rader: Falt[][] = [
+    [
+      'Rubrik',
+      'Konto',
+      'Kontonamn',
+      `Belopp ${aret.period}`,
+      ...(foregaende === undefined ? [] : [`Belopp ${foregaende.period}`]),
+    ],
+  ];
+  const konton = [...new Set([...detta.keys(), ...tidigare.keys()])].sort((a, b) =>
+    a.localeCompare(b),
+  );
+  for (const konto of konton) {
+    const nu = detta.get(konto);
+    const fore = tidigare.get(konto);
+    rader.push([
+      rubrik.get(konto) ?? '',
+      konto,
+      namn.get(konto) ?? '',
+      nu === undefined ? undefined : belopp(nu),
+      ...(foregaende === undefined
+        ? []
+        : [fore === undefined ? undefined : belopp(fore)]),
+    ]);
+  }
+  return rader;
+}
+
 /** The income statement, group by group, with its subtotals. */
 export function resultatrakningTabell(rapport: Resultatrakning): Tabell {
   const rader: Falt[][] = [['Rubrik', 'Konto', 'Kontonamn', 'Belopp']];

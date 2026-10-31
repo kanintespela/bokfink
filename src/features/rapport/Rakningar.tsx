@@ -9,6 +9,7 @@ import { beraknaResultatrakning } from '../../domain/rapport/resultatrakning';
 import { beraknaPeriodsaldon } from '../../domain/rapport/saldon';
 import {
   balansrakningTabell,
+  resultatPerKontoTabell,
   resultatrakningTabell,
   type Tabell,
 } from '../../domain/export/tabeller';
@@ -103,6 +104,35 @@ export function Rakningar({ konton, verifikat, rakenskapsar, vilken }: Props) {
       : beraknaBalansrakning(saldon, konton);
   }, [foregaende, konton, verifikat, vilken]);
 
+  /*
+   * The whole year and the one before, whatever period is on screen: a budget is
+   * made for a year, and it is made on last year's figures.
+   */
+  const budgetunderlag = useMemo((): Tabell | undefined => {
+    if (vilken !== 'resultat' || aret === undefined) {
+      return undefined;
+    }
+    const helar = (rakenskapsaret: Rakenskapsar) => ({
+      period: `${rakenskapsaret.start}–${rakenskapsaret.slut}`,
+      rapport: beraknaResultatrakning(
+        beraknaPeriodsaldon(
+          rakenskapsaret,
+          verifikat,
+          rakenskapsaret.start,
+          rakenskapsaret.slut,
+        ),
+        konton,
+      ),
+    });
+    const forra = ar.find(
+      (kandidat) => delar(kandidat.start).ar === delar(aret.start).ar - 1,
+    );
+    return resultatPerKontoTabell(
+      helar(aret),
+      forra === undefined ? undefined : helar(forra),
+    );
+  }, [ar, aret, konton, verifikat, vilken]);
+
   if (aret === undefined || period === undefined || rapport === undefined) {
     return (
       <p className="tomt" data-testid="inget-rakenskapsar">
@@ -188,6 +218,21 @@ export function Rakningar({ konton, verifikat, rakenskapsar, vilken }: Props) {
       </p>
 
       <Exportknappar tabell={tabell} namn={`${filprefix}-${vilken}-${fran}-${till}`} />
+
+      {budgetunderlag !== undefined && (
+        <div data-testid="budgetunderlag">
+          <p className="hjalptext">
+            Till en budget i Excel: resultatet per konto för hela året och året före,
+            oavsett vilken period som visas. Intäkter är positiva och kostnader negativa,
+            som i resultaträkningen.
+          </p>
+          <Exportknappar
+            tabell={budgetunderlag}
+            namn={`${filprefix}-resultat-per-konto-${aret.start.slice(0, 4)}`}
+            idprefix="budgetunderlag"
+          />
+        </div>
+      )}
 
       {'grupper' in rapport ? (
         <div data-testid="resultatrakning">
