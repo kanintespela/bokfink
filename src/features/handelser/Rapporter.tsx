@@ -9,15 +9,18 @@ import { Tillbaka } from '../../ui/Tillbaka';
 import { Huvudbok } from '../huvudbok/Huvudbok';
 import { Nyckeltal } from '../rapport/Nyckeltal';
 import { Rakningar } from '../rapport/Rakningar';
+import type { Projekt } from '../../domain/projekt/projekt';
+import { Projektutdrag } from '../projekt/Projektutdrag';
 import { Handelser } from './Handelser';
 
-type Rapport = 'nyckeltal' | 'resultat' | 'balans' | 'huvudbok' | 'handelser';
+type Rapport = 'nyckeltal' | 'resultat' | 'balans' | 'huvudbok' | 'projekt' | 'handelser';
 
 const NAMN: Record<Rapport, string> = {
   nyckeltal: 'Nyckeltal',
   resultat: 'Resultat',
   balans: 'Balans',
   huvudbok: 'Huvudbok',
+  projekt: 'Projekt',
   handelser: 'Händelser',
 };
 
@@ -31,6 +34,8 @@ interface Props {
   readonly rakenskapsar: readonly Rakenskapsar[];
   readonly allaVerifikat: readonly BokfortVerifikat[];
   readonly idag: Datum;
+  /** The book's projects; with none, there is no project statement to show. */
+  readonly projekt: readonly Projekt[];
   /** False for a book with no moms, which then has no moms figure to show. */
   readonly visaMoms?: boolean;
 }
@@ -53,6 +58,7 @@ export function Rapporter(props: Props) {
       <div className="segment" style={{ marginBottom: '1rem' }}>
         {(Object.keys(NAMN) as Rapport[])
           .filter((rapport) => rapport !== 'handelser')
+          .filter((rapport) => rapport !== 'projekt' || props.projekt.length > 0)
           .map((rapport) => (
             <button
               key={rapport}
@@ -100,6 +106,15 @@ export function Rapporter(props: Props) {
           konton={props.konton}
           verifikat={props.verifikat}
           ingaendeBalanser={props.ingaendeBalanser}
+        />
+      )}
+
+      {vald === 'projekt' && (
+        <Projektutdrag
+          projekt={props.projekt}
+          konton={props.konton}
+          verifikat={props.allaVerifikat}
+          rakenskapsar={props.rakenskapsar}
         />
       )}
 

@@ -1676,6 +1676,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
             rakenskapsar={laddat.rakenskapsar}
             allaVerifikat={laddat.allaVerifikat}
             idag={idag}
+            projekt={laddat.projekt}
             visaMoms={laddat.momsregistrerad}
           />
         )}

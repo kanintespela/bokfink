@@ -242,3 +242,93 @@ test('does not offer a finished project for a correction, but lets one be taken 
     'LEADER-28 → inget projekt',
   );
 });
+
+/** Books one verifikat by hand; a row may name a project by its label. */
+async function bokforRader(
+  page: Page,
+  beskrivning: string,
+  rader: readonly {
+    konto: string;
+    sida: 'Debet' | 'Kredit';
+    belopp: string;
+    projekt?: string;
+  }[],
+  forvantad: string,
+) {
+  await page.goto('/#frikontering');
+  await page.getByLabel('Vad avser det?').fill(beskrivning);
+  for (const [index, rad] of rader.entries()) {
+    if (index >= 2) {
+      await page.getByTestId('lagg-till-rad').click();
+    }
+    const nr = index + 1;
+    await page.getByLabel(`Konto, rad ${nr}`).fill(rad.konto);
+    await page.getByLabel(`${rad.sida}, rad ${nr}`).fill(rad.belopp);
+    if (rad.projekt !== undefined) {
+      await page.getByLabel(`Projekt, rad ${nr}`).selectOption({ label: rad.projekt });
+    }
+  }
+  await page.getByTestId('bokfor-fri').click();
+  await expect(page.getByTestId('fri-besked')).toContainText(forvantad);
+}
+
+test('shows what a project took in, cost and has left of its grant', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-04-05T10:00:00+02:00') });
+  await page.clock.resume();
+
+  await oppnaProjekt(page);
+  await page.getByLabel('Kod').fill('LEADER-28');
+  await page.getByLabel('Namn', { exact: true }).fill('Ny scen');
+  await page.getByTestId('skapa-projekt').click();
+  await expect(page.getByTestId('projektlista')).toContainText('LEADER-28');
+
+  const P = 'LEADER-28 Ny scen';
+  // 10 000 kr granted and held as a skuld; 3 000 kr spent; 3 000 kr taken up as income.
+  await bokforRader(
+    page,
+    'Beviljat bidrag',
+    [
+      { konto: '1930', sida: 'Debet', belopp: '10000' },
+      { konto: '2900', sida: 'Kredit', belopp: '10000', projekt: P },
+    ],
+    'A1',
+  );
+  await bokforRader(
+    page,
+    'Virke',
+    [
+      { konto: '6100', sida: 'Debet', belopp: '3000', projekt: P },
+      { konto: '1930', sida: 'Kredit', belopp: '3000' },
+    ],
+    'A2',
+  );
+  await bokforRader(
+    page,
+    'Bidraget tas upp som intäkt',
+    [
+      { konto: '2900', sida: 'Debet', belopp: '3000', projekt: P },
+      { konto: '3980', sida: 'Kredit', belopp: '3000', projekt: P },
+    ],
+    'A3',
+  );
+
+  await page.goto('/#rapporter');
+  await page.getByRole('button', { name: 'Projekt', exact: true }).click();
+  await expect(page.getByTestId('pu-intakter')).toContainText('3 000,00');
+  await expect(page.getByTestId('pu-intakter')).toContainText('3980');
+  await expect(page.getByTestId('pu-kostnader')).toContainText('3 000,00');
+  await expect(page.getByTestId('pu-resultat')).toContainText('0,00');
+  // 10 000 received less the 3 000 taken up is what is left to use.
+  await expect(page.getByTestId('pu-skulder')).toContainText('7 000,00');
+  await expect(page.getByTestId('projektrader').getByRole('listitem')).toHaveCount(4);
+
+  // Another year has nothing booked, and the grant still stands.
+  await page.getByLabel('Period').selectOption({ index: 1 });
+  await expect(page.getByTestId('pu-skulder')).toContainText('7 000,00');
+});
+
+test('has no project statement while the book has no project', async ({ page }) => {
+  await page.goto('/#rapporter');
+  await expect(page.getByRole('button', { name: 'Huvudbok' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Projekt', exact: true })).toHaveCount(0);
+});
