@@ -1,5 +1,6 @@
 import { negate, ZERO, type Ore } from '../belopp/ore';
 import type { Konto, Kontonummer } from '../konto/konto';
+import type { Projektutdrag } from '../projekt/projektutdrag';
 import type { Balansrakning } from '../rapport/balansrakning';
 import type { Resultatrakning } from '../rapport/resultatrakning';
 import type { Kontosaldo } from '../rapport/saldon';
@@ -117,6 +118,58 @@ export function huvudbokTabell(
       belopp(saldo.utgaende),
     ]);
   }
+
+  return rader;
+}
+
+/**
+ * One project's rader out of the huvudbok, and what they add up to.
+ *
+ * The rader come first, as in the huvudbok; the sums follow with their own
+ * label in the last column, so that a spreadsheet can filter the rader on the
+ * account columns and the sums stay out of the way. Every rad carries the
+ * project's code, for a recipient who puts several projects in one sheet.
+ */
+export function projektutdragTabell(
+  utdrag: Projektutdrag,
+  konton: ReadonlyMap<Kontonummer, Konto>,
+): Tabell {
+  const kod = utdrag.projekt.kod;
+  const rader: Falt[][] = [
+    [
+      'Projekt',
+      'Datum',
+      'Verifikat',
+      'Konto',
+      'Kontonamn',
+      'Beskrivning',
+      'Debet',
+      'Kredit',
+      'Summa',
+    ],
+  ];
+
+  for (const rad of utdrag.rader) {
+    rader.push([
+      kod,
+      rad.datum,
+      beteckning(rad.verifikat),
+      rad.konto,
+      konton.get(rad.konto)?.namn ?? '',
+      rad.text,
+      ...debetKredit(rad.belopp),
+      undefined,
+    ]);
+  }
+
+  const summa = (beskrivning: string, varde: Ore) =>
+    rader.push([kod, '', '', '', '', beskrivning, undefined, undefined, belopp(varde)]);
+  summa('Intäkter', utdrag.summaIntakter);
+  summa('Kostnader', utdrag.summaKostnader);
+  summa('Finansiella poster', utdrag.summaFinansiella);
+  summa('Resultat', utdrag.resultat);
+  summa('Tillgångar på projektet', utdrag.summaTillgangar);
+  summa('Skuld kvar på projektet', utdrag.summaSkulder);
 
   return rader;
 }

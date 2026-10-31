@@ -5,12 +5,15 @@ import { kontonummer, skapaKonto, type Konto, type Kontonummer } from '../konto/
 import type { Uuid } from '../id/uuidv7';
 import { beraknaSaldon } from '../rapport/saldon';
 import { beraknaResultatrakning } from '../rapport/resultatrakning';
+import { skapaProjekt } from '../projekt/projekt';
+import { projektutdrag } from '../projekt/projektutdrag';
 import { datum } from '../tid/datum';
 import { verifikatserie } from '../verifikat/serie';
 import { bokfor, skapaUtkast, type BokfortVerifikat } from '../verifikat/verifikat';
-import { skrivCsv } from './csv';
+import { belopp, skrivCsv } from './csv';
 import {
   huvudbokTabell,
+  projektutdragTabell,
   resultatrakningTabell,
   tillJson,
   verifikationslistaTabell,
@@ -125,5 +128,72 @@ describe('tillJson', () => {
     >[];
     expect(poster[0]?.['Debet']).toBe(1250000);
     expect(poster[0]?.['Kredit']).toBeNull();
+  });
+});
+
+describe('projektutdragTabell', () => {
+  const projekt = skapaProjekt({
+    id: '019b76da-a800-7000-8000-0000000000a1' as Uuid,
+    kod: 'LEADER-28',
+    namn: 'Ny scen',
+  });
+  const KOSTNAD = bokfor(
+    skapaUtkast({
+      id: '019b76da-a800-7000-8000-000000000002' as Uuid,
+      datum: datum('2026-03-02'),
+      beskrivning: 'Virke',
+      konteringar: [
+        { konto: kontonummer('5460'), belopp: kr('800.00'), projekt: projekt.id },
+        { konto: kontonummer('1930'), belopp: kr('-800.00') },
+      ],
+    }),
+    {
+      serie: verifikatserie('A'),
+      nummer: 2,
+      bokfortDatum: datum('2026-03-02'),
+      kalla: 'manuell',
+    },
+  );
+  const konton: ReadonlyMap<Kontonummer, Konto> = new Map([
+    [kontonummer('5460'), skapaKonto({ nummer: '5460', namn: 'Förbrukningsmaterial' })],
+  ]);
+
+  it('lists the rader of the project, then the sums, each with the project code', () => {
+    const tabell = projektutdragTabell(
+      projektutdrag(projekt, [FORSALJNING, KOSTNAD]),
+      konton,
+    );
+
+    expect(tabell[0]).toEqual([
+      'Projekt',
+      'Datum',
+      'Verifikat',
+      'Konto',
+      'Kontonamn',
+      'Beskrivning',
+      'Debet',
+      'Kredit',
+      'Summa',
+    ]);
+    // Only the cost row is on the project: the bank row and the sale are not.
+    expect(tabell[1]).toEqual([
+      'LEADER-28',
+      '2026-03-02',
+      'A2',
+      '5460',
+      'Förbrukningsmaterial',
+      'Virke',
+      belopp(kr('800.00')),
+      undefined,
+      undefined,
+    ]);
+    expect(tabell.slice(2).map((rad) => [rad[5], rad[8]])).toEqual([
+      ['Intäkter', belopp(kr('0'))],
+      ['Kostnader', belopp(kr('800.00'))],
+      ['Finansiella poster', belopp(kr('0'))],
+      ['Resultat', belopp(kr('-800.00'))],
+      ['Tillgångar på projektet', belopp(kr('0'))],
+      ['Skuld kvar på projektet', belopp(kr('0'))],
+    ]);
   });
 });
