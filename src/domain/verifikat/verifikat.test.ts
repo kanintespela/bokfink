@@ -615,6 +615,98 @@ describe('ratta', () => {
     );
   });
 
+  describe('the project of a rad', () => {
+    const P1 = '019b76da-a800-7000-8000-0000000000a1' as Uuid;
+    const P2 = '019b76da-a800-7000-8000-0000000000a2' as Uuid;
+
+    it('sets a project on a rad and records which rad and what it held', () => {
+      const rattat = ratta(bokfort(), { projekt: [{ rad: 0, projekt: P1 }], nar, enhet });
+
+      expect(rattat.konteringar.map((post) => post.projekt)).toEqual([
+        P1,
+        undefined,
+        undefined,
+      ]);
+      expect(rattat.rattelser).toEqual([
+        { nar, enhet, falt: 'projekt', rad: 0, fran: '', till: P1 },
+      ]);
+    });
+
+    it('changes and takes away a project, keeping the old one beside the new', () => {
+      const pa = ratta(bokfort(), { projekt: [{ rad: 0, projekt: P1 }], nar, enhet });
+      const flyttat = ratta(pa, { projekt: [{ rad: 0, projekt: P2 }], nar, enhet });
+      const borta = ratta(flyttat, { projekt: [{ rad: 0, projekt: null }], nar, enhet });
+
+      expect(flyttat.konteringar[0]?.projekt).toBe(P2);
+      expect(borta.konteringar[0]).not.toHaveProperty('projekt');
+      expect(borta.rattelser?.map((post) => [post.fran, post.till])).toEqual([
+        ['', P1],
+        [P1, P2],
+        [P2, ''],
+      ]);
+    });
+
+    it('moves no money and no account, and leaves the other rows as they were', () => {
+      const original = bokfort();
+      const rattat = ratta(original, { projekt: [{ rad: 1, projekt: P1 }], nar, enhet });
+
+      expect(rattat.konteringar.map(({ konto, belopp }) => [konto, belopp])).toEqual(
+        original.konteringar.map(({ konto, belopp }) => [konto, belopp]),
+      );
+      expect(rattat.konteringar[0]).toBe(original.konteringar[0]);
+      expect(rattat.konteringar[2]).toBe(original.konteringar[2]);
+      expect(Object.isFrozen(rattat.konteringar[1])).toBe(true);
+    });
+
+    it('records one rättelse for each rad, alongside a corrected description', () => {
+      const rattat = ratta(bokfort(), {
+        beskrivning: 'Swedol AB',
+        projekt: [
+          { rad: 0, projekt: P1 },
+          { rad: 2, projekt: P2 },
+        ],
+        nar,
+        enhet,
+      });
+
+      expect(rattat.rattelser?.map((post) => [post.falt, post.rad])).toEqual([
+        ['beskrivning', undefined],
+        ['projekt', 0],
+        ['projekt', 2],
+      ]);
+    });
+
+    it('refuses a correction to the project a rad already has', () => {
+      const pa = ratta(bokfort(), { projekt: [{ rad: 0, projekt: P1 }], nar, enhet });
+
+      expect(() => ratta(pa, { projekt: [{ rad: 0, projekt: P1 }], nar, enhet })).toThrow(
+        TomRattelseError,
+      );
+      expect(() =>
+        ratta(bokfort(), { projekt: [{ rad: 0, projekt: null }], nar, enhet }),
+      ).toThrow(TomRattelseError);
+    });
+
+    it('refuses a rad that does not exist, and one corrected twice', () => {
+      expect(() =>
+        ratta(bokfort(), { projekt: [{ rad: 3, projekt: P1 }], nar, enhet }),
+      ).toThrow(RangeError);
+      expect(() =>
+        ratta(bokfort(), { projekt: [{ rad: -1, projekt: P1 }], nar, enhet }),
+      ).toThrow(RangeError);
+      expect(() =>
+        ratta(bokfort(), {
+          projekt: [
+            { rad: 0, projekt: P1 },
+            { rad: 0, projekt: P2 },
+          ],
+          nar,
+          enhet,
+        }),
+      ).toThrow(RangeError);
+    });
+  });
+
   it('leaves the corrected verifikat as frozen as a booked one', () => {
     const rattat = ratta(bokfort(), { beskrivning: 'Swedol AB', nar, enhet });
 

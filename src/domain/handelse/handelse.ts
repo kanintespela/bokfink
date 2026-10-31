@@ -28,6 +28,7 @@ import {
 } from '../underlag/underlag';
 import {
   ratta,
+  type Projektrattelse,
   type BokfortVerifikat,
   type Verifikatutkast,
 } from '../verifikat/verifikat';
@@ -114,6 +115,8 @@ export type Handelse =
       readonly verifikatId: Uuid;
       readonly beskrivning?: string;
       readonly datum?: Datum;
+      /** Rows whose project is corrected, by their place in the konteringar. */
+      readonly projekt?: readonly Projektrattelse[];
     })
   | (Handelsehuvud & { readonly typ: 'mall.sparad'; readonly mall: Konteringsmall })
   | (Handelsehuvud & { readonly typ: 'mall.borttagen'; readonly mallId: Uuid })
@@ -557,6 +560,7 @@ export function effekter(
               ? {}
               : { beskrivning: handelse.beskrivning }),
             ...(handelse.datum === undefined ? {} : { datum: handelse.datum }),
+            ...(handelse.projekt === undefined ? {} : { projekt: handelse.projekt }),
             // BFL 5 kap. 8 § wants when and who; the log entry is both.
             nar: handelse.tidpunkt,
             enhet: handelse.enhet,

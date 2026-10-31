@@ -119,9 +119,49 @@ function barRattelse(fore: VerifikatRad, efter: VerifikatRad): boolean {
     fore.bokfortDatum === efter.bokfortDatum &&
     fore.rakenskapsarId === efter.rakenskapsarId &&
     fore.annullerar === efter.annullerar &&
-    JSON.stringify(fore.konteringar) === JSON.stringify(efter.konteringar) &&
-    arTillagg(fore.rattelser ?? [], efter.rattelser ?? [])
+    sammaPengarOchKonton(fore.konteringar, efter.konteringar) &&
+    arTillagg(fore.rattelser ?? [], efter.rattelser ?? []) &&
+    projektenArRattade(fore, efter)
   );
+}
+
+/**
+ * Whether the rows are the same rows: the same accounts, amounts and notes in
+ * the same order. A rad's project is not part of it, as it may be corrected.
+ */
+function sammaPengarOchKonton(
+  fore: VerifikatRad['konteringar'],
+  efter: VerifikatRad['konteringar'],
+): boolean {
+  // Every field but the project, so a field added to a rad later is guarded too.
+  const utanProjekt = (rader: VerifikatRad['konteringar']) =>
+    JSON.stringify(
+      rader.map((rad) => Object.entries(rad).filter(([falt]) => falt !== 'projekt')),
+    );
+  return fore.length === efter.length && utanProjekt(fore) === utanProjekt(efter);
+}
+
+/**
+ * Whether every rad whose project differs has a rättelse of its own in what
+ * `efter` added, saying what it held and what it holds now. A project changed
+ * with nothing recorded is as unrecorded as a description changed with nothing
+ * recorded.
+ */
+function projektenArRattade(fore: VerifikatRad, efter: VerifikatRad): boolean {
+  const nya = (efter.rattelser ?? []).slice((fore.rattelser ?? []).length);
+  return fore.konteringar.every((rad, index) => {
+    const nu = efter.konteringar[index]?.projekt;
+    if (rad.projekt === nu) {
+      return true;
+    }
+    return nya.some(
+      (post) =>
+        post.falt === 'projekt' &&
+        post.rad === index &&
+        post.fran === (rad.projekt ?? '') &&
+        post.till === (nu ?? ''),
+    );
+  });
 }
 
 /** Whether `efter` is `fore` with at least one rättelse added at the end. */

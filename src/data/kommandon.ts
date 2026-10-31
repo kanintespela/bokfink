@@ -25,6 +25,7 @@ import {
   bokfor,
   ratta,
   type BokfortVerifikat,
+  type Projektrattelse,
   type Verifikatkalla,
   type Verifikatutkast,
 } from '../domain/verifikat/verifikat';
@@ -111,10 +112,10 @@ export class AvslutatProjektError extends Error {
  */
 async function kontrolleraProjekt(
   db: KonteraDatabase,
-  konteringar: Verifikatutkast['konteringar'],
+  projektIdn: Iterable<Uuid>,
   tillatAvslutat = false,
 ): Promise<void> {
-  for (const projektId of new Set(konteringar.flatMap((rad) => rad.projekt ?? []))) {
+  for (const projektId of new Set(projektIdn)) {
     const projekt = await db.table<Projekt, Uuid>(PROJEKT_TABLE).get(projektId);
     if (projekt === undefined) {
       throw new OkantProjektError(projektId);
@@ -163,7 +164,10 @@ export async function sparaUtkast(
   kontext: Skrivkontext,
   utkast: Verifikatutkast,
 ): Promise<void> {
-  await kontrolleraProjekt(db, utkast.konteringar);
+  await kontrolleraProjekt(
+    db,
+    utkast.konteringar.flatMap((rad) => rad.projekt ?? []),
+  );
   await tillampa(db, { ...huvud(kontext), typ: 'utkast.sparat', utkast });
 }
 
@@ -386,7 +390,11 @@ export async function bokforUtkast(
     utkast.datum,
     paverkarMomsdeklarationen(utkast.konteringar),
   );
-  await kontrolleraProjekt(db, utkast.konteringar, utkast.annullerar !== undefined);
+  await kontrolleraProjekt(
+    db,
+    utkast.konteringar.flatMap((rad) => rad.projekt ?? []),
+    utkast.annullerar !== undefined,
+  );
 
   const verifikat = bokfor(utkast, {
     serie,
@@ -421,9 +429,28 @@ export async function rattaVerifikat(
   db: KonteraDatabase,
   kontext: Skrivkontext,
   original: BokfortVerifikat,
-  andring: { readonly beskrivning?: string; readonly datum?: Datum },
+  andring: {
+    readonly beskrivning?: string;
+    readonly datum?: Datum;
+    readonly projekt?: readonly Projektrattelse[];
+  },
 ): Promise<BokfortVerifikat> {
   const gammaltAr = await hittaAr(db, original.datum);
+
+  /*
+   * A project may be taken off a row, or kept where it is, whether the project
+   * is finished or not; one put on a row must be there and be open, the same as
+   * when a row is saved. A rad that already has the project is not put on it.
+   */
+  await kontrolleraProjekt(
+    db,
+    (andring.projekt ?? []).flatMap((rattelse) =>
+      rattelse.projekt === null ||
+      original.konteringar[rattelse.rad]?.projekt === rattelse.projekt
+        ? []
+        : [rattelse.projekt],
+    ),
+  );
 
   if (andring.datum !== undefined && andring.datum !== original.datum) {
     if (kontext.idag !== undefined) {
@@ -454,6 +481,7 @@ export async function rattaVerifikat(
   const rattat = ratta(original, {
     ...(andring.beskrivning === undefined ? {} : { beskrivning: andring.beskrivning }),
     ...(andring.datum === undefined ? {} : { datum: andring.datum }),
+    ...(andring.projekt === undefined ? {} : { projekt: andring.projekt }),
     nar: post.tidpunkt,
     enhet: post.enhet,
   });
@@ -464,6 +492,7 @@ export async function rattaVerifikat(
     verifikatId: original.id,
     ...(andring.beskrivning === undefined ? {} : { beskrivning: rattat.beskrivning }),
     ...(andring.datum === undefined ? {} : { datum: rattat.datum }),
+    ...(andring.projekt === undefined ? {} : { projekt: andring.projekt }),
   });
   return rattat;
 }

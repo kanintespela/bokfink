@@ -96,14 +96,14 @@ export type Verifikat = Verifikatutkast | BokfortVerifikat;
  * What may be corrected on a booked verifikat.
  *
  * Deliberately short, and it will stay short. The description is prose about
- * what the affärshändelse was, and the date is which day it belongs to;
- * neither moves an öre between accounts. The konteringar, the amount, the
- * serie and the nummer are not here and must never be - correcting those
- * changes what the books say happened, which is what bokföringslagen 5 kap.
- * 5 §'s särskild rättelsepost exists for and what Kontera does with an
- * annullering.
+ * what the affärshändelse was, the date is which day it belongs to, and the
+ * project is which undertaking a rad is followed under; none of them moves an
+ * öre between accounts. The accounts, the amounts, the serie and the nummer
+ * are not here and must never be - correcting those changes what the books say
+ * happened, which is what bokföringslagen 5 kap. 5 §'s särskild rättelsepost
+ * exists for and what Kontera does with an annullering.
  */
-export type Rattbartfalt = 'beskrivning' | 'datum';
+export type Rattbartfalt = 'beskrivning' | 'datum' | 'projekt';
 
 /**
  * A correction made to a booked verifikat, kept beside it for good.
@@ -125,7 +125,14 @@ export interface Rattelse {
   /** The device that made it, which is what the log knows about "who". */
   readonly enhet: string;
   readonly falt: Rattbartfalt;
+  /**
+   * The rad a project was corrected on, counted from 0 in the verifikat's
+   * konteringar, which never change order. Only on a correction of `projekt`.
+   */
+  readonly rad?: number;
+  /** What the field held; for a project its id, or empty for none. */
   readonly fran: string;
+  /** What it holds now; for a project its id, or empty for none. */
   readonly till: string;
 }
 
@@ -266,9 +273,20 @@ export function annullera(
   };
 }
 
+/** A rad's project corrected to this one, or to none when it is null. */
+export interface Projektrattelse {
+  readonly rad: number;
+  readonly projekt: Uuid | null;
+}
+
 export interface Rattelseuppgifter {
   readonly beskrivning?: string;
   readonly datum?: Datum;
+  /**
+   * The projects of rows to change. Whether a project exists and is open is not
+   * decided here, as with a date: this layer has no register to look in.
+   */
+  readonly projekt?: readonly Projektrattelse[];
   /** When the correction was made, and by which device. BFL 5 kap. 8 §. */
   readonly nar: string;
   readonly enhet: string;
@@ -282,7 +300,7 @@ export class TomRattelseError extends Error {
 }
 
 /**
- * Corrects the description or the date of a booked verifikat.
+ * Corrects the description, the date or the project of a row of a booked verifikat.
  *
  * Bokföringslagen 5 kap. 8 § allows this: "Om en verifikation rättas, skall
  * det anges när rättelsen har skett och vem som har gjort den." It asks for a
@@ -330,6 +348,41 @@ export function ratta(
     });
   }
 
+  const rader = [...original.konteringar];
+  const rattadeRader = new Set<number>();
+  for (const andring of uppgifter.projekt ?? []) {
+    const rad = original.konteringar[andring.rad];
+    if (rad === undefined) {
+      throw new RangeError(
+        `${beteckning(original)} har ingen rad ${andring.rad + 1}, så projektet på den ` +
+          'kan inte rättas.',
+      );
+    }
+    if (rattadeRader.has(andring.rad)) {
+      throw new RangeError(`Rad ${andring.rad + 1} rättas två gånger i samma rättelse.`);
+    }
+    rattadeRader.add(andring.rad);
+    if ((rad.projekt ?? null) === andring.projekt) {
+      continue;
+    }
+    rattelser.push({
+      nar: uppgifter.nar,
+      enhet: uppgifter.enhet,
+      falt: 'projekt',
+      rad: andring.rad,
+      fran: rad.projekt ?? '',
+      till: andring.projekt ?? '',
+    });
+    const utanProjekt = Object.fromEntries(
+      Object.entries(rad).filter(([falt]) => falt !== 'projekt'),
+    ) as unknown as Kontering;
+    rader[andring.rad] = Object.freeze(
+      andring.projekt === null
+        ? utanProjekt
+        : { ...utanProjekt, projekt: andring.projekt },
+    );
+  }
+
   /*
    * A correction that corrects nothing would still be written to the log and
    * would still show up beside the verifikat as one, which turns the record
@@ -345,6 +398,7 @@ export function ratta(
     ...original,
     ...(beskrivning === undefined ? {} : { beskrivning }),
     ...(uppgifter.datum === undefined ? {} : { datum: uppgifter.datum }),
+    konteringar: rader,
     rattelser: [...(original.rattelser ?? []), ...rattelser],
   };
 

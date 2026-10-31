@@ -12,14 +12,21 @@ import { datum } from '../domain/tid/datum';
 import { verifikatserie } from '../domain/verifikat/serie';
 import { skapaUtkast } from '../domain/verifikat/verifikat';
 import { exportera, importera } from './backup';
-import { lasLogg, lasTillstand, skyddaBokfordaVerifikat } from './bokforing';
+import {
+  lasLogg,
+  lasTillstand,
+  OforanderligtVerifikatError,
+  skyddaBokfordaVerifikat,
+} from './bokforing';
 import { KonteraDatabase } from './db';
+import { VERIFIKAT_TABLE } from './schema';
 import {
   andraProjektet,
   annulleraVerifikat,
   AvslutatProjektError,
   bokforUtkast,
   OkantProjektError,
+  rattaVerifikat,
   skrivKonto,
   skrivProjekt,
   skrivRakenskapsar,
@@ -164,6 +171,177 @@ describe('en konteringsrad på ett projekt', () => {
       belopp: kr('-1000'),
       projekt: projekt.id,
     });
+  });
+});
+
+describe('rättelse av projekt på en bokförd rad', () => {
+  it('puts a project on a row after booking, with when and who, and moves no money', async () => {
+    const db = await bok();
+    const projekt = await skrivProjekt(db, kontext, { kod: 'P2026', namn: 'Läger' });
+    const original = await bokforUtkast(db, kontext, utkast(), A);
+
+    await rattaVerifikat(db, kontext, original, {
+      projekt: [{ rad: 0, projekt: projekt.id }],
+    });
+
+    const lagrat = (await lasTillstand(db)).verifikat.get(original.id);
+    expect(lagrat?.konteringar[0]).toMatchObject({
+      konto: '5020',
+      belopp: kr('1000'),
+      projekt: projekt.id,
+    });
+    expect(lagrat?.konteringar[1]).toEqual(original.konteringar[1]);
+    expect(lagrat?.rattelser).toEqual([
+      {
+        nar: '2026-10-30T08:00:00.000Z',
+        enhet: 'enhet-a',
+        falt: 'projekt',
+        rad: 0,
+        fran: '',
+        till: projekt.id,
+      },
+    ]);
+  });
+
+  it('moves a row from one project to another and takes it off again', async () => {
+    const db = await bok();
+    const ett = await skrivProjekt(db, kontext, { kod: 'P1', namn: 'Ett' });
+    const tva = await skrivProjekt(db, kontext, { kod: 'P2', namn: 'Två' });
+    const original = await bokforUtkast(db, kontext, utkast(ett.id), A);
+
+    await rattaVerifikat(db, kontext, original, {
+      projekt: [{ rad: 0, projekt: tva.id }],
+    });
+    const flyttat = (await lasTillstand(db)).verifikat.get(original.id)!;
+    expect(flyttat.konteringar[0]?.projekt).toBe(tva.id);
+
+    await rattaVerifikat(db, kontext, flyttat, { projekt: [{ rad: 0, projekt: null }] });
+    const borta = (await lasTillstand(db)).verifikat.get(original.id)!;
+    expect(borta.konteringar[0]).not.toHaveProperty('projekt');
+    expect(borta.rattelser?.map((post) => [post.fran, post.till])).toEqual([
+      [ett.id, tva.id],
+      [tva.id, ''],
+    ]);
+  });
+
+  it('is refused for a project that does not exist, or is finished, and changes nothing', async () => {
+    const db = await bok();
+    const avslutat = await skrivProjekt(db, kontext, { kod: 'P1', namn: 'Ett' });
+    const original = await bokforUtkast(db, kontext, utkast(), A);
+    await andraProjektet(db, kontext, avslutat.id, { avslutat: true });
+
+    await expect(
+      rattaVerifikat(db, kontext, original, {
+        projekt: [{ rad: 0, projekt: '019b76da-a800-7000-8000-000000009999' as Uuid }],
+      }),
+    ).rejects.toBeInstanceOf(OkantProjektError);
+    await expect(
+      rattaVerifikat(db, kontext, original, {
+        projekt: [{ rad: 0, projekt: avslutat.id }],
+      }),
+    ).rejects.toBeInstanceOf(AvslutatProjektError);
+
+    const lagrat = (await lasTillstand(db)).verifikat.get(original.id);
+    expect(lagrat?.rattelser).toBeUndefined();
+    expect(lagrat?.konteringar[0]).not.toHaveProperty('projekt');
+  });
+
+  it('may take a row off a project that has since been finished', async () => {
+    const db = await bok();
+    const projekt = await skrivProjekt(db, kontext, { kod: 'P1', namn: 'Ett' });
+    const original = await bokforUtkast(db, kontext, utkast(projekt.id), A);
+    await andraProjektet(db, kontext, projekt.id, { avslutat: true });
+
+    await rattaVerifikat(db, kontext, original, { projekt: [{ rad: 0, projekt: null }] });
+    expect(
+      (await lasTillstand(db)).verifikat.get(original.id)?.konteringar[0],
+    ).not.toHaveProperty('projekt');
+  });
+
+  it('is corrected together with a description and a date, one rättelse for each thing', async () => {
+    const db = await bok();
+    const projekt = await skrivProjekt(db, kontext, { kod: 'P1', namn: 'Ett' });
+    const original = await bokforUtkast(db, kontext, utkast(), A);
+
+    await rattaVerifikat(db, kontext, original, {
+      beskrivning: 'Elräkning juni',
+      datum: datum('2026-06-02'),
+      projekt: [{ rad: 0, projekt: projekt.id }],
+    });
+    expect(
+      (await lasTillstand(db)).verifikat.get(original.id)?.rattelser?.map((p) => p.falt),
+    ).toEqual(['beskrivning', 'datum', 'projekt']);
+  });
+
+  it('cannot be done around the correction: a changed project with nothing recorded is refused', async () => {
+    const db = await bok();
+    const projekt = await skrivProjekt(db, kontext, { kod: 'P1', namn: 'Ett' });
+    const original = await bokforUtkast(db, kontext, utkast(), A);
+
+    await expect(
+      db.table(VERIFIKAT_TABLE).update(original.id, {
+        konteringar: [
+          { ...original.konteringar[0], projekt: projekt.id },
+          original.konteringar[1],
+        ],
+      }),
+    ).rejects.toBeInstanceOf(OforanderligtVerifikatError);
+    // Nor with a rättelse that says something else than what was done.
+    await expect(
+      db.table(VERIFIKAT_TABLE).update(original.id, {
+        konteringar: [
+          { ...original.konteringar[0], projekt: projekt.id },
+          original.konteringar[1],
+        ],
+        rattelser: [
+          {
+            nar: '2026-10-30T08:00:00.000Z',
+            enhet: 'enhet-a',
+            falt: 'projekt',
+            rad: 1,
+            fran: '',
+            till: projekt.id,
+          },
+        ],
+      }),
+    ).rejects.toBeInstanceOf(OforanderligtVerifikatError);
+    // And never the money, even with a rättelse alongside.
+    await expect(
+      db.table(VERIFIKAT_TABLE).update(original.id, {
+        konteringar: [
+          { ...original.konteringar[0], belopp: kr('999'), projekt: projekt.id },
+          original.konteringar[1],
+        ],
+        rattelser: [
+          {
+            nar: '2026-10-30T08:00:00.000Z',
+            enhet: 'enhet-a',
+            falt: 'projekt',
+            rad: 0,
+            fran: '',
+            till: projekt.id,
+          },
+        ],
+      }),
+    ).rejects.toBeInstanceOf(OforanderligtVerifikatError);
+  });
+
+  it('rebuilds from the log to the same row, and survives a backup', async () => {
+    const db = await bok();
+    const projekt = await skrivProjekt(db, kontext, { kod: 'P1', namn: 'Ett' });
+    const original = await bokforUtkast(db, kontext, utkast(), A);
+    await rattaVerifikat(db, kontext, original, {
+      projekt: [{ rad: 0, projekt: projekt.id }],
+    });
+
+    const franLogg = bygg(await lasLogg(db)).verifikat.get(original.id);
+    const franTabell = (await lasTillstand(db)).verifikat.get(original.id);
+    expect(franLogg).toEqual(franTabell);
+    expect(franLogg?.konteringar[0]?.projekt).toBe(projekt.id);
+
+    const ny = await nyDb();
+    await importera(ny, await exportera(db), { hasha: hashaFil });
+    expect((await lasTillstand(ny)).verifikat.get(original.id)).toEqual(franTabell);
   });
 });
 
