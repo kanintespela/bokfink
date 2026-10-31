@@ -1917,6 +1917,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
             onTillbaka={() => setVy('mer')}
             rakenskapsar={laddat.rakenskapsar}
             konton={laddat.konton}
+            projekt={laddat.projekt}
             idag={idag}
             katalog={bokslutskatalogFor(laddat.profil)}
             profil={laddat.profil}

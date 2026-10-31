@@ -2,7 +2,9 @@ import { negate, oreFromKronor, type Ore } from '../belopp/ore';
 import type { Bokprofil } from '../bok/bokprofil';
 import { kontonummer, type Kontonummer } from '../konto/konto';
 import { delaBelopp } from '../mall/konteringsmall';
+import type { Uuid } from '../id/uuidv7';
 import { forvaltMomskonto } from '../moms/momskonto';
+import { medProjektPaKonto } from '../projekt/projekt';
 import type { Kontering } from '../verifikat/verifikat';
 
 /**
@@ -298,6 +300,12 @@ export interface Bokslutspost {
   readonly balanskonto: Kontonummer;
   /** Defaults to the BAS account for the direction and rate. */
   readonly momskonto?: Kontonummer;
+  /**
+   * The project the item belongs to. It is set on the income or cost row and
+   * on the balance row, so that a skuld for a grant can be followed on its own;
+   * the moms row is no part of a project.
+   */
+  readonly projekt?: Uuid;
 }
 
 /**
@@ -313,6 +321,15 @@ export function bokslutspostKonteringar(
   post: Bokslutspost,
   katalog: Bokslutskatalog = BOKSLUTSPOSTER,
 ): Kontering[] {
+  const rader = grundkonteringar(post, katalog);
+  return medProjektPaKonto(
+    medProjektPaKonto(rader, post.motkonto, post.projekt),
+    post.balanskonto,
+    post.projekt,
+  );
+}
+
+function grundkonteringar(post: Bokslutspost, katalog: Bokslutskatalog): Kontering[] {
   const beskrivning = katalog[post.typ];
   if (beskrivning === undefined) {
     throw new RangeError(`Den här sortens bok tar inte upp ${post.typ} vid årets slut.`);

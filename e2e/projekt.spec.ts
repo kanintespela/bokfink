@@ -118,3 +118,32 @@ test('puts the cost row of a guided booking on a project, and not the payment or
     .click();
   await expect(page.getByLabel('Projekt (kostnaden)')).toHaveValue('');
 });
+
+test('takes up a year-end item on a project, the reversal included', async ({ page }) => {
+  // The project is made in the year being closed; the item is taken up in January.
+  await page.clock.install({ time: new Date('2026-12-20T10:00:00+01:00') });
+  await page.clock.resume();
+
+  await oppnaProjekt(page);
+  await page.getByLabel('Kod').fill('LEADER-28');
+  await page.getByLabel('Namn', { exact: true }).fill('Ny scen');
+  await page.getByTestId('skapa-projekt').click();
+  await expect(page.getByTestId('projektlista')).toContainText('LEADER-28');
+
+  await page.clock.setSystemTime(new Date('2027-01-20T10:00:00+01:00'));
+  await page.goto('/#periodisering');
+  await page.reload();
+  await page
+    .getByLabel('Vad gäller det?')
+    .selectOption({ label: 'Förskott till leverantör' });
+  await page.getByLabel('Beskrivning').fill('Handpenning, ny scen');
+  await page.getByLabel('Belopp utan moms').fill('8000');
+  await page.getByLabel('Projekt').selectOption({ label: 'LEADER-28 Ny scen' });
+  await expect(page.getByTestId('bokslutspost-forslag')).toContainText('LEADER-28');
+  await page.getByTestId('bokfor-bokslutspost').click();
+  await expect(page.getByTestId('bokslutspost-besked')).toContainText('tillbakafört');
+
+  await page.goto('/#verifikat');
+  await page.getByTestId('verifikatlista').getByRole('button', { name: /A1/ }).click();
+  await expect(page.getByTestId(/^kontering-/).first()).toContainText('LEADER-28');
+});

@@ -8,7 +8,9 @@ import {
   type Bokslutspost,
   type Posttyp,
 } from '../../domain/bokslut/bokslutspost';
+import type { Uuid } from '../../domain/id/uuidv7';
 import { kontonummer, type Konto, type Kontonummer } from '../../domain/konto/konto';
+import type { Projekt } from '../../domain/projekt/projekt';
 import { forvaltMomskonto } from '../../domain/moms/momskonto';
 import { nastaRakenskapsarsperiod } from '../../domain/bokslut/arsavslut';
 import type { Rakenskapsar } from '../../domain/rakenskapsar/rakenskapsar';
@@ -16,11 +18,13 @@ import type { Datum } from '../../domain/tid/datum';
 import type { Kontering } from '../../domain/verifikat/verifikat';
 import { Tillbaka } from '../../ui/Tillbaka';
 import { tolkaBelopp } from '../bokfor/Beloppsfalt';
+import { Projektval } from '../bokfor/Projektval';
 
 interface Props {
   readonly onTillbaka: () => void;
   readonly rakenskapsar: readonly Rakenskapsar[];
   readonly konton: ReadonlyMap<Kontonummer, Konto>;
+  readonly projekt: readonly Projekt[];
   readonly idag: Datum;
   /** The items this kind of book takes up, with their accounts and sources. */
   readonly katalog: Bokslutskatalog;
@@ -43,6 +47,7 @@ export function Bokslutspostsida({
   onTillbaka,
   rakenskapsar,
   konton,
+  projekt,
   idag,
   katalog,
   profil,
@@ -66,6 +71,7 @@ export function Bokslutspostsida({
   /** A decided grant is only taken up with a decision and its documentation. */
   const [beslutFinns, setBeslutFinns] = useState(false);
   const [beskrivning, setBeskrivning] = useState('');
+  const [projektId, setProjektId] = useState<Uuid | ''>('');
   const [beloppText, setBeloppText] = useState('');
   const [momssats, setMomssats] = useState(25);
   const [motkontoText, setMotkontoText] = useState(forsta.motkonto ?? '');
@@ -121,7 +127,7 @@ export function Bokslutspostsida({
     try {
       return {
         rader: bokslutspostKonteringar(
-          byggPost(katalog, typ, belopp, momssats, motkonto!, balanskonto!),
+          byggPost(katalog, typ, belopp, momssats, motkonto!, balanskonto!, projektId),
           katalog,
         ),
       };
@@ -148,12 +154,21 @@ export function Bokslutspostsida({
       setBesked(
         await onBokfor({
           ar,
-          post: byggPost(katalog, typ, belopp, momssats, motkonto, balanskonto),
+          post: byggPost(
+            katalog,
+            typ,
+            belopp,
+            momssats,
+            motkonto,
+            balanskonto,
+            projektId,
+          ),
           beskrivning,
         }),
       );
       setBeskrivning('');
       setBeloppText('');
+      setProjektId('');
     } catch (orsak) {
       // Hard rule 11: a locked declaration or a year not yet begun is said here.
       setFel(orsak instanceof Error ? orsak.message : String(orsak));
@@ -280,6 +295,14 @@ export function Bokslutspostsida({
         </div>
       )}
 
+      <Projektval
+        id="bokslutspost-projekt"
+        etikett="Projekt"
+        projekt={projekt}
+        varde={projektId}
+        onAndra={setProjektId}
+      />
+
       <div className="faltgrupp">
         <label htmlFor="bokslutspost-motkonto">
           {post.motkontoArIntakt ? 'Intäktskonto' : 'Kostnadskonto'}
@@ -331,6 +354,8 @@ export function Bokslutspostsida({
                     <span>{rad.konto}</span>
                     <span className="listrad__sekundar">
                       {konton.get(rad.konto)?.namn ?? ''}
+                      {rad.projekt !== undefined &&
+                        ` · ${projekt.find((post) => post.id === rad.projekt)?.kod ?? 'okänt projekt'}`}
                     </span>
                   </span>
                   <span className={`belopp${rad.belopp < 0 ? ' belopp--negativ' : ''}`}>
@@ -379,6 +404,7 @@ function byggPost(
   momssats: number,
   motkonto: Kontonummer,
   balanskonto: Kontonummer,
+  projekt: Uuid | '',
 ): Bokslutspost {
   return {
     typ,
@@ -386,6 +412,7 @@ function byggPost(
     ...(katalog[typ]?.medMoms ? { momssats } : {}),
     motkonto,
     balanskonto,
+    ...(projekt === '' ? {} : { projekt }),
   };
 }
 

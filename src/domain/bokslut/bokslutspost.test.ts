@@ -29,6 +29,26 @@ function post(typ: Bokslutsposttyp, belopp: string, momssats?: number) {
 }
 
 describe('bokslutspostKonteringar', () => {
+  it('puts a project on the income and the balance row but not on the moms', () => {
+    const projekt = '019b76da-a800-7000-8000-000000000001' as Uuid;
+    const konteringar = bokslutspostKonteringar({
+      ...post('obetald_kundfaktura', '12500', 25),
+      projekt,
+    });
+
+    expect(konteringar.map((rad) => [rad.konto, rad.projekt])).toEqual([
+      ['1500', projekt],
+      ['3000', projekt],
+      ['2611', undefined],
+    ]);
+    // Turned round for the next year's first day, the project goes back with it.
+    expect(aterforing(konteringar).map((rad) => rad.projekt)).toEqual([
+      projekt,
+      projekt,
+      undefined,
+    ]);
+  });
+
   /*
    * 12 500 kr invoiced with 25 % moms and unpaid on 31 December:
    *   1500 kundfordran 12 500, 3000 försäljning -10 000, 2611 moms -2 500
