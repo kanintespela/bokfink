@@ -147,3 +147,98 @@ test('takes up a year-end item on a project, the reversal included', async ({ pa
   await page.getByTestId('verifikatlista').getByRole('button', { name: /A1/ }).click();
   await expect(page.getByTestId(/^kontering-/).first()).toContainText('LEADER-28');
 });
+
+test('corrects the project of a booked rad and keeps what it was beside it', async ({
+  page,
+}) => {
+  await page.clock.install({ time: new Date('2026-04-05T10:00:00+02:00') });
+  await page.clock.resume();
+
+  await oppnaProjekt(page);
+  await page.getByLabel('Kod').fill('LEADER-28');
+  await page.getByLabel('Namn', { exact: true }).fill('Ny scen');
+  await page.getByTestId('skapa-projekt').click();
+  await expect(page.getByTestId('projektlista')).toContainText('LEADER-28');
+  await page.getByLabel('Kod').fill('FEST-26');
+  await page.getByLabel('Namn', { exact: true }).fill('Sommarfest');
+  await page.getByTestId('skapa-projekt').click();
+  await expect(page.getByTestId('projektlista')).toContainText('FEST-26');
+
+  // Booked with no project at all.
+  await page.goto('/#frikontering');
+  await page.getByLabel('Vad avser det?').fill('Virke till scenen');
+  await page.getByLabel('Konto, rad 1').fill('6100');
+  await page.getByLabel('Debet, rad 1').fill('100');
+  await page.getByLabel('Konto, rad 2').fill('1930');
+  await page.getByLabel('Kredit, rad 2').fill('100');
+  await page.getByTestId('bokfor-fri').click();
+  await expect(page.getByTestId('fri-besked')).toContainText('A1');
+
+  await page.goto('/#verifikat');
+  await page.getByTestId('verifikatlista').getByRole('button', { name: /A1/ }).click();
+  await page.getByTestId(/^ratta-/).click();
+  await page.getByLabel(/^Projekt, rad 1/).selectOption({ label: 'LEADER-28 Ny scen' });
+  await page.getByTestId(/^spara-rattelse-/).click();
+
+  const rader = page.getByTestId(/^kontering-/).getByRole('listitem');
+  await expect(rader.nth(0)).toContainText('LEADER-28');
+  await expect(rader.nth(1)).not.toContainText('LEADER-28');
+  await expect(page.getByTestId(/^rattelser-/)).toContainText('Projekt på rad 1 rättad');
+  await expect(page.getByTestId(/^rattelser-/)).toContainText(
+    'inget projekt → LEADER-28',
+  );
+
+  // Moved to the other project, and the first correction stays beside the second.
+  await page.getByTestId(/^ratta-/).click();
+  await page.getByLabel(/^Projekt, rad 1/).selectOption({ label: 'FEST-26 Sommarfest' });
+  await page.getByTestId(/^spara-rattelse-/).click();
+  await expect(rader.nth(0)).toContainText('FEST-26');
+  await expect(page.getByTestId(/^rattelser-/).getByRole('listitem')).toHaveCount(2);
+  await expect(page.getByTestId(/^rattelser-/)).toContainText('LEADER-28 → FEST-26');
+
+  // The money did not move.
+  await expect(rader.nth(0)).toContainText('100,00');
+  await expect(rader.nth(1)).toContainText('-100,00');
+});
+
+test('does not offer a finished project for a correction, but lets one be taken away', async ({
+  page,
+}) => {
+  await page.clock.install({ time: new Date('2026-04-05T10:00:00+02:00') });
+  await page.clock.resume();
+
+  await oppnaProjekt(page);
+  await page.getByLabel('Kod').fill('LEADER-28');
+  await page.getByLabel('Namn', { exact: true }).fill('Ny scen');
+  await page.getByTestId('skapa-projekt').click();
+  await expect(page.getByTestId('projektlista')).toContainText('LEADER-28');
+
+  await page.goto('/#frikontering');
+  await page.getByLabel('Vad avser det?').fill('Virke till scenen');
+  await page.getByLabel('Konto, rad 1').fill('6100');
+  await page.getByLabel('Debet, rad 1').fill('100');
+  await page.getByLabel('Projekt, rad 1').selectOption({ label: 'LEADER-28 Ny scen' });
+  await page.getByLabel('Konto, rad 2').fill('1930');
+  await page.getByLabel('Kredit, rad 2').fill('100');
+  await page.getByTestId('bokfor-fri').click();
+  await expect(page.getByTestId('fri-besked')).toContainText('A1');
+
+  await oppnaProjekt(page);
+  await page.getByTestId('avsluta-LEADER-28').click();
+  await expect(page.getByTestId('projektlista')).toContainText('Avslutat');
+
+  await page.goto('/#verifikat');
+  await page.getByTestId('verifikatlista').getByRole('button', { name: /A1/ }).click();
+  await page.getByTestId(/^ratta-/).click();
+  // The finished project is shown where the rad already has it, and nowhere else.
+  await expect(page.getByLabel(/^Projekt, rad 1/)).toContainText('(avslutat)');
+  await expect(page.getByLabel(/^Projekt, rad 2/)).toHaveCount(0);
+
+  await page.getByLabel(/^Projekt, rad 1/).selectOption({ label: 'Inget projekt' });
+  await page.getByTestId(/^spara-rattelse-/).click();
+  const rader = page.getByTestId(/^kontering-/).getByRole('listitem');
+  await expect(rader.nth(0)).not.toContainText('LEADER-28');
+  await expect(page.getByTestId(/^rattelser-/)).toContainText(
+    'LEADER-28 → inget projekt',
+  );
+});

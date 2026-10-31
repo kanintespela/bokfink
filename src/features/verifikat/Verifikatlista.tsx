@@ -3,7 +3,13 @@ import { useMemo, useState } from 'react';
 import { formatKronor } from '../../domain/belopp/ore';
 import type { Konto, Kontonummer } from '../../domain/konto/konto';
 import type { Projekt } from '../../domain/projekt/projekt';
-import { beteckning, omslutning } from '../../domain/verifikat/verifikat';
+import { Projektval } from '../bokfor/Projektval';
+import {
+  beteckning,
+  omslutning,
+  type BokfortVerifikat,
+  type Projektrattelse,
+} from '../../domain/verifikat/verifikat';
 import type { Verifikatpost } from '../../data/bokforing';
 import { verifikationslistaTabell } from '../../domain/export/tabeller';
 import { Exportknappar } from '../rapport/Exportknappar';
@@ -60,12 +66,17 @@ interface Props {
    *
    * Bokföringslagen 5 kap. 8 § allows a verifikation to be corrected as long
    * as when and by whom are recorded, so the description and the date are
-   * editable and the posting is not. Rejects, with a reason to show, when a
-   * date would leave the year or a filed momsdeklaration.
+   * editable and the posting is not; nor is the project of a rad, which moves
+   * no money. Rejects, with a reason to show, when a date would leave the year
+   * or a filed momsdeklaration, or a project is finished.
    */
   readonly onRatta: (
     post: Verifikatpost,
-    andring: { beskrivning?: string; datum?: Datum },
+    andring: {
+      beskrivning?: string;
+      datum?: Datum;
+      projekt?: readonly Projektrattelse[];
+    },
   ) => Promise<void>;
 }
 
@@ -93,11 +104,16 @@ export function Verifikatlista({
   onRatta,
 }: Props) {
   const filprefix = useFilprefix();
+  /** A project as a rättelse names it: by its code, which never changes. */
+  const projektkod = (id: string) =>
+    id === '' ? 'inget projekt' : (projekt.get(id as Uuid)?.kod ?? 'okänt projekt');
   const [fraga, setFraga] = useState('');
   /** Which verifikat is being corrected, and what it is being corrected to. */
   const [rattar, setRattar] = useState<Uuid | undefined>();
   const [rattadText, setRattadText] = useState('');
   const [rattatDatum, setRattatDatum] = useState('');
+  /** The project chosen for each rad of the verifikat being corrected, empty for none. */
+  const [rattatProjekt, setRattatProjekt] = useState<readonly (Uuid | '')[]>([]);
   const [rattelsefel, setRattelsefel] = useState<string | undefined>();
   /*
    * Two orders, which are two books.
@@ -275,11 +291,17 @@ export function Verifikatlista({
                           <li key={`${rattelse.nar}-${index}`}>
                             <span className="listrad__text">
                               <span className="listrad__sekundar">
-                                {rattelse.falt === 'datum' ? 'Datum' : 'Beskrivning'}{' '}
+                                {rattelse.falt === 'projekt'
+                                  ? `Projekt på rad ${(rattelse.rad ?? 0) + 1}`
+                                  : rattelse.falt === 'datum'
+                                    ? 'Datum'
+                                    : 'Beskrivning'}{' '}
                                 rättad {rattelse.nar.slice(0, 10)}
                               </span>
                               <span className="listrad__sekundar">
-                                ”{rattelse.fran}” → ”{rattelse.till}”
+                                {rattelse.falt === 'projekt'
+                                  ? `${projektkod(rattelse.fran)} → ${projektkod(rattelse.till)}`
+                                  : `”${rattelse.fran}” → ”${rattelse.till}”`}
                               </span>
                             </span>
                           </li>
@@ -311,9 +333,29 @@ export function Verifikatlista({
                           />
                         </div>
 
+                        {post.verifikat.konteringar.map((rad, index) => (
+                          <Projektval
+                            key={`${rad.konto}-${index}`}
+                            id={`rattat-projekt-${id}-${index}`}
+                            etikett={`Projekt, rad ${index + 1} (${rad.konto} ${
+                              konton.get(rad.konto)?.namn ?? ''
+                            })`}
+                            projekt={[...projekt.values()]}
+                            varde={rattatProjekt[index] ?? ''}
+                            onAndra={(valt) =>
+                              setRattatProjekt((forra) =>
+                                post.verifikat.konteringar.map(
+                                  (_, plats) =>
+                                    (plats === index ? valt : forra[plats]) ?? '',
+                                ),
+                              )
+                            }
+                          />
+                        ))}
+
                         <p className="hjalptext">
-                          Konteringen står kvar som den är. Det som rättas sparas med
-                          datum, och originaltexten blir kvar här under.
+                          Konton och belopp står kvar som de är. Det som rättas sparas med
+                          datum, och det gamla värdet blir kvar här under.
                         </p>
 
                         {rattelsefel !== undefined && (
@@ -337,6 +379,10 @@ export function Verifikatlista({
                               ...(rattatDatum === post.verifikat.datum
                                 ? {}
                                 : { datum: rattatDatum as Datum }),
+                              ...projektandringar(
+                                post.verifikat.konteringar,
+                                rattatProjekt,
+                              ),
                             })
                               .then(() => setRattar(undefined))
                               // Hard rule 11: a refused correction says why.
@@ -372,9 +418,12 @@ export function Verifikatlista({
                             setRattelsefel(undefined);
                             setRattadText(post.verifikat.beskrivning);
                             setRattatDatum(post.verifikat.datum);
+                            setRattatProjekt(
+                              post.verifikat.konteringar.map((rad) => rad.projekt ?? ''),
+                            );
                           }}
                         >
-                          Rätta text eller datum
+                          Rätta text, datum eller projekt
                         </button>
                       )
                     )}
@@ -543,6 +592,20 @@ export function Verifikatlista({
  * is itself annulled puts the original back in force by a route nobody can
  * follow a year later.
  */
+/** The rows whose project was chosen differently from what they have. */
+function projektandringar(
+  rader: BokfortVerifikat['konteringar'],
+  valda: readonly (Uuid | '')[],
+): { projekt?: readonly Projektrattelse[] } {
+  const andringar = rader.flatMap((rad, index) => {
+    const val = valda[index] ?? '';
+    return val === (rad.projekt ?? '')
+      ? []
+      : [{ rad: index, projekt: val === '' ? null : val }];
+  });
+  return andringar.length === 0 ? {} : { projekt: andringar };
+}
+
 function annullerbar(post: Verifikatpost): boolean {
   return post.annulleratAv === undefined && post.verifikat.annullerar === undefined;
 }
