@@ -1187,6 +1187,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
         {vy === 'projekt' && (
           <Projektsida
             projekt={laddat.projekt}
+            konton={laddat.konton}
             onTillbaka={() => setVy('mer')}
             onSkapa={async (uppgifter) => {
               await skrivProjekt(db, await skrivkontext(db), uppgifter);

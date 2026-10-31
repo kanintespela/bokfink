@@ -1,5 +1,6 @@
-import { negate, ZERO, type Ore } from '../belopp/ore';
+import { negate, subtract, ZERO, type Ore } from '../belopp/ore';
 import type { Konto, Kontonummer } from '../konto/konto';
+import type { Budgetjamforelse } from '../projekt/projektbudget';
 import type { Projektutdrag } from '../projekt/projektutdrag';
 import type { Balansrakning } from '../rapport/balansrakning';
 import type { Resultatrakning } from '../rapport/resultatrakning';
@@ -171,6 +172,61 @@ export function projektutdragTabell(
   summa('Tillgångar på projektet', utdrag.summaTillgangar);
   summa('Skuld kvar på projektet', utdrag.summaSkulder);
 
+  return rader;
+}
+
+/**
+ * A project's budget against its outcome, account by account.
+ *
+ * Income and cost both as positive amounts, as on screen; "Kvar" is budget less
+ * outcome and is negative where the outcome went past the budget. A cost nobody
+ * budgeted has a budget of nothing and is on the list all the same.
+ */
+export function budgetTabell(
+  kod: string,
+  jamforelse: Budgetjamforelse,
+  konton: ReadonlyMap<Kontonummer, Konto>,
+): Tabell {
+  const rader: Falt[][] = [
+    ['Projekt', 'Rubrik', 'Konto', 'Kontonamn', 'Budget', 'Utfall', 'Kvar'],
+  ];
+  const grupp = (
+    rubrik: string,
+    poster: Budgetjamforelse['intakter'],
+    summa: Budgetjamforelse['summaIntakter'],
+  ) => {
+    for (const post of poster) {
+      rader.push([
+        kod,
+        rubrik,
+        post.konto,
+        konton.get(post.konto)?.namn ?? '',
+        belopp(post.budget),
+        belopp(post.utfall),
+        belopp(post.kvar),
+      ]);
+    }
+    rader.push([
+      kod,
+      `Summa ${rubrik.toLowerCase()}`,
+      '',
+      '',
+      belopp(summa.budget),
+      belopp(summa.utfall),
+      belopp(summa.kvar),
+    ]);
+  };
+  grupp('Intäkter', jamforelse.intakter, jamforelse.summaIntakter);
+  grupp('Kostnader', jamforelse.kostnader, jamforelse.summaKostnader);
+  rader.push([
+    kod,
+    'Resultat',
+    '',
+    '',
+    belopp(jamforelse.resultat.budget),
+    belopp(jamforelse.resultat.utfall),
+    belopp(subtract(jamforelse.resultat.budget, jamforelse.resultat.utfall)),
+  ]);
   return rader;
 }
 

@@ -9,7 +9,8 @@ import {
   type Kontosumma,
   type Projektperiod,
 } from '../../domain/projekt/projektutdrag';
-import { projektutdragTabell } from '../../domain/export/tabeller';
+import { budgetTabell, projektutdragTabell } from '../../domain/export/tabeller';
+import { budgetMotUtfall, type Budgetrad } from '../../domain/projekt/projektbudget';
 import type { Rakenskapsar } from '../../domain/rakenskapsar/rakenskapsar';
 import { beteckning, type BokfortVerifikat } from '../../domain/verifikat/verifikat';
 import { useFilprefix } from '../../ui/bok';
@@ -173,6 +174,29 @@ export function Projektutdrag({ projekt, konton, verifikat, rakenskapsar }: Prop
           )}
       </div>
 
+      {tid === undefined ? (
+        valt.budget === undefined || valt.budget.length === 0 ? (
+          <p className="hjalptext" data-testid="ingen-budget">
+            Projektet har ingen budget. Den läggs upp under Mer, Projekt.
+          </p>
+        ) : (
+          <Budgetavsnitt
+            jamforelse={budgetMotUtfall(utdrag)}
+            kod={valt.kod}
+            namn={namn}
+            konton={konton}
+            filnamn={`${filprefix}-budget-${valt.kod}`}
+          />
+        )
+      ) : (
+        valt.budget !== undefined &&
+        valt.budget.length > 0 && (
+          <p className="hjalptext" data-testid="budget-hela-projektet">
+            Budgeten gäller hela projektet och visas när perioden är Hela projektet.
+          </p>
+        )
+      )}
+
       <Exportknappar
         tabell={projektutdragTabell(utdrag, konton)}
         namn={`${filprefix}-projekt-${valt.kod}`}
@@ -205,5 +229,82 @@ export function Projektutdrag({ projekt, konton, verifikat, rakenskapsar }: Prop
         </ul>
       )}
     </>
+  );
+}
+
+/** The budget against the outcome, account by account, with its export. */
+function Budgetavsnitt({
+  jamforelse,
+  kod,
+  namn,
+  konton,
+  filnamn,
+}: {
+  readonly jamforelse: ReturnType<typeof budgetMotUtfall>;
+  readonly kod: string;
+  readonly namn: (konto: Kontonummer) => string;
+  readonly konton: ReadonlyMap<Kontonummer, Konto>;
+  readonly filnamn: string;
+}) {
+  const grupp = (
+    testid: string,
+    rubrik: string,
+    rader: readonly Budgetrad[],
+    summa: typeof jamforelse.summaIntakter,
+  ) => (
+    <div data-testid={testid}>
+      <dl>
+        <dt>
+          {rubrik}: budget {formatKronor(summa.budget)} · utfall{' '}
+          {formatKronor(summa.utfall)}
+        </dt>
+        <dd className={`belopp${summa.kvar < 0 ? ' belopp--negativ' : ''}`}>
+          <strong>{formatKronor(summa.kvar)}</strong>
+        </dd>
+      </dl>
+      <ul className="lista">
+        {rader.map((rad) => (
+          <li key={rad.konto}>
+            <div className="listrad">
+              <span className="listrad__text">
+                <span>
+                  {rad.konto} {namn(rad.konto)}
+                </span>
+                <span className="listrad__sekundar">
+                  Budget {formatKronor(rad.budget)} · utfall {formatKronor(rad.utfall)}
+                </span>
+              </span>
+              <span className={`belopp${rad.kvar < 0 ? ' belopp--negativ' : ''}`}>
+                {formatKronor(rad.kvar)}
+              </span>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+
+  return (
+    <div data-testid="budget-mot-utfall">
+      <h3>Budget mot utfall</h3>
+      <p className="hjalptext">
+        Beloppet till höger är det som återstår av budgeten. Det är negativt där utfallet
+        har gått över.
+      </p>
+      {grupp('bu-intakter', 'Intäkter', jamforelse.intakter, jamforelse.summaIntakter)}
+      {grupp(
+        'bu-kostnader',
+        'Kostnader',
+        jamforelse.kostnader,
+        jamforelse.summaKostnader,
+      )}
+      <dl data-testid="bu-resultat">
+        <dt>
+          Resultat: budget {formatKronor(jamforelse.resultat.budget)} · utfall{' '}
+          {formatKronor(jamforelse.resultat.utfall)}
+        </dt>
+      </dl>
+      <Exportknappar tabell={budgetTabell(kod, jamforelse, konton)} namn={filnamn} />
+    </div>
   );
 }

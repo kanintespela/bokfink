@@ -12,6 +12,7 @@ import { verifikatserie } from '../verifikat/serie';
 import { bokfor, skapaUtkast, type BokfortVerifikat } from '../verifikat/verifikat';
 import { belopp, skrivCsv } from './csv';
 import {
+  budgetTabell,
   huvudbokTabell,
   projektutdragTabell,
   resultatrakningTabell,
@@ -194,6 +195,59 @@ describe('projektutdragTabell', () => {
       ['Resultat', belopp(kr('-800.00'))],
       ['Tillgångar på projektet', belopp(kr('0'))],
       ['Skuld kvar på projektet', belopp(kr('0'))],
+    ]);
+  });
+});
+
+describe('budgetTabell', () => {
+  it('lists budget, outcome and what is left per account, then the result', () => {
+    const tabell = budgetTabell(
+      'LEADER-28',
+      {
+        intakter: [
+          {
+            konto: kontonummer('3980'),
+            budget: kr('20000'),
+            utfall: kr('15000'),
+            kvar: kr('5000'),
+          },
+        ],
+        summaIntakter: { budget: kr('20000'), utfall: kr('15000'), kvar: kr('5000') },
+        kostnader: [
+          {
+            konto: kontonummer('6100'),
+            budget: kr('10000'),
+            utfall: kr('12000'),
+            kvar: kr('-2000'),
+          },
+        ],
+        summaKostnader: { budget: kr('10000'), utfall: kr('12000'), kvar: kr('-2000') },
+        resultat: { budget: kr('10000'), utfall: kr('3000') },
+      },
+      new Map(),
+    );
+
+    expect(tabell[0]).toEqual([
+      'Projekt',
+      'Rubrik',
+      'Konto',
+      'Kontonamn',
+      'Budget',
+      'Utfall',
+      'Kvar',
+    ]);
+    expect(tabell.slice(1).map((rad) => [rad[1], rad[2]])).toEqual([
+      ['Intäkter', '3980'],
+      ['Summa intäkter', ''],
+      ['Kostnader', '6100'],
+      ['Summa kostnader', ''],
+      ['Resultat', ''],
+    ]);
+    // 10 000 budgeted less 3 000 outcome: 7 000 left of the result.
+    expect(tabell.at(-1)?.slice(4)).toEqual([
+      belopp(kr('10000')),
+      belopp(kr('3000')),
+      belopp(kr('7000')),
     ]);
   });
 });

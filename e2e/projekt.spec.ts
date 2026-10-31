@@ -397,3 +397,78 @@ test('asks for a project before sharing anything out', async ({ page }) => {
   await page.goto('/#fordelning');
   await expect(page.getByTestId('fordela-inga-projekt')).toBeVisible();
 });
+
+test('sets a budget on a project and compares it with the outcome', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-04-05T10:00:00+02:00') });
+  await page.clock.resume();
+
+  await oppnaProjekt(page);
+  await page.getByLabel('Kod').fill('LEADER-28');
+  await page.getByLabel('Namn', { exact: true }).fill('Ny scen');
+  await page.getByTestId('skapa-projekt').click();
+  await expect(page.getByTestId('projektlista')).toContainText('LEADER-28');
+
+  // A balance account cannot be budgeted, and the reason is said.
+  await page.getByTestId('budget-LEADER-28').click();
+  await page.getByLabel('Konto, budgetrad 1').fill('1930');
+  await page.getByLabel('Belopp, budgetrad 1').fill('100');
+  await page.getByTestId('spara-budget').click();
+  await expect(page.getByRole('alert')).toContainText('går inte att budgetera');
+
+  // 2 000 kr of grant expected and 1 000 kr of office supplies.
+  await page.getByLabel('Konto, budgetrad 1').fill('3980');
+  await page.getByLabel('Belopp, budgetrad 1').fill('2000');
+  await page.getByTestId('budget-ny-rad').click();
+  await page.getByLabel('Konto, budgetrad 2').fill('6100');
+  await page.getByLabel('Belopp, budgetrad 2').fill('1000');
+  await page.getByTestId('spara-budget').click();
+  await expect(page.getByTestId('projektlista')).toContainText('budget på 2 konton');
+
+  const P = 'LEADER-28 Ny scen';
+  await bokforRader(
+    page,
+    'Bidrag',
+    [
+      { konto: '1930', sida: 'Debet', belopp: '1500' },
+      { konto: '3980', sida: 'Kredit', belopp: '1500', projekt: P },
+    ],
+    'A1',
+  );
+  await bokforRader(
+    page,
+    'Kontorsmaterial',
+    [
+      { konto: '6100', sida: 'Debet', belopp: '1200', projekt: P },
+      { konto: '1930', sida: 'Kredit', belopp: '1200' },
+    ],
+    'A2',
+  );
+
+  await page.goto('/#rapporter');
+  await page.getByRole('button', { name: 'Projekt', exact: true }).click();
+  // 2 000 budgeted less 1 500 received: 500 left to receive.
+  await expect(page.getByTestId('bu-intakter')).toContainText('budget 2 000,00');
+  await expect(page.getByTestId('bu-intakter')).toContainText('utfall 1 500,00');
+  await expect(page.getByTestId('bu-intakter')).toContainText('500,00');
+  // 1 000 budgeted and 1 200 spent: 200 over.
+  await expect(page.getByTestId('bu-kostnader')).toContainText('-200,00');
+  await expect(page.getByTestId('bu-resultat')).toContainText('budget 1 000,00');
+  await expect(page.getByTestId('bu-resultat')).toContainText('utfall 300,00');
+
+  // The budget is for the whole project, and a single year says so instead.
+  await page.getByLabel('Period').selectOption({ index: 1 });
+  await expect(page.getByTestId('budget-mot-utfall')).toHaveCount(0);
+  await expect(page.getByTestId('budget-hela-projektet')).toBeVisible();
+});
+
+test('says when a project has no budget', async ({ page }) => {
+  await oppnaProjekt(page);
+  await page.getByLabel('Kod').fill('FEST-26');
+  await page.getByLabel('Namn', { exact: true }).fill('Sommarfest');
+  await page.getByTestId('skapa-projekt').click();
+  await expect(page.getByTestId('projektlista')).toContainText('FEST-26');
+
+  await page.goto('/#rapporter');
+  await page.getByRole('button', { name: 'Projekt', exact: true }).click();
+  await expect(page.getByTestId('ingen-budget')).toBeVisible();
+});
