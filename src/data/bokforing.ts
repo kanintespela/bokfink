@@ -14,7 +14,11 @@ import type { Fastighetstillgang } from '../domain/anlaggning/fastighetstillgang
 import type { Djurlagerinventering } from '../domain/lager/djurlager';
 import type { Projekt } from '../domain/projekt/projekt';
 import type { Underlag } from '../domain/underlag/underlag';
-import type { BokfortVerifikat, Verifikatutkast } from '../domain/verifikat/verifikat';
+import type {
+  BokfortVerifikat,
+  Rattelse,
+  Verifikatutkast,
+} from '../domain/verifikat/verifikat';
 import type { KonteraDatabase } from './db';
 import {
   ANLAGGNING_TABLE,
@@ -101,9 +105,10 @@ export function skyddaBokfordaVerifikat(db: KonteraDatabase): void {
  *
  * Bokföringslagen 5 kap. 8 § permits the correction; what it does not permit
  * is an unrecorded one. Hence the last condition: a change is only a
- * correction if it leaves behind one more rättelse than it found. Editing the
- * description without recording it fails here even though every other field
- * would have passed.
+ * correction if it leaves behind at least one more rättelse than it found, with
+ * the earlier ones as they were: one per field corrected, so a description and
+ * a date corrected together add two. Editing the description without recording
+ * it fails here even though every other field would have passed.
  */
 function barRattelse(fore: VerifikatRad, efter: VerifikatRad): boolean {
   return (
@@ -115,7 +120,15 @@ function barRattelse(fore: VerifikatRad, efter: VerifikatRad): boolean {
     fore.rakenskapsarId === efter.rakenskapsarId &&
     fore.annullerar === efter.annullerar &&
     JSON.stringify(fore.konteringar) === JSON.stringify(efter.konteringar) &&
-    (efter.rattelser?.length ?? 0) === (fore.rattelser?.length ?? 0) + 1
+    arTillagg(fore.rattelser ?? [], efter.rattelser ?? [])
+  );
+}
+
+/** Whether `efter` is `fore` with at least one rättelse added at the end. */
+function arTillagg(fore: readonly Rattelse[], efter: readonly Rattelse[]): boolean {
+  return (
+    efter.length > fore.length &&
+    JSON.stringify(efter.slice(0, fore.length)) === JSON.stringify(fore)
   );
 }
 

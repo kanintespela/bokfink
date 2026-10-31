@@ -152,6 +152,23 @@ describe('kommandon', () => {
       });
     });
 
+    it('corrects the description and the date in one go, one rättelse for each', async () => {
+      const original = await bokforUtkast(db, kontext, utkast('2026-09-16'), A);
+
+      const rattat = await rattaVerifikat(db, kontext, original, {
+        beskrivning: 'Swedol AB',
+        datum: datum('2026-09-11'),
+      });
+
+      expect(rattat.rattelser?.map((post) => post.falt)).toEqual([
+        'beskrivning',
+        'datum',
+      ]);
+      const ur = (await lasTillstand(db)).verifikat.get(original.id);
+      expect(ur?.rattelser?.map((post) => post.falt)).toEqual(['beskrivning', 'datum']);
+      expect(ur?.konteringar).toEqual(original.konteringar);
+    });
+
     it('corrects the date within the year', async () => {
       const original = await bokforUtkast(db, kontext, utkast('2026-09-16'), A);
 
