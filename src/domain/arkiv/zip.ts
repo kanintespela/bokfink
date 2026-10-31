@@ -46,7 +46,7 @@ function byggCrc32Tabell(): Uint32Array {
   return tabell;
 }
 
-function crc32(data: Uint8Array): number {
+export function crc32(data: Uint8Array): number {
   let crc = 0xffffffff;
   for (let i = 0; i < data.length; i += 1) {
     crc = CRC32_TABELL[(crc ^ data[i]!) & 0xff]! ^ (crc >>> 8);
