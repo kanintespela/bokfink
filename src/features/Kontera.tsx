@@ -45,6 +45,8 @@ import {
   serieForEnhet,
   sattSerieForEnhet,
   skrivKonto,
+  skrivProjekt,
+  andraProjektet,
   type Skrivkontext,
 } from '../data/kommandon';
 import {
@@ -156,6 +158,8 @@ import { AttGoraSida } from './attgora/AttGoraSida';
 import { Utkastlista } from './utkast/Utkastlista';
 import { FriKontering, type Friforslag } from './bokfor/FriKontering';
 import { Kontosida } from './konton/Kontosida';
+import { Projektsida } from './projekt/Projektsida';
+import type { Projekt } from '../domain/projekt/projekt';
 import { Momssida } from './moms/Momssida';
 import { beraknaMomsrapport } from '../domain/moms/momsrapport';
 import { momsredovisning } from '../domain/moms/momsredovisning';
@@ -244,6 +248,7 @@ interface Laddat {
   readonly borttagbaraAr: ReadonlySet<Uuid>;
   /** Undefined when no backup has ever been taken on this device. */
   readonly dagarSedanBackup: number | undefined;
+  readonly projekt: readonly Projekt[];
   readonly anlaggningar: readonly Anlaggningstillgang[];
   readonly fastigheter: readonly Fastighetstillgang[];
   readonly djurlagerinventeringar: readonly Djurlagerinventering[];
@@ -455,6 +460,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
       borttagbaraAr: await borttagbaraRakenskapsar(db),
       dagarSedanBackup:
         backupSenast === undefined ? undefined : dagarMellan(datum(backupSenast), idag),
+      projekt: [...tillstand.projekt.values()],
       anlaggningar: [...tillstand.anlaggningar.values()],
       fastigheter: [...tillstand.fastigheter.values()],
       djurlagerinventeringar: [...tillstand.djurlagerinventeringar.values()].sort(
@@ -1172,6 +1178,21 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
               }}
             />
           </>
+        )}
+
+        {vy === 'projekt' && (
+          <Projektsida
+            projekt={laddat.projekt}
+            onTillbaka={() => setVy('mer')}
+            onSkapa={async (uppgifter) => {
+              await skrivProjekt(db, await skrivkontext(db), uppgifter);
+              setLaddat(await hamta());
+            }}
+            onAndra={async (id, andring) => {
+              await andraProjektet(db, await skrivkontext(db), id, andring);
+              setLaddat(await hamta());
+            }}
+          />
         )}
 
         {vy === 'filer' && (
