@@ -79,3 +79,42 @@ test('does not offer the field while there is no project', async ({ page }) => {
   await expect(page.getByLabel('Konto, rad 1')).toBeVisible();
   await expect(page.getByLabel('Projekt, rad 1')).toHaveCount(0);
 });
+
+test('puts the cost row of a guided booking on a project, and not the payment or the moms', async ({
+  page,
+}) => {
+  await oppnaProjekt(page);
+  await page.getByLabel('Kod').fill('LEADER-28');
+  await page.getByLabel('Namn', { exact: true }).fill('Ny scen');
+  await page.getByTestId('skapa-projekt').click();
+  await expect(page.getByTestId('projektlista')).toContainText('LEADER-28');
+
+  await page.goto('/#bokfor');
+  await page.getByLabel('Sök').fill('foder');
+  await page
+    .getByTestId('sokresultat')
+    .getByRole('button', { name: /Foder och strö/ })
+    .click();
+  await page.getByLabel('Att betala').fill('1000');
+  await page
+    .getByLabel('Projekt (kostnaden)')
+    .selectOption({ label: 'LEADER-28 Ny scen' });
+
+  await page.getByRole('button', { name: 'Visa konteringen' }).click();
+  const kontering = page.getByTestId('kontering').getByRole('listitem');
+  await expect(kontering).toHaveCount(3);
+  await expect(kontering.nth(0)).toContainText('LEADER-28');
+  await expect(kontering.nth(1)).not.toContainText('LEADER-28');
+  await expect(kontering.nth(2)).not.toContainText('LEADER-28');
+
+  await page.locator('main').getByRole('button', { name: 'Bokför', exact: true }).click();
+  await expect(page.getByTestId('senast-bokfort')).toContainText('A1');
+
+  // The field starts over for the next entry rather than carrying the project on.
+  await page.getByLabel('Sök').fill('foder');
+  await page
+    .getByTestId('sokresultat')
+    .getByRole('button', { name: /Foder och strö/ })
+    .click();
+  await expect(page.getByLabel('Projekt (kostnaden)')).toHaveValue('');
+});

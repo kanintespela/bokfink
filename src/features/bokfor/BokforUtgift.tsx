@@ -16,6 +16,7 @@ import {
 import { beslutstradFor, betalsattsnamnFor } from '../../domain/beslutstrad/tradval';
 import type { Bokprofil } from '../../domain/bok/bokprofil';
 import type { Konto, Kontonummer } from '../../domain/konto/konto';
+import { medProjektPaKonto, type Projekt } from '../../domain/projekt/projekt';
 import {
   delaMedUnderlag,
   sokMallar,
@@ -35,6 +36,7 @@ import {
   valutakod,
 } from '../../domain/belopp/valuta';
 import { Beloppsfalt, tolkaBelopp, visaBelopp } from './Beloppsfalt';
+import { Projektval } from './Projektval';
 import type { Friforslag } from './FriKontering';
 import { Beskar } from '../underlag/Beskar';
 import { Underlagsvisning } from '../../ui/Underlagsvisning';
@@ -96,6 +98,8 @@ interface Props {
   readonly onHanvisning: (till: Hanvisning['till']) => void;
   /** What kind of book this is, which decides the questions and accounts offered. */
   readonly profil: Bokprofil;
+  /** The projects the cost or the income can be booked on. */
+  readonly projekt: readonly Projekt[];
   readonly onBokfor: (val: {
     mall: Konteringsmall;
     brutto: Ore;
@@ -132,6 +136,7 @@ const GENVAGAR = 4;
  */
 export function BokforUtgift({
   profil,
+  projekt,
   idag,
   anvandning,
   forvaltBetalkonto,
@@ -168,6 +173,8 @@ export function BokforUtgift({
    * wants a verifikation to say what the affärshändelse avser.
    */
   const [beskrivning, setBeskrivning] = useState('');
+  /** The project the cost or income row is booked on; none unless chosen. */
+  const [projektId, setProjektId] = useState<Uuid | ''>('');
   const [betalkonto, setBetalkonto] = useState<Kontonummer | undefined>(
     forvaltBetalkonto,
   );
@@ -255,7 +262,7 @@ export function BokforUtgift({
       return undefined;
     }
     try {
-      return tillampaMall(mall, {
+      const rader = tillampaMall(mall, {
         /*
          * With an öresutjämning the purchase is netto + moms, and what was
          * paid is the amount typed; tillampaMall books the difference on
@@ -266,6 +273,11 @@ export function BokforUtgift({
         betalkonto: aktivtBetalkonto,
         ...(kvittomoms === undefined ? {} : { moms: kvittomoms }),
       });
+      return medProjektPaKonto(
+        rader,
+        mall.konto,
+        projektId === '' ? undefined : projektId,
+      );
     } catch {
       // A receipt's moms that cannot belong to the amount; the split line says so.
       return undefined;
@@ -381,6 +393,7 @@ export function BokforUtgift({
       setBelopp('');
       setDatumtext(idag);
       setBeskrivning('');
+      setProjektId('');
       setValuta('');
       setValutabelopp('');
       setKurstext('');
@@ -685,6 +698,16 @@ export function BokforUtgift({
         />
       </div>
 
+      <Projektval
+        id="projekt"
+        etikett={
+          mall.riktning === 'utgift' ? 'Projekt (kostnaden)' : 'Projekt (intäkten)'
+        }
+        projekt={projekt}
+        varde={projektId}
+        onAndra={setProjektId}
+      />
+
       <div className="faltgrupp">
         <label htmlFor="datum">Datum</label>
         <input
@@ -841,6 +864,8 @@ export function BokforUtgift({
                   <span>{rad.konto}</span>
                   <span className="listrad__sekundar">
                     {konton.get(rad.konto)?.namn ?? ''}
+                    {rad.projekt !== undefined &&
+                      ` · ${projekt.find((post) => post.id === rad.projekt)?.kod ?? 'okänt projekt'}`}
                   </span>
                 </span>
                 <span className={`belopp${rad.belopp < 0 ? ' belopp--negativ' : ''}`}>

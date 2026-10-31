@@ -1572,6 +1572,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
 
             <BokforUtgift
               profil={laddat.profil}
+              projekt={laddat.projekt}
               // Remounted when a receipt or a bank line starts a new entry,
               // so nothing from the last one is left in the fields - but not
               // when a photograph is attached to the entry in progress, which

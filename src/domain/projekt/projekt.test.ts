@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
+import { oreFromKronor } from '../belopp/ore';
 import type { Uuid } from '../id/uuidv7';
+import { kontonummer } from '../konto/konto';
 import {
   andraProjekt,
   kodenFinns,
+  medProjektPaKonto,
   LANGSTA_PROJEKTKOD,
   LANGSTA_PROJEKTNAMN,
   OgiltigtProjektError,
@@ -123,5 +126,23 @@ describe('projektnamnFranSie', () => {
   it('falls back on the code when the file gives no name', () => {
     expect(projektnamnFranSie('', 'P1')).toBe('P1');
     expect(projektnamnFranSie('   ', 'P1')).toBe('P1');
+  });
+});
+
+describe('medProjektPaKonto', () => {
+  const rader = [
+    { konto: kontonummer('5020'), belopp: oreFromKronor('800') },
+    { konto: kontonummer('2641'), belopp: oreFromKronor('200') },
+    { konto: kontonummer('1930'), belopp: oreFromKronor('-1000') },
+  ];
+
+  it('sets the project on the rows of that account only', () => {
+    const resultat = medProjektPaKonto(rader, kontonummer('5020'), id);
+    expect(resultat.map((rad) => rad.projekt)).toEqual([id, undefined, undefined]);
+    expect(resultat[1]).toBe(rader[1]);
+  });
+
+  it('leaves the rows as they were when there is no project', () => {
+    expect(medProjektPaKonto(rader, kontonummer('5020'), undefined)).toEqual(rader);
   });
 });

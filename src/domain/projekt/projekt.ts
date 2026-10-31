@@ -1,4 +1,5 @@
 import type { Uuid } from '../id/uuidv7';
+import type { Kontering } from '../verifikat/verifikat';
 
 /**
  * A project that konteringsrader can be booked on, so that what belongs to a
@@ -134,4 +135,22 @@ export function kodenFinns(kod: string, projekt: Iterable<Projekt>): boolean {
     }
   }
   return false;
+}
+
+/**
+ * The rows with the project set on those booked on one account.
+ *
+ * A template books a cost or an income together with its moms and the account
+ * that paid, and only the first is what a project follows: the bank row would
+ * put the whole payment on it and the moms row a cost that is not the
+ * project's. The rows are otherwise left as they were.
+ */
+export function medProjektPaKonto(
+  konteringar: readonly Kontering[],
+  konto: Kontering['konto'],
+  projekt: Uuid | undefined,
+): Kontering[] {
+  return konteringar.map((rad) =>
+    projekt === undefined || rad.konto !== konto ? rad : { ...rad, projekt },
+  );
 }
