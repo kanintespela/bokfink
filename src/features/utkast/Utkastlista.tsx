@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { formatKronor } from '../../domain/belopp/ore';
 import type { Uuid } from '../../domain/id/uuidv7';
 import type { Konto, Kontonummer } from '../../domain/konto/konto';
+import type { Projekt } from '../../domain/projekt/projekt';
 import type { Underlag } from '../../domain/underlag/underlag';
 import type { Verifikatutkast } from '../../domain/verifikat/verifikat';
 import { Underlagsvisning, type Visat } from '../../ui/Underlagsvisning';
@@ -11,6 +12,8 @@ interface Props {
   /** Oldest first, which is the order they should be dealt with in. */
   readonly utkast: readonly Verifikatutkast[];
   readonly konton: ReadonlyMap<Kontonummer, Konto>;
+  /** Named on the rows that are booked on one. */
+  readonly projekt: ReadonlyMap<Uuid, Projekt>;
   /** The receipts linked to each draft, by the draft's id. */
   readonly underlag: ReadonlyMap<Uuid, readonly Underlag[]>;
   /** Object URLs for the stored files, by content address. */
@@ -38,6 +41,7 @@ interface Props {
 export function Utkastlista({
   utkast,
   konton,
+  projekt,
   underlag,
   underlagsbilder,
   onBokfor,
@@ -177,6 +181,8 @@ export function Utkastlista({
                           <span className="listrad__sekundar">
                             {konton.get(rad.konto)?.namn ??
                               'Kontot finns inte i kontoplanen'}
+                            {rad.projekt !== undefined &&
+                              ` · ${projekt.get(rad.projekt)?.kod ?? 'okänt projekt'}`}
                           </span>
                         </span>
                         <span

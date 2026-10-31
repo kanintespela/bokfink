@@ -10,6 +10,7 @@ import {
 import type { Uuid } from '../../domain/id/uuidv7';
 import { kontonummer, type Konto, type Kontonummer } from '../../domain/konto/konto';
 import { sokKonton } from '../../domain/konto/kontosok';
+import type { Projekt } from '../../domain/projekt/projekt';
 import type { Datum } from '../../domain/tid/datum';
 import type { Underlag } from '../../domain/underlag/underlag';
 import {
@@ -20,6 +21,7 @@ import {
 import type { Kontering } from '../../domain/verifikat/verifikat';
 import { Tillbaka } from '../../ui/Tillbaka';
 import { tolkaBelopp } from './Beloppsfalt';
+import { Projektval } from './Projektval';
 
 /** A booking from the questions, carried over to be changed here. */
 export interface Friforslag {
@@ -37,6 +39,8 @@ interface Props {
   /** The receipt to attach from the start, when the booking had one. */
   readonly forvaltUnderlag?: Uuid;
   readonly konton: ReadonlyMap<Kontonummer, Konto>;
+  /** The projects a row can be booked on. A finished one is offered only where a row already has it. */
+  readonly projekt: readonly Projekt[];
   /** Receipts waiting to be booked, any of which may be attached. */
   readonly kvitton: readonly Underlag[];
   readonly onBokfor: (val: {
@@ -64,9 +68,10 @@ interface Radtext {
   readonly konto: string;
   readonly debet: string;
   readonly kredit: string;
+  readonly projekt: Uuid | '';
 }
 
-const TOM: Radtext = { konto: '', debet: '', kredit: '' };
+const TOM: Radtext = { konto: '', debet: '', kredit: '', projekt: '' };
 
 /** Enough to choose from on a phone without the keyboard hiding the rest. */
 const FORSLAG = 6;
@@ -85,6 +90,7 @@ export function FriKontering({
   start,
   forvaltUnderlag,
   konton,
+  projekt,
   kvitton,
   onBokfor,
   onTillbaka,
@@ -304,6 +310,13 @@ export function FriKontering({
                   />
                 </div>
               </div>
+              <Projektval
+                id={`fri-projekt-${index}`}
+                etikett={`Projekt, rad ${index + 1}`}
+                projekt={projekt}
+                varde={rad.projekt}
+                onAndra={(valt) => andraRad(index, { projekt: valt })}
+              />
               {rader.length > 2 && (
                 <button
                   type="button"
@@ -399,13 +412,15 @@ function tolkaRad(rad: Radtext): Friarad {
     ...(konto === undefined ? {} : { konto }),
     ...(debet === undefined ? {} : { debet }),
     ...(kredit === undefined ? {} : { kredit }),
+    ...(rad.projekt === '' ? {} : { projekt: rad.projekt }),
   };
 }
 
 /** A proposed row as the fields hold it, on the side its sign says. */
 function tillRadtext(rad: Kontering): Radtext {
   const kronor = (belopp: Ore) => kronorString(belopp).replace('.', ',');
+  const projekt = rad.projekt ?? '';
   return rad.belopp < 0
-    ? { konto: rad.konto, debet: '', kredit: kronor(negate(rad.belopp)) }
-    : { konto: rad.konto, debet: kronor(rad.belopp), kredit: '' };
+    ? { konto: rad.konto, debet: '', kredit: kronor(negate(rad.belopp)), projekt }
+    : { konto: rad.konto, debet: kronor(rad.belopp), kredit: '', projekt };
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { oreFromKronor } from '../belopp/ore';
+import type { Uuid } from '../id/uuidv7';
 import { kontonummer } from '../konto/konto';
 import { friaKonteringar, summeraFriaRader } from './frikontering';
 
@@ -28,6 +29,17 @@ describe('friaKonteringar', () => {
       ['2640', kr('24')],
       ['2013', kr('-624')],
     ]);
+  });
+
+  it('carries the project of a row, and only of that row', () => {
+    const projekt = '019b76da-a800-7000-8000-000000000001' as Uuid;
+    const rader = friaKonteringar([
+      { konto: kontonummer('5020'), debet: kr('100'), projekt },
+      { konto: kontonummer('1930'), kredit: kr('100') },
+    ]);
+
+    expect(rader[0]?.projekt).toBe(projekt);
+    expect(rader[1]).not.toHaveProperty('projekt');
   });
 
   it('skips a row left empty, which is how the form offers a spare one', () => {

@@ -1,4 +1,5 @@
 import { add, negate, subtract, ZERO, type Ore } from '../belopp/ore';
+import type { Uuid } from '../id/uuidv7';
 import type { Kontonummer } from '../konto/konto';
 import type { Kontering } from './verifikat';
 
@@ -11,6 +12,8 @@ export interface Friarad {
   readonly debet?: Ore;
   readonly kredit?: Ore;
   readonly text?: string;
+  /** The project the row is booked on, if it is booked on one. */
+  readonly projekt?: Uuid;
 }
 
 /**
@@ -55,6 +58,7 @@ export function friaKonteringar(rader: readonly Friarad[]): Kontering[] {
       ...(rad.text === undefined || rad.text.trim() === ''
         ? {}
         : { text: rad.text.trim() }),
+      ...(rad.projekt === undefined ? {} : { projekt: rad.projekt }),
     });
   });
   return konteringar;

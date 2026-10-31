@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 
 import { formatKronor } from '../../domain/belopp/ore';
 import type { Konto, Kontonummer } from '../../domain/konto/konto';
+import type { Projekt } from '../../domain/projekt/projekt';
 import { beteckning, omslutning } from '../../domain/verifikat/verifikat';
 import type { Verifikatpost } from '../../data/bokforing';
 import { verifikationslistaTabell } from '../../domain/export/tabeller';
@@ -22,6 +23,8 @@ interface Props {
   readonly rakenskapsar: readonly Rakenskapsar[];
   readonly idag: Datum;
   readonly konton: ReadonlyMap<Kontonummer, Konto>;
+  /** Named on the rows that are booked on one. */
+  readonly projekt: ReadonlyMap<Uuid, Projekt>;
   /** The evidence attached to each verifikat, by verifikat id. */
   readonly underlag: ReadonlyMap<Uuid, readonly Underlag[]>;
   /**
@@ -79,6 +82,7 @@ export function Verifikatlista({
   rakenskapsar,
   idag,
   konton,
+  projekt,
   underlag,
   underlagsbilder,
   kvitton,
@@ -508,6 +512,8 @@ export function Verifikatlista({
                               <span>{rad.konto}</span>
                               <span className="listrad__sekundar">
                                 {konton.get(rad.konto)?.namn ?? ''}
+                                {rad.projekt !== undefined &&
+                                  ` · ${projekt.get(rad.projekt)?.kod ?? 'okänt projekt'}`}
                               </span>
                             </span>
                             <span

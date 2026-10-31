@@ -743,6 +743,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
   }
 
   const idag = systemklocka().idag();
+  const projektPerId = new Map(laddat.projekt.map((post) => [post.id, post]));
   const valtBild = bilder.find((kandidat) => kandidat.underlag.id === valtKvitto);
 
   /** Whether a picked file is an encrypted backup rather than a plain one. */
@@ -1068,6 +1069,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
             <Utkastlista
               utkast={laddat.utkast}
               konton={laddat.konton}
+              projekt={projektPerId}
               underlag={laddat.underlagPerVerifikat}
               underlagsbilder={underlagsbilder}
               onAndra={(utkast) => {
@@ -1470,6 +1472,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
               ...(andrarUtkast.mall === undefined ? {} : { mall: andrarUtkast.mall }),
             }}
             konton={laddat.konton}
+            projekt={laddat.projekt}
             // The receipt is already linked to the draft, by the draft's id.
             kvitton={[]}
             redigering={{
@@ -1520,6 +1523,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
               ? {}
               : { forvaltUnderlag: valtKvitto })}
             konton={laddat.konton}
+            projekt={laddat.projekt}
             kvitton={laddat.kvitton}
             onTillbaka={() => {
               setFriStart(undefined);
@@ -1728,6 +1732,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
             rakenskapsar={laddat.rakenskapsar}
             idag={idag}
             konton={laddat.konton}
+            projekt={projektPerId}
             underlag={laddat.underlagPerVerifikat}
             underlagsbilder={underlagsbilder}
             kvitton={bilder}

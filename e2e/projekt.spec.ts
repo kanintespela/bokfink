@@ -43,3 +43,39 @@ test('creates a project, renames it, finishes it and opens it again', async ({
   await oppnaProjekt(page);
   await expect(page.getByTestId('projektlista')).toContainText('LEADER-28');
 });
+
+test('books a rad on a project with Fri kontering and shows it on the verifikat', async ({
+  page,
+}) => {
+  await page.clock.install({ time: new Date('2026-04-05T10:00:00+02:00') });
+  await page.clock.resume();
+
+  await oppnaProjekt(page);
+  await page.getByLabel('Kod').fill('LEADER-28');
+  await page.getByLabel('Namn', { exact: true }).fill('Ny scen');
+  await page.getByTestId('skapa-projekt').click();
+  await expect(page.getByTestId('projektlista')).toContainText('LEADER-28');
+
+  await page.goto('/#frikontering');
+  await page.getByLabel('Vad avser det?').fill('Virke till scenen');
+  await page.getByLabel('Konto, rad 1').fill('6100');
+  await page.getByLabel('Debet, rad 1').fill('100');
+  await page.getByLabel('Projekt, rad 1').selectOption({ label: 'LEADER-28 Ny scen' });
+  await page.getByLabel('Konto, rad 2').fill('1930');
+  await page.getByLabel('Kredit, rad 2').fill('100');
+  // The bank row is not a cost of the project and says nothing of it.
+  await page.getByTestId('bokfor-fri').click();
+  await expect(page.getByTestId('fri-besked')).toContainText('A1');
+
+  await page.goto('/#verifikat');
+  await page.getByTestId('verifikatlista').getByRole('button', { name: /A1/ }).click();
+  const rader = page.getByTestId(/^kontering-/).getByRole('listitem');
+  await expect(rader.nth(0)).toContainText('LEADER-28');
+  await expect(rader.nth(1)).not.toContainText('LEADER-28');
+});
+
+test('does not offer the field while there is no project', async ({ page }) => {
+  await page.goto('/#frikontering');
+  await expect(page.getByLabel('Konto, rad 1')).toBeVisible();
+  await expect(page.getByLabel('Projekt, rad 1')).toHaveCount(0);
+});
