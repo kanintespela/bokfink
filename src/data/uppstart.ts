@@ -145,6 +145,8 @@ export const FORENINGENS_GRUNDKONTON: readonly Kontoutkast[] = [
   { nummer: '6320', namn: 'Avgifter till andra organisationer' },
   { nummer: '6390', namn: 'Övriga kostnader' },
   { nummer: '6570', namn: 'Bankkostnader' },
+  { nummer: '7820', namn: 'Avskrivningar på byggnader' },
+  { nummer: '7830', namn: 'Avskrivningar på inventarier' },
   { nummer: '8300', namn: 'Ränteintäkter', typ: 'intakt' },
   { nummer: '8400', namn: 'Räntekostnader', typ: 'kostnad' },
   { nummer: '8999', namn: 'Årets resultat', typ: 'kostnad' },

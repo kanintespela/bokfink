@@ -194,6 +194,7 @@ describe('forvalsradFor', () => {
     expect(rad('3740')).toBe('ovriga_verksamhetsintakter');
     expect(rad('4010')).toBe('forsaljningskostnader');
     expect(rad('5020')).toBe('ovriga_externa_kostnader');
+    expect(rad('7820')).toBe('av_och_nedskrivningar');
     expect(rad('7830')).toBe('av_och_nedskrivningar');
     expect(rad('8300')).toBe('finansiella_intakter');
     expect(rad('8400')).toBe('finansiella_kostnader');

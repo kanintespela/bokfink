@@ -84,6 +84,17 @@ describe('FORENINGENS_GRUNDKONTON', () => {
     expect(nummer.has('8999')).toBe(true);
   });
 
+  it('has the accounts depreciation is booked on, which the bilaga 2 form puts on its own row', () => {
+    const nummer = new Set(FORENINGENS_GRUNDKONTON.map((konto) => konto.nummer));
+    // A building and an inventarie each have a contra account and a cost account.
+    for (const konto of ['1110', '1118', '1220', '1228', '7820', '7830']) {
+      expect(nummer.has(konto)).toBe(true);
+    }
+    // And none of the firm's pool accounts, which an association does not use.
+    expect(nummer.has('1229')).toBe(false);
+    expect(nummer.has('1129')).toBe(false);
+  });
+
   it('is what an association gets, and the K1 set is what a firm gets', () => {
     expect(grundkontonFor('forening')).toBe(FORENINGENS_GRUNDKONTON);
     expect(grundkontonFor('enskild_firma')).toBe(GRUNDKONTON);
