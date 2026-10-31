@@ -41,6 +41,10 @@ interface Props {
     avskrivningskostnadKonto: ReturnType<typeof kontonummer>,
     ackAvskrivningKonto: ReturnType<typeof kontonummer>,
   ) => Promise<string>;
+  /** The accounts offered to start with, which depend on what kind of book this is. */
+  readonly standardkonton: { readonly kostnad: string; readonly ack: string };
+  /** An association has no collective pool above this section to be told apart from. */
+  readonly forening: boolean;
 }
 
 type Kategorival = 'byggnad' | 'markanlaggning' | 'mark' | 'skog';
@@ -53,6 +57,8 @@ type Kategorival = 'byggnad' | 'markanlaggning' | 'mark' | 'skog';
  * - det räcker att titta på tillgången.
  */
 export function Fastighetssektion({
+  standardkonton,
+  forening,
   fastigheter,
   idag,
   onRegistrera,
@@ -73,8 +79,8 @@ export function Fastighetssektion({
   );
   const [avyttringsbelopp, setAvyttringsbelopp] = useState('');
   const [avyttringsdatum, setAvyttringsdatum] = useState(idag);
-  const [kostnadskontoText, setKostnadskontoText] = useState('7820');
-  const [ackkontoText, setAckkontoText] = useState('1129');
+  const [kostnadskontoText, setKostnadskontoText] = useState(standardkonton.kostnad);
+  const [ackkontoText, setAckkontoText] = useState(standardkonton.ack);
 
   const [arbetar, setArbetar] = useState(false);
   const [besked, setBesked] = useState<string | undefined>();
@@ -114,8 +120,9 @@ export function Fastighetssektion({
       <h2>Byggnader, markanläggningar, mark och skog</h2>
 
       <p className="hjalptext">
-        Här skrivs varje sak av för sig, med sin egen procentsats - till skillnad från
-        maskiner och inventarier ovan. Mark och skog skrivs aldrig av.
+        Här skrivs varje sak av för sig, med sin egen procentsats
+        {forening ? '' : ' - till skillnad från maskiner och inventarier ovan'}. Mark och
+        skog skrivs aldrig av.
       </p>
 
       {fastigheter.length === 0 ? (

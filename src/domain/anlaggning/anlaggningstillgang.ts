@@ -80,6 +80,20 @@ export function kravsDirektavdrag(
   );
 }
 
+/**
+ * An association's asset of lesser value: one that costs less than half a
+ * prisbasbelopp (plus moms that is not deducted) need not be taken up in the
+ * balance sheet but may be booked as a cost the year it is bought.
+ * BFNAR 2010:1 punkt 6.27. A firm has two such conditions
+ * ({@link kravsDirektavdrag}); an association has this one.
+ */
+export function arAvMindreVarde(
+  anskaffningsvarde: Ore,
+  halvtPrisbasbelopp: Ore,
+): boolean {
+  return anskaffningsvarde < halvtPrisbasbelopp;
+}
+
 export class RedanAvyttradError extends Error {
   constructor(benamning: string) {
     super(`"${benamning}" är redan avyttrad och kan inte avyttras en gång till.`);

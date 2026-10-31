@@ -4,6 +4,7 @@ import { oreFromKronor, ZERO } from '../belopp/ore';
 import { uuidv7 } from '../id/uuidv7';
 import { datum } from '../tid/datum';
 import {
+  arAvMindreVarde,
   avyttra,
   kravsDirektavdrag,
   RedanAvyttradError,
@@ -120,5 +121,17 @@ describe('avyttra', () => {
         forsaljningsinkomst: ZERO,
       }),
     ).toThrow(RedanAvyttradError);
+  });
+});
+
+describe('arAvMindreVarde', () => {
+  const halvt = oreFromKronor('29600');
+
+  // BFNAR 2010:1 punkt 6.27 says "understiger", so a value exactly at the limit is not of lesser value,
+  // and a long period does not matter: an association has no three-year condition.
+  it('is true below half a prisbasbelopp and false at it or above', () => {
+    expect(arAvMindreVarde(oreFromKronor('29599.99'), halvt)).toBe(true);
+    expect(arAvMindreVarde(halvt, halvt)).toBe(false);
+    expect(arAvMindreVarde(oreFromKronor('50000'), halvt)).toBe(false);
   });
 });

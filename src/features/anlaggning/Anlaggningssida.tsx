@@ -1,6 +1,10 @@
 import { useState } from 'react';
 
-import { kravsDirektavdrag } from '../../domain/anlaggning/anlaggningstillgang';
+import {
+  arAvMindreVarde,
+  kravsDirektavdrag,
+} from '../../domain/anlaggning/anlaggningstillgang';
+import type { Bokprofil } from '../../domain/bok/bokprofil';
 import type { Anlaggningstillgang } from '../../domain/anlaggning/anlaggningstillgang';
 import type {
   Fastighetskategori,
@@ -15,10 +19,13 @@ import { halvtPrisbasbelopp as halvtPrisbasbeloppFor } from '../../domain/skatt/
 import type { Uuid } from '../../domain/id/uuidv7';
 import { Tillbaka } from '../../ui/Tillbaka';
 import { Fastighetssektion } from './Fastighetssektion';
+import { Linjaravskrivningssektion } from './Linjaravskrivningssektion';
 import { Prisbasbeloppssektion } from './Prisbasbeloppssektion';
 
 interface Props {
   readonly onTillbaka: () => void;
+  /** An association's assets are depreciated by other rules than a firm's. */
+  readonly profil: Bokprofil;
   readonly rakenskapsar: readonly Rakenskapsar[];
   readonly anlaggningar: readonly Anlaggningstillgang[];
   readonly fastigheter: readonly Fastighetstillgang[];
@@ -83,6 +90,7 @@ interface Props {
  */
 export function Anlaggningssida({
   onTillbaka,
+  profil,
   rakenskapsar,
   anlaggningar,
   fastigheter,
@@ -153,12 +161,15 @@ export function Anlaggningssida({
       return undefined;
     }
   })();
+  const forening = profil === 'forening';
   const direktavdrag =
     halvtPrisbasbelopp !== undefined &&
     beloppOre !== undefined &&
     Number.isInteger(nyttjandeperiodTal) &&
     nyttjandeperiodTal > 0 &&
-    kravsDirektavdrag(beloppOre, nyttjandeperiodTal, halvtPrisbasbelopp);
+    (forening
+      ? arAvMindreVarde(beloppOre, halvtPrisbasbelopp)
+      : kravsDirektavdrag(beloppOre, nyttjandeperiodTal, halvtPrisbasbelopp));
 
   function tolkaKonton(text: string): Kontonummer[] {
     return text
@@ -173,11 +184,10 @@ export function Anlaggningssida({
       <Tillbaka onTillbaka={onTillbaka} />
       <h2>Anläggningsregister</h2>
 
-      <p className="hjalptext">
-        Maskiner och inventarier skrivs av kollektivt, som en klumpsumma för allt som ägs
-        - inte per tillgång. Registret nedan är till för spårbarhet och för
-        kompletteringsregeln, som behöver varje tillgångs eget anskaffningsvärde och
-        ålder.
+      <p className="hjalptext" data-testid="anlaggning-inledning">
+        {forening
+          ? 'Inventarier skrivs av var och en för sig under sin nyttjandeperiod. Registret nedan är det som årets avskrivning räknas på, så en tillgång som ska skrivas av måste finnas i det. Byggnader hanteras längre ned.'
+          : 'Maskiner och inventarier skrivs av kollektivt, som en klumpsumma för allt som ägs - inte per tillgång. Registret nedan är till för spårbarhet och för kompletteringsregeln, som behöver varje tillgångs eget anskaffningsvärde och ålder.'}
       </p>
 
       {anlaggningar.length === 0 ? (
@@ -337,9 +347,9 @@ export function Anlaggningssida({
 
       {direktavdrag && (
         <p role="status" data-testid="direktavdrag-varning">
-          Det här får kostnadsföras direkt i stället för att registreras här - värdet är
-          högst ett halvt prisbasbelopp, eller nyttjandeperioden högst tre år (BFN K1
-          punkt 6.30, 6.31). Bokför det som en vanlig utgift.
+          {forening
+            ? 'Det här får kostnadsföras direkt i stället för att registreras här - värdet understiger ett halvt prisbasbelopp (BFNAR 2010:1 punkt 6.27). Bokför det som en vanlig utgift.'
+            : 'Det här får kostnadsföras direkt i stället för att registreras här - värdet är högst ett halvt prisbasbelopp, eller nyttjandeperioden högst tre år (BFN K1 punkt 6.30, 6.31). Bokför det som en vanlig utgift.'}
         </p>
       )}
 
@@ -396,137 +406,153 @@ export function Anlaggningssida({
         </select>
       </div>
 
-      <div className="faltgrupp">
-        <label htmlFor="poolkonton">Konton för potten, kommaseparerat</label>
-        <input
-          id="poolkonton"
-          className="falt"
-          value={poolkontoText}
-          onChange={(handelse) => setPoolkontoText(handelse.target.value)}
+      {forening ? (
+        <Linjaravskrivningssektion
+          anlaggningar={anlaggningar}
+          rakenskapsar={rakenskapsar.find((kandidat) => kandidat.id === ar)}
+          arbetar={arbetar}
+          kor={kor}
+          onBokfor={(belopp, kostnadskonto, ackKonto) =>
+            onBokforAvskrivning(ar as Uuid, belopp, kostnadskonto, ackKonto)
+          }
         />
-      </div>
-
-      <button
-        type="button"
-        className="knapp"
-        disabled={arbetar || ar === ''}
-        data-testid="berakna-avskrivning"
-        onClick={() =>
-          void kor(async () => {
-            const rakenskapsarId = ar as Uuid;
-            const resultat = await onBeraknaAvskrivning(
-              rakenskapsarId,
-              tolkaKonton(poolkontoText),
-            );
-            setUnderlag(resultat);
-            return `Underlag ${formatKronor(resultat.forslag.underlag)} kr.`;
-          })
-        }
-      >
-        Beräkna
-      </button>
-
-      {underlag !== undefined && (
-        <div className="kort" data-testid="avskrivningsforslag">
-          <dl>
-            <dt>IB</dt>
-            <dd>{formatKronor(underlag.ib)}</dd>
-            <dt>Årets inköp</dt>
-            <dd>{formatKronor(underlag.aretsInkop)}</dd>
-            <dt>Årets avyttrat</dt>
-            <dd>{formatKronor(underlag.aretsAvyttrat)}</dd>
-            <dt>Avskrivningsunderlag</dt>
-            <dd>{formatKronor(underlag.forslag.underlag)}</dd>
-          </dl>
-
+      ) : (
+        <>
           <div className="faltgrupp">
-            <label htmlFor="avskrivningskostnadkonto">
-              Kostnadskonto för avskrivningen
-            </label>
+            <label htmlFor="poolkonton">Konton för potten, kommaseparerat</label>
             <input
-              id="avskrivningskostnadkonto"
+              id="poolkonton"
               className="falt"
-              value={avskrivningskostnadText}
-              onChange={(handelse) => setAvskrivningskostnadText(handelse.target.value)}
+              value={poolkontoText}
+              onChange={(handelse) => setPoolkontoText(handelse.target.value)}
             />
           </div>
 
-          <div className="faltgrupp">
-            <label htmlFor="ackavskrivningkonto">
-              Kontot för ackumulerade avskrivningar
-            </label>
-            <input
-              id="ackavskrivningkonto"
-              className="falt"
-              value={ackAvskrivningText}
-              onChange={(handelse) => setAckAvskrivningText(handelse.target.value)}
-            />
-          </div>
+          <button
+            type="button"
+            className="knapp"
+            disabled={arbetar || ar === ''}
+            data-testid="berakna-avskrivning"
+            onClick={() =>
+              void kor(async () => {
+                const rakenskapsarId = ar as Uuid;
+                const resultat = await onBeraknaAvskrivning(
+                  rakenskapsarId,
+                  tolkaKonton(poolkontoText),
+                );
+                setUnderlag(resultat);
+                return `Underlag ${formatKronor(resultat.forslag.underlag)} kr.`;
+              })
+            }
+          >
+            Beräkna
+          </button>
 
-          <p className="hjalptext">
-            {underlag.forslag.underlag <= 0
-              ? 'Underlaget är noll, så det finns inget att skriva av än - registrera och bokför en anskaffning först.'
-              : 'Tre regler räknade parallellt, plus möjligheten att skriva av hela underlaget när det är litet nog - vilken som bokförs är alltid ett val, aldrig ett förslag som redan är ifyllt (hård regel 10).'}
-          </p>
+          {underlag !== undefined && (
+            <div className="kort" data-testid="avskrivningsforslag">
+              <dl>
+                <dt>IB</dt>
+                <dd>{formatKronor(underlag.ib)}</dd>
+                <dt>Årets inköp</dt>
+                <dd>{formatKronor(underlag.aretsInkop)}</dd>
+                <dt>Årets avyttrat</dt>
+                <dd>{formatKronor(underlag.aretsAvyttrat)}</dd>
+                <dt>Avskrivningsunderlag</dt>
+                <dd>{formatKronor(underlag.forslag.underlag)}</dd>
+              </dl>
 
-          <ul className="lista" data-testid="avskrivningsforslag-rader">
-            {(
-              [
-                ['Huvudregeln, 30 %', underlag.forslag.huvudregeln, 'huvudregeln'],
-                [
-                  'Kompletteringsregeln',
-                  underlag.forslag.kompletteringsregeln,
-                  'kompletteringsregeln',
-                ],
-                [
-                  'Restvärdesavskrivning, 25 %',
-                  underlag.forslag.restvardesavskrivning,
-                  'restvardesavskrivning',
-                ],
-                ...(underlag.forslag.helaUnderlaget === undefined
-                  ? []
-                  : ([
-                      [
-                        'Hela underlaget (under halvt prisbasbelopp)',
-                        underlag.forslag.helaUnderlaget,
-                        'helaUnderlaget',
-                      ],
-                    ] as const)),
-              ] as const
-            ).map(([namn, avskrivning, nyckel]) => (
-              <li key={nyckel}>
-                <div className="listrad">
-                  <span className="listrad__text">
-                    <span>{namn}</span>
-                  </span>
-                  <span className="belopp">{formatKronor(avskrivning)}</span>
-                </div>
-                <p>
-                  <button
-                    type="button"
-                    className="knapp"
-                    disabled={arbetar || avskrivning <= 0}
-                    data-testid={`bokfor-${nyckel}`}
-                    onClick={() =>
-                      void kor(async () => {
-                        const resultat = await onBokforAvskrivning(
-                          ar as Uuid,
-                          avskrivning,
-                          kontonummer(avskrivningskostnadText),
-                          kontonummer(ackAvskrivningText),
-                        );
-                        setUnderlag(undefined);
-                        return resultat;
-                      })
-                    }
-                  >
-                    Bokför {formatKronor(avskrivning)} kr
-                  </button>
-                </p>
-              </li>
-            ))}
-          </ul>
-        </div>
+              <div className="faltgrupp">
+                <label htmlFor="avskrivningskostnadkonto">
+                  Kostnadskonto för avskrivningen
+                </label>
+                <input
+                  id="avskrivningskostnadkonto"
+                  className="falt"
+                  value={avskrivningskostnadText}
+                  onChange={(handelse) =>
+                    setAvskrivningskostnadText(handelse.target.value)
+                  }
+                />
+              </div>
+
+              <div className="faltgrupp">
+                <label htmlFor="ackavskrivningkonto">
+                  Kontot för ackumulerade avskrivningar
+                </label>
+                <input
+                  id="ackavskrivningkonto"
+                  className="falt"
+                  value={ackAvskrivningText}
+                  onChange={(handelse) => setAckAvskrivningText(handelse.target.value)}
+                />
+              </div>
+
+              <p className="hjalptext">
+                {underlag.forslag.underlag <= 0
+                  ? 'Underlaget är noll, så det finns inget att skriva av än - registrera och bokför en anskaffning först.'
+                  : 'Tre regler räknade parallellt, plus möjligheten att skriva av hela underlaget när det är litet nog - vilken som bokförs är alltid ett val, aldrig ett förslag som redan är ifyllt (hård regel 10).'}
+              </p>
+
+              <ul className="lista" data-testid="avskrivningsforslag-rader">
+                {(
+                  [
+                    ['Huvudregeln, 30 %', underlag.forslag.huvudregeln, 'huvudregeln'],
+                    [
+                      'Kompletteringsregeln',
+                      underlag.forslag.kompletteringsregeln,
+                      'kompletteringsregeln',
+                    ],
+                    [
+                      'Restvärdesavskrivning, 25 %',
+                      underlag.forslag.restvardesavskrivning,
+                      'restvardesavskrivning',
+                    ],
+                    ...(underlag.forslag.helaUnderlaget === undefined
+                      ? []
+                      : ([
+                          [
+                            'Hela underlaget (under halvt prisbasbelopp)',
+                            underlag.forslag.helaUnderlaget,
+                            'helaUnderlaget',
+                          ],
+                        ] as const)),
+                  ] as const
+                ).map(([namn, avskrivning, nyckel]) => (
+                  <li key={nyckel}>
+                    <div className="listrad">
+                      <span className="listrad__text">
+                        <span>{namn}</span>
+                      </span>
+                      <span className="belopp">{formatKronor(avskrivning)}</span>
+                    </div>
+                    <p>
+                      <button
+                        type="button"
+                        className="knapp"
+                        disabled={arbetar || avskrivning <= 0}
+                        data-testid={`bokfor-${nyckel}`}
+                        onClick={() =>
+                          void kor(async () => {
+                            const resultat = await onBokforAvskrivning(
+                              ar as Uuid,
+                              avskrivning,
+                              kontonummer(avskrivningskostnadText),
+                              kontonummer(ackAvskrivningText),
+                            );
+                            setUnderlag(undefined);
+                            return resultat;
+                          })
+                        }
+                      >
+                        Bokför {formatKronor(avskrivning)} kr
+                      </button>
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </>
       )}
 
       {arbetar && <p data-testid="anlaggning-arbetar">Arbetar …</p>}
@@ -544,6 +570,10 @@ export function Anlaggningssida({
       )}
 
       <Fastighetssektion
+        forening={forening}
+        standardkonton={
+          forening ? { kostnad: '7820', ack: '1118' } : { kostnad: '7820', ack: '1129' }
+        }
         fastigheter={fastigheter}
         idag={idag}
         onRegistrera={onRegistreraFastighet}

@@ -1832,6 +1832,7 @@ export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval })
 
         {vy === 'anlaggning' && (
           <Anlaggningssida
+            profil={laddat.profil}
             onTillbaka={() => setVy('mer')}
             rakenskapsar={laddat.rakenskapsar}
             anlaggningar={laddat.anlaggningar}
