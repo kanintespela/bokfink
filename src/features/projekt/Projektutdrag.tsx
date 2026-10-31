@@ -156,9 +156,13 @@ export function Projektutdrag({ projekt, konton, verifikat, rakenskapsar }: Prop
           utdrag.summaSkulder,
         )}
         <p className="hjalptext">
-          Ett bidrag som tagits emot men ännu inte tagits upp som intäkt ligger som skuld
-          på projektet, om det bokförts så. Det som står kvar där är det som återstår att
-          använda. Skulden räknas till periodens slut, från projektets början.
+          Skulden är det som bokförts som skuld på projektet och inte tagits upp som
+          intäkt än. I en förening är det ett villkorat bidrag från det allmänna som kan
+          komma att krävas tillbaka (BFNAR 2010:1, punkt 6.77 och 7.4), och den del av ett
+          bidrag som hör till kommande år när bidraget redovisas det år det hör till
+          (punkt 6.76). Ett bidrag som redovisas när det betalas ut är intäkt direkt och
+          syns inte här. Medel som bara är öronmärkta, till exempel en gåva, är eget
+          kapital (punkt 6.67). Skulden räknas från projektets början till periodens slut.
         </p>
         {utdrag.tillgangar.length > 0 &&
           grupp(
