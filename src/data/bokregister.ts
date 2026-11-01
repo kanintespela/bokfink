@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie';
 
+import { nastaLedigaFarg, type Bokfarg } from '../domain/bok/bokfarg';
 import type { Bokprofil } from '../domain/bok/bokprofil';
 import { BOK_ID_NYCKEL, BOK_PROFIL_NYCKEL, URSPRUNGLIG_BOK } from './bokidentitet';
 import { BokfinkDatabase } from './db';
@@ -23,6 +24,8 @@ export interface Bok {
   /** The IndexedDB database the book lives in. */
   readonly databas: string;
   readonly skapad: string;
+  /** What colours the frame and the bar while the book is open. Chosen, not required. */
+  readonly farg?: Bokfarg;
 }
 
 interface Valrad {
@@ -187,6 +190,7 @@ export async function skapaBok(
     namn: granskaBoknamn(namn, bocker),
     databas: `${BOKDATABAS_PREFIX}${id}`,
     skapad: kontext.nu(),
+    farg: nastaLedigaFarg(bocker.map((kandidat) => kandidat.farg)),
   };
 
   const db = new BokfinkDatabase(bok.databas);
@@ -199,6 +203,29 @@ export async function skapaBok(
 
   await register.bocker.put(bok);
   return bok;
+}
+
+/** Sets, or with undefined clears, the colour of a book. */
+export async function bytFargPaBok(
+  register: Bokregister,
+  kontext: Registerkontext,
+  id: string,
+  farg: Bokfarg | undefined,
+): Promise<Bok> {
+  const { bocker } = await lasBocker(register, kontext);
+  const bok = bocker.find((kandidat) => kandidat.id === id);
+  if (bok === undefined) {
+    throw new Error(`Boken ${id} finns inte på den här enheten.`);
+  }
+  const utan: Bok = {
+    id: bok.id,
+    namn: bok.namn,
+    databas: bok.databas,
+    skapad: bok.skapad,
+  };
+  const ny: Bok = farg === undefined ? utan : { ...utan, farg };
+  await register.bocker.put(ny);
+  return ny;
 }
 
 export async function bytNamnPaBok(

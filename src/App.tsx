@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import {
+  bytFargPaBok,
   bytNamnPaBok,
   filprefix,
   lasBokinnehall,
@@ -108,6 +109,10 @@ export function App() {
             onSkapa: async (namn, profil) => {
               const ny = await skapaBok(register, registerkontext, namn, profil);
               await valj(ny.id);
+            },
+            onBytFarg: async (farg) => {
+              await bytFargPaBok(register, registerkontext, aktiv.id, farg);
+              await lasOm();
             },
             onBytNamn: async (namn) => {
               await bytNamnPaBok(register, registerkontext, aktiv.id, namn);

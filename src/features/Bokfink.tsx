@@ -325,6 +325,17 @@ const ASSISTENT_BESKED_MS = 60 * 60 * 1000;
 export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval }) {
   const [begardVy, setVy] = useVy();
   const filprefix = useFilprefix();
+  // The open book's colour goes on the root, where the frame and the bar read it.
+  const bokfarg = bokval.aktiv.farg;
+  useEffect(() => {
+    if (bokfarg === undefined) {
+      return undefined;
+    }
+    document.documentElement.dataset['bokfarg'] = bokfarg;
+    return () => {
+      delete document.documentElement.dataset['bokfarg'];
+    };
+  }, [bokfarg]);
   // Stable, so the NE screen reads a year once rather than on every render.
   const lasNeJusteringar = useCallback((arId: Uuid) => lasNejusteringar(db, arId), [db]);
   const lasNe = useCallback(
@@ -919,28 +930,6 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
   return (
     <>
       <main>
-        {/*
-         * Which book is open, on every screen, once there is more than one.
-         * The mistake this guards against is a receipt from the firm booked
-         * in the association's books, and that happens on the booking screen,
-         * not on the home screen.
-         */}
-        {bokval.bocker.length > 1 && (
-          <p className="bokrad" data-testid="aktiv-bok">
-            <span>
-              Bok: <strong>{bokval.aktiv.namn}</strong>
-            </span>
-            {vy !== 'bocker' && (
-              <button
-                type="button"
-                className="knapp knapp--text"
-                onClick={() => setVy('bocker')}
-              >
-                Byt bok
-              </button>
-            )}
-          </p>
-        )}
         {vy === 'attgora' && (
           <div className="rubrikrad">
             <Varumarke />
@@ -2129,6 +2118,14 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
         vy={vy}
         onValj={setVy}
         antal={{ kvitton: laddat.utkast.length + laddat.kvitton.length }}
+        {...(bokval.bocker.length > 1
+          ? {
+              bok: {
+                namn: bokval.aktiv.namn,
+                ...(vy === 'bocker' ? {} : { onByt: () => setVy('bocker') }),
+              },
+            }
+          : {})}
       />
     </>
   );

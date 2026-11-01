@@ -394,3 +394,28 @@ test('offers no way to take away the first book', async ({ page }) => {
   await oppnaBocker(page);
   await expect(page.getByRole('heading', { name: 'Ta bort en bok' })).toHaveCount(0);
 });
+
+test('colours the frame and the bar with the open book’s colour', async ({ page }) => {
+  await oppnaBocker(page);
+  const rot = page.locator('html');
+  // One book with no colour chosen: nothing is painted.
+  await expect(rot).not.toHaveAttribute('data-bokfarg', /.+/);
+
+  await page.getByLabel('Namn på den nya boken').fill('Föreningen');
+  await page.getByRole('button', { name: 'Ideell förening' }).click();
+  await page.getByRole('button', { name: 'Skapa och öppna boken' }).click();
+
+  // A new book gets the first free colour, and the bar says which book is open.
+  await expect(rot).toHaveAttribute('data-bokfarg', 'gron');
+  await expect(page.getByTestId('aktiv-bok')).toContainText('Föreningen');
+
+  await page.goto('/#bocker');
+  await page.getByRole('button', { name: 'Röd', exact: true }).click();
+  await expect(rot).toHaveAttribute('data-bokfarg', 'rod');
+  await page.reload();
+  await expect(rot).toHaveAttribute('data-bokfarg', 'rod');
+  await page.goto('/#bocker');
+
+  await page.getByRole('button', { name: 'Ingen färg' }).click();
+  await expect(rot).not.toHaveAttribute('data-bokfarg', /.+/);
+});

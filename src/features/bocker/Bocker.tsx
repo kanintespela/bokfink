@@ -6,6 +6,7 @@ import {
   type Bok,
   type Bokinnehall,
 } from '../../data/bokregister';
+import { BOKFARGER, BOKFARGNAMN, type Bokfarg } from '../../domain/bok/bokfarg';
 import { BOKPROFILER, BOKPROFILNAMN, type Bokprofil } from '../../domain/bok/bokprofil';
 import { Uppgiftsstatus, useUppgift } from '../data/uppgift';
 
@@ -16,6 +17,7 @@ export interface Bokval {
   /** Opens another book. The whole app starts over in it. */
   readonly onValj: (id: string) => Promise<void>;
   readonly onSkapa: (namn: string, profil: Bokprofil) => Promise<void>;
+  readonly onBytFarg: (farg: Bokfarg | undefined) => Promise<void>;
   readonly onBytNamn: (namn: string) => Promise<void>;
   /** What a book holds, so the interface knows whether it may go without asking. */
   readonly onInnehall: (bok: Bok) => Promise<Bokinnehall>;
@@ -36,6 +38,7 @@ export function Bocker({
   aktiv,
   onValj,
   onSkapa,
+  onBytFarg,
   onBytNamn,
   onInnehall,
   onTaBort,
@@ -81,7 +84,14 @@ export function Bocker({
               }
             >
               <span className="listrad__text">
-                <strong>{bok.namn}</strong>
+                <span className="bokrubrik">
+                  <span
+                    className="bokprick"
+                    {...(bok.farg === undefined ? {} : { 'data-bokfarg': bok.farg })}
+                    aria-hidden="true"
+                  />
+                  <strong>{bok.namn}</strong>
+                </span>
               </span>
               <span className="listrad__sekundar">
                 {bok.id === aktiv.id ? 'Öppen' : 'Öppna'}
@@ -90,6 +100,46 @@ export function Bocker({
           </li>
         ))}
       </ul>
+
+      <h2>Färg för {aktiv.namn}</h2>
+      <p className="hjalptext">
+        Färgen syns som en tunn ram runt skärmen och i fliken längst ner medan boken är
+        öppen, så att du ser vilken bok du bokför i.
+      </p>
+      <div className="fargval" role="group" aria-label={`Färg för ${aktiv.namn}`}>
+        {BOKFARGER.map((farg) => (
+          <button
+            key={farg}
+            type="button"
+            className="fargval__knapp"
+            data-bokfarg={farg}
+            aria-pressed={aktiv.farg === farg}
+            aria-label={BOKFARGNAMN[farg]}
+            title={BOKFARGNAMN[farg]}
+            disabled={arbetar}
+            onClick={() =>
+              void kor(async () => {
+                await onBytFarg(farg);
+                return `${BOKFARGNAMN[farg]} är vald.`;
+              })
+            }
+          />
+        ))}
+        <button
+          type="button"
+          className="knapp knapp--text"
+          aria-pressed={aktiv.farg === undefined}
+          disabled={arbetar || aktiv.farg === undefined}
+          onClick={() =>
+            void kor(async () => {
+              await onBytFarg(undefined);
+              return 'Färgen är borttagen.';
+            })
+          }
+        >
+          Ingen färg
+        </button>
+      </div>
 
       <h2>Byt namn på {aktiv.namn}</h2>
       <form

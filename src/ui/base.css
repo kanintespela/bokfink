@@ -133,33 +133,6 @@ h1 {
   border-radius: var(--rundning);
 }
 
-/*
- * Which book is open, once there are several. Inked like the primary action
- * rather than muted like help text: it has to be seen without being looked
- * for, on every screen, by someone in a hurry.
- */
-.bokrad {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--rum-3);
-  margin: 0 0 var(--rum-4);
-  padding: var(--rum-1) var(--rum-1) var(--rum-1) var(--rum-4);
-  border-radius: var(--rundning);
-  background: var(--ink);
-  color: var(--paper);
-}
-
-.bokrad strong {
-  overflow-wrap: anywhere;
-}
-
-.bokrad .knapp--text {
-  flex-shrink: 0;
-  white-space: nowrap;
-  color: var(--paper);
-}
-
 h2 {
   font-size: 1.1rem;
   margin: var(--rum-5) 0 var(--rum-2);
@@ -955,16 +928,24 @@ dd {
 .vyval {
   position: fixed;
   inset: auto 0 0 0;
-  display: flex;
-  background: var(--yta);
-  border-top: 1px solid var(--line);
+  background: var(--vyval-bakgrund, var(--yta));
+  border-top: 1px solid var(--bokfarg, var(--line));
   padding-bottom: env(safe-area-inset-bottom);
   z-index: 10;
 }
 
-.vyval button {
+.vyval__flikar {
+  display: flex;
+}
+
+.vyval button:not(.vyval__bok) {
   flex: 1;
-  min-height: var(--tapp-stor);
+  /* A flex box, so a count beside the name cannot lift one tab's text above
+     the others': every label is centred on the same line. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--tapp-stor);
   border: 0;
   background: none;
   color: var(--muted);
@@ -972,6 +953,34 @@ dd {
   font-size: 0.875rem;
   cursor: pointer;
   touch-action: manipulation;
+}
+
+/* The open book, a thin line above the tabs. Muted and small: it is read, not hit. */
+.vyval__bok {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0.15rem var(--rum-4);
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+button.vyval__bok {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.vyval__bok strong {
+  color: var(--text);
+  font-weight: 600;
 }
 
 /* How many things wait behind a tab: small, beside the name, never wrapping it. */
@@ -986,18 +995,135 @@ dd {
   font-size: 0.75rem;
   font-weight: 600;
   line-height: 1.25rem;
-  vertical-align: 0.1em;
 }
 
 .vyval button[aria-current='page'] {
   color: var(--ink);
   font-weight: 600;
-  box-shadow: inset 0 2px 0 var(--ink);
+  box-shadow: inset 0 2px 0 var(--bokfarg, var(--ink));
 }
 
 /* Room for the bar, so the last row of a list is never trapped under it. */
 main {
   padding-bottom: calc(var(--tapp-stor) + env(safe-area-inset-bottom) + var(--rum-5));
+}
+
+body:has(.vyval--bok) main {
+  padding-bottom: calc(
+    var(--tapp-stor) + 1.75rem + env(safe-area-inset-bottom) + var(--rum-5)
+  );
+}
+
+/* ── Book colours ──────────────────────────────────────────────────────────
+   Chosen per book (Mer, Böcker). The open book's colour is on the root as
+   data-bokfarg: a thin frame round the screen, and a tint on the bar. */
+
+:root {
+  --bok-gron: #2f7d5b;
+  --bok-bla: #2f6fb3;
+  --bok-lila: #7a4fb0;
+  --bok-rosa: #c4467e;
+  --bok-rod: #c0392b;
+  --bok-orange: #d9741c;
+  --bok-gul: #b8920a;
+  --bok-turkos: #1f8a92;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bok-gron: #5fcf9f;
+    --bok-bla: #6fa8ec;
+    --bok-lila: #b28ae6;
+    --bok-rosa: #ee86b4;
+    --bok-rod: #f07a6a;
+    --bok-orange: #f2a057;
+    --bok-gul: #e3c24a;
+    --bok-turkos: #5ccbd3;
+  }
+}
+
+[data-bokfarg='gron'] {
+  --bokfarg: var(--bok-gron);
+}
+[data-bokfarg='bla'] {
+  --bokfarg: var(--bok-bla);
+}
+[data-bokfarg='lila'] {
+  --bokfarg: var(--bok-lila);
+}
+[data-bokfarg='rosa'] {
+  --bokfarg: var(--bok-rosa);
+}
+[data-bokfarg='rod'] {
+  --bokfarg: var(--bok-rod);
+}
+[data-bokfarg='orange'] {
+  --bokfarg: var(--bok-orange);
+}
+[data-bokfarg='gul'] {
+  --bokfarg: var(--bok-gul);
+}
+[data-bokfarg='turkos'] {
+  --bokfarg: var(--bok-turkos);
+}
+
+html[data-bokfarg] {
+  --vyval-bakgrund: color-mix(in srgb, var(--bokfarg) 14%, var(--yta));
+}
+
+/* The frame: over everything, never in the way of a touch. */
+html[data-bokfarg]::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  border: 4px solid var(--bokfarg);
+  pointer-events: none;
+  z-index: 40;
+}
+
+.bokrubrik {
+  display: flex;
+  align-items: center;
+}
+
+.bokprick {
+  flex-shrink: 0;
+  width: 0.75rem;
+  height: 0.75rem;
+  margin-right: var(--rum-2);
+  border-radius: 50%;
+  background: var(--bokfarg);
+  border: 1px solid var(--line);
+}
+
+/* No colour chosen: an empty ring, not the open book's colour passed down. */
+.bokprick:not([data-bokfarg]) {
+  background: none;
+}
+
+.fargval {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--rum-3);
+  margin-bottom: var(--rum-4);
+}
+
+.fargval__knapp {
+  width: var(--tapp);
+  height: var(--tapp);
+  padding: 0;
+  border: 3px solid transparent;
+  border-radius: 50%;
+  background: var(--bokfarg);
+  background-clip: padding-box;
+  box-shadow: 0 0 0 1px var(--line);
+  cursor: pointer;
+}
+
+.fargval__knapp[aria-pressed='true'] {
+  border-color: var(--yta);
+  box-shadow: 0 0 0 3px var(--text);
 }
 
 /* ── Tables of figures, and the form a board signs ─────────────────────── */

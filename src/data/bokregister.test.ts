@@ -12,6 +12,7 @@ import {
 } from './bokidentitet';
 import {
   Bokregister,
+  bytFargPaBok,
   bytNamnPaBok,
   filprefix,
   granskaBoknamn,
@@ -126,6 +127,22 @@ describe('bokregistret', () => {
     // Registered once, however often it is read.
     await lasBocker(register, kontext);
     expect(await register.bocker.count()).toBe(1);
+  });
+
+  it('gives each new book the first colour no book has, and lets it be changed or cleared', async () => {
+    const forst = await skapaBok(register, kontext, 'Första', 'forening');
+    const andra = await skapaBok(register, kontext, 'Andra', 'enskild_firma');
+    expect([forst.farg, andra.farg]).toEqual(['gron', 'bla']);
+    // The original book was never given one.
+    expect((await lasBocker(register, kontext)).bocker[0]?.farg).toBeUndefined();
+
+    await bytFargPaBok(register, kontext, andra.id, 'rod');
+    expect((await register.bocker.get(andra.id))?.farg).toBe('rod');
+    await bytFargPaBok(register, kontext, andra.id, undefined);
+    expect((await register.bocker.get(andra.id))?.farg).toBeUndefined();
+    await expect(bytFargPaBok(register, kontext, 'finns-inte', 'rod')).rejects.toThrow(
+      'finns inte',
+    );
   });
 
   it('creates a book in a database of its own that knows which book it is', async () => {
