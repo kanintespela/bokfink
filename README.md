@@ -44,7 +44,7 @@ Status: ⬜ ej påbörjad · 🟡 pågår · ✅ klar · ⏸️ nedprioriterad
 |---|---|
 | ✅ | Ingående och utgående moms per momskod (25/12/6 %, momsfritt, omvänd skattskyldighet) |
 | ✅ | Momsrapport och underlag för momsdeklarationens samtliga rutor |
-| 🟡 | Export av momsdeklaration som eSKD-fil, för de rutor vars format är bekräftat |
+| ✅ | Export av momsdeklaration som eSKD-fil. En fil har laddats upp hos Skatteverket och fungerade |
 | 🟡 | EU-handel klar. Periodisk sammanställning visar beloppen men kräver kundregistret |
 | ✅ | Förenklat årsbokslut enligt K1, årets resultat till eget kapital och omföring av 20xx-kontona |
 | 🟡 | Underlag till NE-bilagan med SRU-export (`INFO.SRU` + `BLANKETTER.SRU`), ännu inte uppladdat hos Skatteverket |
