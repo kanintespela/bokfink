@@ -77,6 +77,23 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 
+/*
+ * A fixed strip over the status bar. iOS 26 blurs the top edge of the page
+ * under its status bar - at rest too, so the first heading looked out of
+ * focus - unless a fixed element sits against that edge. This one is the page's
+ * own colour and as tall as the status bar, so it also keeps content scrolled
+ * under the clock from showing through.
+ */
+html::before {
+  content: '';
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: max(env(safe-area-inset-top), 1px);
+  background: var(--paper);
+  pointer-events: none;
+  z-index: 30;
+}
+
 main {
   padding: max(var(--rum-5), env(safe-area-inset-top))
     max(var(--rum-4), env(safe-area-inset-right))
