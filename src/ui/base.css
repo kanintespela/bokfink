@@ -1146,14 +1146,14 @@ html[data-bokfarg]::after {
   }
 }
 
-/* ── The fixed top bar ─────────────────────────────────────────────────────
-   Solid and fixed, covering the status bar and the strip under it. iOS 26
+/* ── The top bar ───────────────────────────────────────────────────────────
+   Sticky at top: 0 with a solid background that runs up behind the status bar. iOS 26
    fades the top edge of whatever scrolls; with this over that edge, the fade
    falls on the bar, not on the page's first heading. */
 
 .topprad {
-  position: fixed;
-  inset: 0 0 auto 0;
+  position: sticky;
+  top: 0;
   z-index: 15;
   padding: env(safe-area-inset-top) max(var(--rum-4), env(safe-area-inset-right)) 0
     max(var(--rum-4), env(safe-area-inset-left));
@@ -1201,14 +1201,6 @@ html[data-bokfarg]::after {
   --topprad-hojd: 2.75rem;
 }
 
-body:has(.topprad) {
-  padding-top: calc(env(safe-area-inset-top) + var(--topprad-hojd) + 1px);
-}
-
 body:has(.topprad) main {
   padding-top: var(--rum-4);
-}
-
-body:has(.topprad) .update-banner {
-  padding-top: var(--rum-3);
 }

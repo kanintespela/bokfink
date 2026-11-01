@@ -4,7 +4,7 @@ interface Props {
 }
 
 /**
- * A bar fixed to the top of the screen, which does not scroll. The status bar
+ * A solid bar stuck to the top of the screen (sticky, top 0), which stays when the page scrolls. The status bar
  * sits over it, and it is solid, so the system's fade of the scrolling page
  * under the status bar lands on this bar rather than on the page's content.
  */
