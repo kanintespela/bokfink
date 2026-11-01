@@ -138,9 +138,9 @@ export function Lagersida({
   ) as Ore;
 
   return (
-    <section aria-label="Djurlager">
+    <section aria-label="Lager">
       <Tillbaka onTillbaka={onTillbaka} />
-      <h2>Djurlager</h2>
+      <h2>Lager</h2>
 
       <p className="hjalptext">
         Djur i jordbruk räknas alltid som lagertillgångar, aldrig som

@@ -63,7 +63,7 @@ Status: ⬜ ej påbörjad · 🟡 pågår · ✅ klar · ⏸️ nedprioriterad
 | | Funktion |
 |---|---|
 | ✅ | Anläggningsregister med avskrivningar enligt K1, fastighetskomponenter |
-| 🟡 | Djurlager klart; lagerregister för vanligt varulager nedprioriterat |
+| 🟡 | Lager (djur) klart; lagerregister för vanligt varulager nedprioriterat |
 | ⏸️ | Kund-, projekt- och artikelregister med timtaxor |
 
 ### Fakturering

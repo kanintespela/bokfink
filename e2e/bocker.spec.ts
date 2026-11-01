@@ -97,7 +97,7 @@ test('an association book has no owner screens and no moms until it is registere
 
   // Under Mer: no NE-bilaga, owner's equity, K1 statement, animal stock or moms.
   await page.goto('/#mer');
-  for (const dold of ['NE-bilaga', 'Djurlager', 'Moms']) {
+  for (const dold of ['NE-bilaga', 'Lager', 'Moms']) {
     await expect(page.getByRole('button', { name: dold, exact: true })).toHaveCount(0);
   }
   await expect(page.getByRole('button', { name: 'Företaget' })).toBeVisible();

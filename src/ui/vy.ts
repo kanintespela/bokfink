@@ -61,7 +61,7 @@ export const VYNAMN: Record<Vy, string> = {
   enhet: 'Synk och den här enheten',
   foretag: 'Företaget',
   anlaggning: 'Anläggningar',
-  lager: 'Djurlager',
+  lager: 'Lager',
   projekt: 'Projekt',
   periodisering: 'Obetalda fakturor och periodisering',
   fordelning: 'Fördela kostnader på projekt',
