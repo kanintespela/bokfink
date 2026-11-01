@@ -116,17 +116,80 @@
         font-size: 1.1rem;
         margin: 20px 0 4px;
       }
-      /* A: sticky top bar, the document scrolls, bottom bar fixed */
-      .v-sticky .topp {
+      /* kort: A with almost no content, so the document cannot scroll */
+      .v-kort .topp,
+      .v-kort1 .topp,
+      .v-skal3 .topp {
         position: sticky;
         top: 0;
         z-index: 5;
       }
-      .v-sticky .nav {
+      .v-kort .nav,
+      .v-kort1 .nav {
         position: fixed;
         inset: auto 0 0 0;
       }
-      .v-sticky .innehall {
+      .v-kort .innehall,
+      .v-kort1 .innehall {
+        padding-bottom: calc(56px + var(--botten) + 24px);
+      }
+      /* kort1: the same, but the document is made to scroll by 2px */
+      .v-kort1,
+      .v-skal3 {
+        height: 100%;
+      }
+      .v-kort1 body,
+      .v-skal3 body {
+        min-height: calc(100% + 2px);
+      }
+      /* skal3: the shell, with the document forced to scroll by 2px */
+      .v-skal3 .app {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+      }
+      .v-skal3 .scroll {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+      }
+      .v-skal3 .topp,
+      .v-skal3 .nav {
+        flex: none;
+      }
+      /* linjal: text at known heights, to see where the system blur ends */
+      .linjal {
+        position: fixed;
+        left: 0;
+        right: 0;
+        z-index: 99;
+        pointer-events: none;
+      }
+      .linjal div {
+        position: absolute;
+        left: 8px;
+        font:
+          12px/1 -apple-system,
+          sans-serif;
+        color: var(--text);
+        white-space: nowrap;
+      }
+      /* A: sticky top bar, the document scrolls, bottom bar fixed */
+      .v-sticky .topp,
+      .v-linjal .topp {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+      }
+      .v-sticky .nav,
+      .v-linjal .nav {
+        position: fixed;
+        inset: auto 0 0 0;
+      }
+      .v-sticky .innehall,
+      .v-linjal .innehall {
         padding-bottom: calc(56px + var(--botten) + 24px);
       }
       /* D: as A, plus a fixed opaque band at the very top */
@@ -196,6 +259,7 @@
       const v = new URLSearchParams(location.search).get('v') || 'skal';
       document.documentElement.classList.add('v-' + v);
     </script>
+    <div class="linjal" id="linjal"></div>
     <div class="app">
       <header class="topp">
         <div class="rad">Bok:<strong>Bygdegårdsföreningen</strong></div>
@@ -211,6 +275,11 @@
             <a href="?v=skal2">skal2</a> – som skal men <code>100dvh</code><br />
             <a href="?v=sticky">sticky</a> – sidan rullar, sticky topp (som nu)<br />
             <a href="?v=band">band</a> – som sticky + fast remsa längst upp<br />
+            <a href="?v=linjal">linjal</a> – text på kända höjder, visar var oskärpan
+            slutar<br />
+            <a href="?v=kort">kort</a> – som sticky men nästan inget innehåll<br />
+            <a href="?v=kort1">kort1</a> – som kort, men sidan tvingas rulla 2 px<br />
+            <a href="?v=skal3">skal3</a> – som skal, men sidan tvingas rulla 2 px<br />
             <a href="/#mer">Tillbaka till Bokfink</a>
           </div>
           <p>
@@ -231,7 +300,23 @@
     </div>
     <script>
       const rader = document.getElementById('rader');
-      for (let i = 1; i <= 40; i++) {
+      const kort = /v-kort/.test(document.documentElement.className);
+      if (kort) {
+        document.getElementById('rader').remove();
+        document.querySelector('main p').remove();
+      }
+      if (document.documentElement.classList.contains('v-linjal')) {
+        const l = document.getElementById('linjal');
+        l.style.top = '0';
+        l.style.height = '200px';
+        for (let y = 10; y <= 150; y += 10) {
+          const d = document.createElement('div');
+          d.style.top = y + 'px';
+          d.textContent = 'y=' + y + '  Bok: Bygdegårdsföreningen abcdefg';
+          l.append(d);
+        }
+      }
+      for (let i = 1; i <= (kort ? 0 : 40); i++) {
         const p = document.createElement('p');
         p.textContent = 'Rad ' + i + ' – lite text att rulla förbi, skarp eller suddig?';
         rader.append(p);
