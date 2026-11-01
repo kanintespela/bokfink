@@ -199,6 +199,7 @@ import { doldaVyer, useVy, type Vy } from '../ui/vy';
 import { Mer } from './mer/Mer';
 import { Tillbaka } from '../ui/Tillbaka';
 import { Varumarke } from '../ui/Varumarke';
+import { Topprad } from '../ui/Topprad';
 import { Vyval } from '../ui/Vyval';
 import { BokforUtgift } from './bokfor/BokforUtgift';
 import { Kvitton, type Assistentstatus, type Kvittobild } from './underlag/Kvitton';
@@ -929,6 +930,16 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
 
   return (
     <>
+      <Topprad
+        {...(bokval.bocker.length > 1
+          ? {
+              bok: {
+                namn: bokval.aktiv.namn,
+                ...(vy === 'bocker' ? {} : { onByt: () => setVy('bocker') }),
+              },
+            }
+          : {})}
+      />
       <main>
         {vy === 'attgora' && (
           <div className="rubrikrad">
@@ -2118,14 +2129,6 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
         vy={vy}
         onValj={setVy}
         antal={{ kvitton: laddat.utkast.length + laddat.kvitton.length }}
-        {...(bokval.bocker.length > 1
-          ? {
-              bok: {
-                namn: bokval.aktiv.namn,
-                ...(vy === 'bocker' ? {} : { onByt: () => setVy('bocker') }),
-              },
-            }
-          : {})}
       />
     </>
   );

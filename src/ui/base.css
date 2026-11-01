@@ -77,23 +77,6 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 
-/*
- * A fixed strip over the status bar. iOS 26 blurs the top edge of the page
- * under its status bar - at rest too, so the first heading looked out of
- * focus - unless a fixed element sits against that edge. This one is the page's
- * own colour and as tall as the status bar, so it also keeps content scrolled
- * under the clock from showing through.
- */
-html::before {
-  content: '';
-  position: fixed;
-  inset: 0 0 auto 0;
-  height: max(env(safe-area-inset-top), 1px);
-  background: var(--paper);
-  pointer-events: none;
-  z-index: 30;
-}
-
 main {
   padding: max(var(--rum-5), env(safe-area-inset-top))
     max(var(--rum-4), env(safe-area-inset-right))
@@ -972,34 +955,6 @@ dd {
   touch-action: manipulation;
 }
 
-/* The open book, a thin line above the tabs. Muted and small: it is read, not hit. */
-.vyval__bok {
-  display: block;
-  width: 100%;
-  margin: 0;
-  padding: 0.15rem var(--rum-4);
-  border: 0;
-  background: none;
-  color: var(--muted);
-  font: inherit;
-  font-size: 0.75rem;
-  line-height: 1.25rem;
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-button.vyval__bok {
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
-.vyval__bok strong {
-  color: var(--text);
-  font-weight: 600;
-}
-
 /* How many things wait behind a tab: small, beside the name, never wrapping it. */
 .vyval__antal {
   display: inline-block;
@@ -1023,12 +978,6 @@ button.vyval__bok {
 /* Room for the bar, so the last row of a list is never trapped under it. */
 main {
   padding-bottom: calc(var(--tapp-stor) + env(safe-area-inset-bottom) + var(--rum-5));
-}
-
-body:has(.vyval--bok) main {
-  padding-bottom: calc(
-    var(--tapp-stor) + 1.75rem + env(safe-area-inset-bottom) + var(--rum-5)
-  );
 }
 
 /* ── Book colours ──────────────────────────────────────────────────────────
@@ -1086,6 +1035,7 @@ body:has(.vyval--bok) main {
 
 html[data-bokfarg] {
   --vyval-bakgrund: color-mix(in srgb, var(--bokfarg) 14%, var(--yta));
+  --topp-bakgrund: color-mix(in srgb, var(--bokfarg) 14%, var(--paper));
 }
 
 /* The frame: over everything, never in the way of a touch. */
@@ -1194,4 +1144,71 @@ html[data-bokfarg]::after {
   .ej-utskrift {
     display: none;
   }
+}
+
+/* ── The fixed top bar ─────────────────────────────────────────────────────
+   Solid and fixed, covering the status bar and the strip under it. iOS 26
+   fades the top edge of whatever scrolls; with this over that edge, the fade
+   falls on the bar, not on the page's first heading. */
+
+.topprad {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 15;
+  padding: env(safe-area-inset-top) max(var(--rum-4), env(safe-area-inset-right)) 0
+    max(var(--rum-4), env(safe-area-inset-left));
+  background: var(--topp-bakgrund, var(--paper));
+  border-bottom: 1px solid var(--bokfarg, var(--line));
+}
+
+.topprad__rad {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--rum-2);
+  height: var(--topprad-hojd);
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.25rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.topprad__bok {
+  min-width: 0;
+  max-width: 100%;
+  padding: 0 var(--rum-3);
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: var(--rum-2);
+  height: var(--topprad-hojd);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.topprad__bok strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+}
+
+:root {
+  --topprad-hojd: 2.75rem;
+}
+
+body:has(.topprad) {
+  padding-top: calc(env(safe-area-inset-top) + var(--topprad-hojd) + 1px);
+}
+
+body:has(.topprad) main {
+  padding-top: var(--rum-4);
+}
+
+body:has(.topprad) .update-banner {
+  padding-top: var(--rum-3);
 }
