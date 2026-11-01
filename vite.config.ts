@@ -109,6 +109,8 @@ export default defineConfig({
           },
         ],
         navigateFallback: '/index.html',
+        // The screen test is a page of its own, not a view of the app.
+        navigateFallbackDenylist: [/^\/skarmtest\.html/],
         cleanupOutdatedCaches: true,
         /*
          * Take control on first install so the app survives going offline

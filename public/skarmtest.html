@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="sv">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Skärmtest</title>
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <style>
+      :root {
+        --paper: #f7f5f0;
+        --yta: #fffdf8;
+        --text: #16211d;
+        --muted: #5a6b64;
+        --line: #ddd8cd;
+        --ink: #0e3b32;
+        --topp: env(safe-area-inset-top, 0px);
+        --botten: env(safe-area-inset-bottom, 0px);
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #121714;
+          --yta: #1a221e;
+          --text: #e8efea;
+          --muted: #9aa9a2;
+          --line: #2c3a34;
+          --ink: #8fd8c4;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        background: var(--paper);
+      }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--text);
+        font:
+          16px/1.5 -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+      }
+      .rad {
+        padding: 0 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 44px;
+        font-size: 15px;
+        color: var(--muted);
+      }
+      .rad strong {
+        color: var(--text);
+        margin-left: 0.4em;
+      }
+      .topp {
+        background: var(--paper);
+        padding-top: var(--topp);
+        border-bottom: 1px solid var(--line);
+      }
+      .nav {
+        background: var(--yta);
+        border-top: 1px solid var(--line);
+        padding-bottom: var(--botten);
+      }
+      .nav div {
+        display: flex;
+      }
+      .nav span {
+        flex: 1;
+        height: 56px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        color: var(--muted);
+      }
+      .nav span:first-child {
+        color: var(--ink);
+        font-weight: 600;
+        box-shadow: inset 0 2px 0 var(--ink);
+      }
+      .innehall {
+        padding: 16px 16px 24px;
+        max-width: 40rem;
+        margin-inline: auto;
+      }
+      h1 {
+        font-size: 1.5rem;
+        margin: 0 0 8px;
+      }
+      .kort {
+        background: var(--yta);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px 16px;
+        margin: 0 0 16px;
+      }
+      .kort a {
+        color: var(--ink);
+      }
+      pre {
+        margin: 0;
+        white-space: pre-wrap;
+        font:
+          13px/1.4 ui-monospace,
+          Menlo,
+          monospace;
+      }
+      .rubrik {
+        font-weight: 700;
+        font-size: 1.1rem;
+        margin: 20px 0 4px;
+      }
+      /* A: sticky top bar, the document scrolls, bottom bar fixed */
+      .v-sticky .topp {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+      }
+      .v-sticky .nav {
+        position: fixed;
+        inset: auto 0 0 0;
+      }
+      .v-sticky .innehall {
+        padding-bottom: calc(56px + var(--botten) + 24px);
+      }
+      /* D: as A, plus a fixed opaque band at the very top */
+      .v-band .topp {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+      }
+      .v-band .nav {
+        position: fixed;
+        inset: auto 0 0 0;
+      }
+      .v-band .innehall {
+        padding-bottom: calc(56px + var(--botten) + 24px);
+      }
+      .v-band::before {
+        content: '';
+        position: fixed;
+        inset: 0 0 auto 0;
+        height: max(var(--topp), 12px);
+        background: var(--paper);
+        z-index: 50;
+      }
+      /* B: app shell. The document never scrolls; the middle does. */
+      .v-skal,
+      .v-skal body {
+        height: 100%;
+        overflow: hidden;
+      }
+      .v-skal .app {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+      }
+      .v-skal2,
+      .v-skal2 body {
+        height: 100%;
+        overflow: hidden;
+      }
+      .v-skal2 .app {
+        height: 100dvh;
+        display: flex;
+        flex-direction: column;
+      }
+      .app {
+        display: contents;
+      }
+      .v-skal .scroll,
+      .v-skal2 .scroll {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+      }
+      .v-skal .topp,
+      .v-skal2 .topp,
+      .v-skal .nav,
+      .v-skal2 .nav {
+        flex: none;
+      }
+    </style>
+  </head>
+  <body>
+    <script>
+      const v = new URLSearchParams(location.search).get('v') || 'skal';
+      document.documentElement.classList.add('v-' + v);
+    </script>
+    <div class="app">
+      <header class="topp">
+        <div class="rad">Bok:<strong>Bygdegårdsföreningen</strong></div>
+      </header>
+      <div class="scroll">
+        <main class="innehall">
+          <h1>Skärmtest</h1>
+          <div class="kort"><pre id="info">mäter …</pre></div>
+          <div class="kort">
+            Variant (öppnas om sidan):<br />
+            <a href="?v=skal">skal</a> – fast topp och botten, mitten rullar,
+            <code>position: fixed</code><br />
+            <a href="?v=skal2">skal2</a> – som skal men <code>100dvh</code><br />
+            <a href="?v=sticky">sticky</a> – sidan rullar, sticky topp (som nu)<br />
+            <a href="?v=band">band</a> – som sticky + fast remsa längst upp<br />
+            <a href="/#mer">Tillbaka till Bokfink</a>
+          </div>
+          <p>
+            Granska: är raden "Bok: Bygdegårdsföreningen" skarp? Är rubriken "Skärmtest"
+            skarp när du rullar? Går appens underkant ända ned? Går sista raden att rulla
+            fram ovanför bottenmenyn?
+          </p>
+          <div id="rader"></div>
+          <p class="rubrik" id="slut">SLUT – sista raden</p>
+        </main>
+      </div>
+      <nav class="nav">
+        <div>
+          <span>Översikt</span><span>Kvitton</span><span>Bokför</span
+          ><span>Verifikat</span><span>Mer</span>
+        </div>
+      </nav>
+    </div>
+    <script>
+      const rader = document.getElementById('rader');
+      for (let i = 1; i <= 40; i++) {
+        const p = document.createElement('p');
+        p.textContent = 'Rad ' + i + ' – lite text att rulla förbi, skarp eller suddig?';
+        rader.append(p);
+      }
+      function px(side) {
+        const e = document.createElement('div');
+        e.style.cssText =
+          'position:fixed;visibility:hidden;padding-' +
+          side +
+          ':env(safe-area-inset-' +
+          side +
+          ',0px)';
+        document.body.append(e);
+        const r = parseFloat(
+          getComputedStyle(e)['padding' + side[0].toUpperCase() + side.slice(1)],
+        );
+        e.remove();
+        return r;
+      }
+      function mat() {
+        const vv = window.visualViewport,
+          nav = document.querySelector('.nav').getBoundingClientRect(),
+          topp = document.querySelector('.topp').getBoundingClientRect();
+        const sc = document.querySelector('.scroll'),
+          skal = document.documentElement.className.includes('skal');
+        document.getElementById('info').textContent = [
+          'variant: ' + document.documentElement.className,
+          'standalone: ' +
+            (navigator.standalone === true) +
+            ' / display-mode: ' +
+            ['standalone', 'minimal-ui', 'browser'].find(
+              (m) => matchMedia('(display-mode: ' + m + ')').matches,
+            ),
+          'innerHeight ' +
+            innerHeight +
+            '  visualViewport ' +
+            (vv ? Math.round(vv.height) : '-') +
+            '  screen ' +
+            screen.height,
+          'safe top/bottom: ' + px('top') + ' / ' + px('bottom'),
+          'övre rad: ' + Math.round(topp.top) + '–' + Math.round(topp.bottom),
+          'nedre meny: ' +
+            Math.round(nav.top) +
+            '–' +
+            Math.round(nav.bottom) +
+            ' (fönster ' +
+            innerHeight +
+            ')',
+          'rullning: ' + Math.round(skal ? sc.scrollTop : scrollY),
+        ].join('\n');
+      }
+      mat();
+      addEventListener('scroll', mat, { passive: true });
+      document
+        .querySelector('.scroll')
+        .addEventListener('scroll', mat, { passive: true });
+      addEventListener('resize', mat);
+      visualViewport && visualViewport.addEventListener('resize', mat);
+    </script>
+  </body>
+</html>
