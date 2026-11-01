@@ -1,6 +1,6 @@
-# Konteras synkserver
+# Bokfinks synkserver
 
-Kontera synkar mellan telefon och dator genom att byta händelseloggar över en
+Bokfink synkar mellan telefon och dator genom att byta händelseloggar över en
 PocketBase-instans. Servern är en brevlåda: den lagrar händelser och lämnar
 tillbaka dem i ankomstordning, utan att veta något om bokföring.
 

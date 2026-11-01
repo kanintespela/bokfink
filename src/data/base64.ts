@@ -3,7 +3,7 @@
  *
  * JSON cannot hold binary, and the backup is deliberately one readable file,
  * so receipt images travel base64-encoded and a third larger than they are.
- * That is the price of a backup anyone can open without Kontera; the
+ * That is the price of a backup anyone can open without Bokfink; the
  * incremental, content-addressed backup in stage 5 is what makes it stop
  * mattering.
  */

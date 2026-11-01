@@ -2,7 +2,7 @@ import { oreFromKronor, type Ore } from '../belopp/ore';
 
 /**
  * Figures the tax and accounting rules peg to a given year, rather than to
- * anything Kontera decides itself.
+ * anything Bokfink decides itself.
  *
  * This is the first "versioned yearly data" table in the codebase — moms
  * rates today are flat constants because mervärdesskattelagen's rates

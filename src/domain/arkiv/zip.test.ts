@@ -13,7 +13,7 @@ describe('skrivZip', () => {
       { namn: 'kontera.se', data: new TextEncoder().encode('#FLAGGA 0\n') },
       {
         namn: 'LASMIG.txt',
-        data: new TextEncoder().encode('Arkiv för Kontera – å, ä och ö i innehållet.'),
+        data: new TextEncoder().encode('Arkiv för Bokfink – å, ä och ö i innehållet.'),
       },
       {
         namn: 'underlag/aa11bb22.jpg',

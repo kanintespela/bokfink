@@ -25,7 +25,7 @@ export default defineConfig({
 
   projects: [
     {
-      // Kontera is a phone app first. Testing it at desktop width would pass
+      // Bokfink is a phone app first. Testing it at desktop width would pass
       // while the real target is broken.
       name: 'mobile',
       use: {

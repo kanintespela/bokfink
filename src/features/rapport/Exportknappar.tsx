@@ -19,7 +19,7 @@ interface Props {
  * CSV for a person with a spreadsheet and JSON for a program, from the same
  * rows, so the two can never disagree about what the report said. Both are
  * open formats that outlive this app, which is the point of having them at
- * all - the promise is that leaving Kontera costs nothing.
+ * all - the promise is that leaving Bokfink costs nothing.
  */
 export function Exportknappar({ tabell, namn, idprefix = 'exportera' }: Props) {
   async function exportera(format: 'csv' | 'json') {

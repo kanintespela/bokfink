@@ -272,7 +272,7 @@ describe('beraknaMomsrapport', () => {
 describe('harEuForsaljning', () => {
   /*
    * Selling into the EU means a second return - the periodisk sammanställning
-   * - listing each buyer's VAT number. Kontera has the amounts but not the
+   * - listing each buyer's VAT number. Bokfink has the amounts but not the
    * buyers until the customer register arrives, so the least it can do is say
    * that the return is due.
    */

@@ -11,7 +11,7 @@ import { beraknaSaldon } from '../domain/rapport/saldon';
 import { datum } from '../domain/tid/datum';
 import { verifikatserie } from '../domain/verifikat/serie';
 import { lasTillstand, skyddaBokfordaVerifikat } from './bokforing';
-import { KonteraDatabase } from './db';
+import { BokfinkDatabase } from './db';
 import { skrivKonto, skrivRakenskapsar, type Skrivkontext } from './kommandon';
 import { bokforMomsomforing } from './momsomforing';
 
@@ -19,7 +19,7 @@ let raknare = 0;
 let klockslag = 1_788_554_000_000;
 
 const nyDb = async () => {
-  const db = new KonteraDatabase(`kontera-momsomforing-${(raknare += 1)}`);
+  const db = new BokfinkDatabase(`kontera-momsomforing-${(raknare += 1)}`);
   skyddaBokfordaVerifikat(db);
   await db.open();
   return db;

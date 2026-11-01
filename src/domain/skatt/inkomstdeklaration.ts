@@ -11,7 +11,7 @@ import { fristdag } from '../tid/helgdag';
  * that is not a vardag moves to the next one, lag (1930:173) 2 §.
  *
  * Extended dates through an ombud or a granted anstånd are left out: they are
- * decisions about one person, not rules Kontera can know.
+ * decisions about one person, not rules Bokfink can know.
  */
 export function sistaDagForInkomstdeklaration(beskattningsar: number): Datum {
   return fristdag(datumAv(beskattningsar + 1, 5, 2));

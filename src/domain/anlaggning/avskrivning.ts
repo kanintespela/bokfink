@@ -24,7 +24,7 @@ import type { Anlaggningstillgang } from './anlaggningstillgang';
  * regeln allows at most 30 % of the underlag per year, kompletteringsregeln
  * (17 §) caps the tax value at each still-held item's own acquisition value
  * less a straight 20 %/year, restvärdesavskrivning allows at most 25 %.
- * Kontera computes all three and lets the figure with the biggest deduction
+ * Bokfink computes all three and lets the figure with the biggest deduction
  * be picked, per the plan's "båda reglerna beräknas parallellt" - it never
  * decides for the user which one to file with.
  */

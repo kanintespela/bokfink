@@ -1,7 +1,7 @@
 import { ore, type Ore } from '../domain/belopp/ore';
 import type { Uuid } from '../domain/id/uuidv7';
 import { JUSTERINGAR, type Justeringsrad } from '../domain/skatt/nebilaga';
-import type { KonteraDatabase } from './db';
+import type { BokfinkDatabase } from './db';
 
 /**
  * What the NE-bilaga needs that is not in the books: the adjustments on
@@ -27,7 +27,7 @@ const DEKLARANT = 'ne.deklarant';
 const justeringsnyckel = (arId: Uuid) => `ne.justeringar.${arId}`;
 const KANDA_RADER = new Set<string>(JUSTERINGAR.map((post) => post.rad));
 
-export async function lasDeklarant(db: KonteraDatabase): Promise<Deklarantuppgifter> {
+export async function lasDeklarant(db: BokfinkDatabase): Promise<Deklarantuppgifter> {
   const sparat =
     await db.getMeta<Partial<Record<keyof Deklarantuppgifter, unknown>>>(DEKLARANT);
   const falt = (nyckel: keyof Deklarantuppgifter): string => {
@@ -45,14 +45,14 @@ export async function lasDeklarant(db: KonteraDatabase): Promise<Deklarantuppgif
 }
 
 export async function sparaDeklarant(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   uppgifter: Deklarantuppgifter,
 ): Promise<void> {
   await db.setMeta(DEKLARANT, { ...uppgifter });
 }
 
 export async function lasNejusteringar(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   arId: Uuid,
 ): Promise<Partial<Record<Justeringsrad, Ore>>> {
   const sparat = await db.getMeta<Record<string, unknown>>(justeringsnyckel(arId));
@@ -67,7 +67,7 @@ export async function lasNejusteringar(
 
 /** Zero is not stored; an empty field and a zero say the same on the form. */
 export async function sparaNejusteringar(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   arId: Uuid,
   justeringar: Partial<Record<Justeringsrad, Ore>>,
 ): Promise<void> {

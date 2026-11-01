@@ -50,7 +50,7 @@ rm -rf "$DRIFT/releases/$SHA"
 mv "$TILLFALLIG" "$DRIFT/releases/$SHA"
 ln -sfn "releases/$SHA" "$DRIFT/current.ny"
 mv -T "$DRIFT/current.ny" "$DRIFT/current"
-echo "Kontera $SHA är i drift (tidigare $NUVARANDE)."
+echo "Bokfink $SHA är i drift (tidigare $NUVARANDE)."
 
 # The three newest are kept, so going back is a symlink away.
 cd "$DRIFT/releases"

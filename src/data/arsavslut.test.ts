@@ -19,7 +19,7 @@ import {
   skapaNastaRakenskapsar,
 } from './arsavslut';
 import { lasTillstand, skyddaBokfordaVerifikat } from './bokforing';
-import { KonteraDatabase } from './db';
+import { BokfinkDatabase } from './db';
 import {
   avslutaRakenskapsar,
   bokforUtkast,
@@ -32,7 +32,7 @@ let raknare = 0;
 let klockslag = 1_788_554_000_000;
 
 const nyDb = async () => {
-  const db = new KonteraDatabase(`kontera-arsavslut-${(raknare += 1)}`);
+  const db = new BokfinkDatabase(`kontera-arsavslut-${(raknare += 1)}`);
   skyddaBokfordaVerifikat(db);
   await db.open();
   return db;
@@ -47,7 +47,7 @@ const kontext: Skrivkontext = {
 const AR_2026: Uuid = '019b76da-a800-7000-8000-000000002026' as Uuid;
 
 async function nyttAr(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   ingaendeBalanser: readonly Ingaendebalans[] = [],
 ): Promise<Rakenskapsar> {
   const ar = skapaRakenskapsar({
@@ -98,7 +98,7 @@ describe('skapaNastaRakenskapsar', () => {
 });
 
 describe('arsavslutschecklista', () => {
-  let db: KonteraDatabase;
+  let db: BokfinkDatabase;
   let ar: Rakenskapsar;
 
   beforeEach(async () => {

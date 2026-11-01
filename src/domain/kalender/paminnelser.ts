@@ -24,7 +24,7 @@ export interface Paminnelseunderlag {
  * Every date ahead that something has to reach Skatteverket or a supplier by,
  * soonest first, as entries for a calendar.
  *
- * Only what Kontera already knows goes in: the momsdeklarationer of the open
+ * Only what Bokfink already knows goes in: the momsdeklarationer of the open
  * years, the inkomstdeklaration for every year in the books, and the invoices
  * with a due date. A book that is not registered for moms has no momsdeklaration
  * dates, and one that does not file the owner's NE-bilaga has no

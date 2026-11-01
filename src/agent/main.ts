@@ -21,7 +21,7 @@ import {
 import { homedir, tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
-import { KonteraDatabase } from '../data/db';
+import { BokfinkDatabase } from '../data/db';
 import { newIdentifier } from '../data/id';
 import { hashaFil } from '../platform/hash';
 import { systemklocka } from '../platform/klocka';
@@ -55,7 +55,7 @@ async function main(): Promise<void> {
   );
 
   const inloggning = await loggaIn(konfig.url, konfig.epost, konfig.losenord);
-  const utdata = await korAgent(new KonteraDatabase('kontera-agent'), kommando, {
+  const utdata = await korAgent(new BokfinkDatabase('kontera-agent'), kommando, {
     transport: pocketbaseTransport(inloggning),
     krypto: await synkkrypto(konfig.losenfras),
     enhet: konfig.enhet,

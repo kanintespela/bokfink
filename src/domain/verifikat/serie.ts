@@ -2,7 +2,7 @@
  * A verifikatserie: the label a run of verification numbers belongs to.
  *
  * SIE writes it as the first field of #VER, and real books use short labels
- * like "A" and "V". Kontera gives every device its own series, so two devices
+ * like "A" and "V". Bokfink gives every device its own series, so two devices
  * can hand out numbers offline without agreeing on anything
  * (docs/UTVECKLINGSPLAN.md, 3.1).
  */

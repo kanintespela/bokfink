@@ -17,7 +17,7 @@ import { verifikatserie } from '../domain/verifikat/serie';
 import type { Uuid } from '../domain/id/uuidv7';
 import { lasTillstand } from './bokforing';
 import { skrivKonto, skrivRakenskapsar } from './kommandon';
-import { KonteraDatabase } from './db';
+import { BokfinkDatabase } from './db';
 import { skyddaBokfordaVerifikat } from './bokforing';
 
 import type { Skrivkontext } from './kommandon';
@@ -26,7 +26,7 @@ let raknare = 0;
 let klockslag = 1_788_554_000_000;
 
 const nyDb = async () => {
-  const db = new KonteraDatabase(`kontera-lager-${(raknare += 1)}`);
+  const db = new BokfinkDatabase(`kontera-lager-${(raknare += 1)}`);
   skyddaBokfordaVerifikat(db);
   await db.open();
   return db;

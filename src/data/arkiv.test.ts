@@ -14,7 +14,7 @@ import { lasZip } from '../domain/arkiv/zipTestReader';
 import { hashaFil } from '../platform/hash';
 import { byggArkivpaket, SkadatUnderlagIArkivError } from './arkiv';
 import { lasTillstand, skyddaBokfordaVerifikat } from './bokforing';
-import { KonteraDatabase } from './db';
+import { BokfinkDatabase } from './db';
 import {
   bokforUtkast,
   skrivKonto,
@@ -28,7 +28,7 @@ let raknare = 0;
 let klockslag = 1_788_554_000_000;
 
 const nyDb = async () => {
-  const db = new KonteraDatabase(`kontera-arkiv-${(raknare += 1)}`);
+  const db = new BokfinkDatabase(`kontera-arkiv-${(raknare += 1)}`);
   skyddaBokfordaVerifikat(db);
   await db.open();
   return db;
@@ -43,7 +43,7 @@ const kontext: Skrivkontext = {
 const AR_2026 = '019b76da-a800-7000-8000-000000002026' as Uuid;
 const SKAPAD = datum('2026-09-08');
 
-async function fyll(db: KonteraDatabase): Promise<void> {
+async function fyll(db: BokfinkDatabase): Promise<void> {
   await skrivRakenskapsar(
     db,
     kontext,
@@ -72,7 +72,7 @@ async function fyll(db: KonteraDatabase): Promise<void> {
 }
 
 describe('byggArkivpaket', () => {
-  let db: KonteraDatabase;
+  let db: BokfinkDatabase;
 
   beforeEach(async () => {
     db = await nyDb();
@@ -84,7 +84,7 @@ describe('byggArkivpaket', () => {
     const poster = lasZip(zip);
     const namn = poster.map((post) => post.namn);
 
-    expect(namn).toContain('kontera-2026.se');
+    expect(namn).toContain('bokfink-2026.se');
     expect(namn).toContain('verifikationslista.pdf');
     expect(namn).toContain('checksummor.txt');
     expect(namn).toContain('LASMIG.txt');
@@ -92,7 +92,7 @@ describe('byggArkivpaket', () => {
 
   it('writes a SIE file that starts the way SIE files do', async () => {
     const poster = lasZip(await byggArkivpaket(db, AR_2026, SKAPAD, { hasha: hashaFil }));
-    const sie = poster.find((post) => post.namn === 'kontera-2026.se')!;
+    const sie = poster.find((post) => post.namn === 'bokfink-2026.se')!;
     expect(new TextDecoder('latin1').decode(sie.data.slice(0, 12))).toContain('#FLAGGA');
   });
 

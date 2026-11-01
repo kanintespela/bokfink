@@ -25,7 +25,7 @@ import {
   tillampaAlla,
   type VerifikatRad,
 } from './bokforing';
-import { KonteraDatabase } from './db';
+import { BokfinkDatabase } from './db';
 import { latestSchemaVersion, VERIFIKAT_TABLE } from './schema';
 
 let raknare = 0;
@@ -113,10 +113,10 @@ const grundlogg = (): Handelse[] => [
 ];
 
 describe('tillampa', () => {
-  let db: KonteraDatabase;
+  let db: BokfinkDatabase;
 
   beforeEach(async () => {
-    db = new KonteraDatabase(uniqueName());
+    db = new BokfinkDatabase(uniqueName());
     await db.open();
   });
 
@@ -216,7 +216,7 @@ describe('tillampa', () => {
     await tillampaAlla(db, logg);
 
     const utlast = await lasLogg(db);
-    const ny = new KonteraDatabase(uniqueName());
+    const ny = new BokfinkDatabase(uniqueName());
     await ny.open();
     await tillampaAlla(ny, utlast);
 
@@ -280,7 +280,7 @@ describe('tillampa', () => {
       fc.asyncProperty(
         fc.shuffledSubarray(logg, { minLength: logg.length }),
         async (blandad) => {
-          const enDb = new KonteraDatabase(uniqueName());
+          const enDb = new BokfinkDatabase(uniqueName());
           await enDb.open();
           await tillampaAlla(enDb, blandad);
           const tillstand = await lasTillstand(enDb);
@@ -297,10 +297,10 @@ describe('tillampa', () => {
 });
 
 describe('skyddaBokfordaVerifikat', () => {
-  let db: KonteraDatabase;
+  let db: BokfinkDatabase;
 
   beforeEach(async () => {
-    db = new KonteraDatabase(uniqueName());
+    db = new BokfinkDatabase(uniqueName());
     skyddaBokfordaVerifikat(db);
     await db.open();
     await tillampaAlla(db, grundlogg());
@@ -370,10 +370,10 @@ describe('skyddaBokfordaVerifikat', () => {
 });
 
 describe('senastBokfort', () => {
-  let db: KonteraDatabase;
+  let db: BokfinkDatabase;
 
   beforeEach(async () => {
-    db = new KonteraDatabase(uniqueName());
+    db = new BokfinkDatabase(uniqueName());
     await db.open();
     await tillampaAlla(db, grundlogg());
   });

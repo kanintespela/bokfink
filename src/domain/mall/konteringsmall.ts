@@ -190,7 +190,7 @@ export function tillampaMall(
     /**
      * The VAT the seller actually charged, when the underlag states it.
      *
-     * A shop computes VAT per line and sums; Kontera computes it on the
+     * A shop computes VAT per line and sums; Bokfink computes it on the
      * total. Both are correct arithmetic and they differ by an öre or two
      * depending on where the rounding falls - a real receipt reads 1 004,00
      * with 200,81 of VAT, while 25 % of the total is 200,80.

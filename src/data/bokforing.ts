@@ -19,7 +19,7 @@ import type {
   Rattelse,
   Verifikatutkast,
 } from '../domain/verifikat/verifikat';
-import type { KonteraDatabase } from './db';
+import type { BokfinkDatabase } from './db';
 import {
   ANLAGGNING_TABLE,
   DJURLAGER_TABLE,
@@ -77,7 +77,7 @@ export class OkantRakenskapsarError extends Error {
  * Creating is allowed and correcting is done by writing a new verifikat, so
  * nothing legitimate needs the two operations this removes.
  */
-export function skyddaBokfordaVerifikat(db: KonteraDatabase): void {
+export function skyddaBokfordaVerifikat(db: BokfinkDatabase): void {
   const tabell = db.table<VerifikatRad, Uuid>(VERIFIKAT_TABLE);
 
   tabell.hook('updating', (andringar, nyckel, befintlig) => {
@@ -184,7 +184,7 @@ function arTillagg(fore: readonly Rattelse[], efter: readonly Rattelse[]): boole
  * will legitimately deliver one twice.
  */
 export async function tillampa(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   handelse: Handelse,
   ursprung: Ursprung = 'lokal',
 ): Promise<boolean> {
@@ -290,7 +290,7 @@ export type Ursprung = 'lokal' | 'fjarr';
 
 /** Applies a run of entries in log order. Returns how many were new. */
 export async function tillampaAlla(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   handelser: Iterable<Handelse>,
   ursprung: Ursprung = 'lokal',
 ): Promise<number> {
@@ -304,13 +304,13 @@ export async function tillampaAlla(
 }
 
 /** Every entry, in the order it was made. */
-export async function lasLogg(db: KonteraDatabase): Promise<Handelse[]> {
+export async function lasLogg(db: BokfinkDatabase): Promise<Handelse[]> {
   // The primary key is a UUIDv7, so key order is chronological order.
   return db.table<Handelse, Uuid>(HANDELSE_TABLE).orderBy(':id').toArray();
 }
 
 /** The materialised tables, in the shape the domain describes them. */
-export async function lasTillstand(db: KonteraDatabase): Promise<Bokforingstillstand> {
+export async function lasTillstand(db: BokfinkDatabase): Promise<Bokforingstillstand> {
   const [
     konton,
     rakenskapsar,
@@ -410,7 +410,7 @@ export interface Verifikatpost {
  * index and is joined on the way out.
  */
 export async function lasVerifikat(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   rakenskapsarId: Uuid,
 ): Promise<Verifikatpost[]> {
   const tabell = db.table<VerifikatRad, Uuid>(VERIFIKAT_TABLE);
@@ -454,7 +454,7 @@ export async function lasVerifikat(
  * it was made, wherever it was made and in whatever order a sync delivered it.
  */
 export async function senastBokfort(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   poster: readonly Verifikatpost[],
 ): Promise<Verifikatpost | undefined> {
   return (await senastBokforda(db, poster, 1))[0];
@@ -462,7 +462,7 @@ export async function senastBokfort(
 
 /** The last `antal` booked among `poster`, the latest first. See senastBokfort. */
 export async function senastBokforda(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   poster: readonly Verifikatpost[],
   antal: number,
 ): Promise<Verifikatpost[]> {
@@ -509,7 +509,7 @@ function senastForst(a: Verifikatpost, b: Verifikatpost): number {
  * precisely so that this stays cheap.
  */
 async function laddaUppslag(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   handelse: Handelse,
 ): Promise<Tillstandsuppslag> {
   const arPoster = new Map<Uuid, Rakenskapsar>();
@@ -640,7 +640,7 @@ async function laddaUppslag(
 }
 
 async function hittaRakenskapsar(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   datum: string,
 ): Promise<Rakenskapsar> {
   const kandidater = await db

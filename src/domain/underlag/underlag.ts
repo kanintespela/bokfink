@@ -28,7 +28,7 @@ export function sha256(hex: string): Sha256 {
 /**
  * The file types an underlag may have.
  *
- * Deliberately short. Everything here can still be opened without Kontera in
+ * Deliberately short. Everything here can still be opened without Bokfink in
  * seven years, which is the requirement an archive format has to meet; a
  * format that needs a particular app to read is not an archive. HEIC, which
  * an iPhone would rather produce, is missing on purpose - the camera layer

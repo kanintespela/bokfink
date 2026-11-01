@@ -18,7 +18,7 @@ import {
   OforanderligtVerifikatError,
   skyddaBokfordaVerifikat,
 } from './bokforing';
-import { KonteraDatabase } from './db';
+import { BokfinkDatabase } from './db';
 import { VERIFIKAT_TABLE } from './schema';
 import {
   andraProjektet,
@@ -38,7 +38,7 @@ import { hashaFil } from '../platform/hash';
 let raknare = 0;
 let klockslag = 1_788_554_000_000;
 const nyDb = async () => {
-  const db = new KonteraDatabase(`kontera-projekt-${(raknare += 1)}`);
+  const db = new BokfinkDatabase(`kontera-projekt-${(raknare += 1)}`);
   skyddaBokfordaVerifikat(db);
   await db.open();
   return db;

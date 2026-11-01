@@ -85,7 +85,7 @@ const server = createServer(async (forfragan, svar) => {
     rot = await realpath(ROT);
   } catch {
     svar.writeHead(503, { 'Content-Type': 'text/plain; charset=utf-8' });
-    svar.end('Kontera är inte installerad än.\n');
+    svar.end('Bokfink är inte installerad än.\n');
     return;
   }
 
@@ -128,5 +128,5 @@ const server = createServer(async (forfragan, svar) => {
 });
 
 server.listen(PORT, '127.0.0.1', () => {
-  console.log(`Kontera serveras från ${ROT} på http://127.0.0.1:${PORT}`);
+  console.log(`Bokfink serveras från ${ROT} på http://127.0.0.1:${PORT}`);
 });

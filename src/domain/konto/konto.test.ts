@@ -17,7 +17,7 @@ import {
  * chart, not anything about whoever keeps the books.
  *
  * The mapping is one-way: SIE folds equity and debt together into S, so an
- * S here is satisfied by either of Kontera's two.
+ * S here is satisfied by either of Bokfink's two.
  */
 const FRAN_SIE: ReadonlyArray<readonly [string, string, 'T' | 'S' | 'K' | 'I']> = [
   ['1010', 'Immateriella tillgångar', 'T'],

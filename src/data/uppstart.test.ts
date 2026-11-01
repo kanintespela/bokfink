@@ -13,7 +13,7 @@ import { datum } from '../domain/tid/datum';
 import { fastKlocka } from '../domain/tid/klocka';
 import { BOK_PROFIL_NYCKEL } from './bokidentitet';
 import { lasTillstand } from './bokforing';
-import { KonteraDatabase } from './db';
+import { BokfinkDatabase } from './db';
 import type { Skrivkontext } from './kommandon';
 import {
   arEnbartStartdata,
@@ -114,7 +114,7 @@ describe('forberedBokforing och bokens profil', () => {
   let raknare = 0;
   let klockslag = 1_788_554_000_000;
   const nyDb = async () => {
-    const db = new KonteraDatabase(`kontera-uppstart-${(raknare += 1)}`);
+    const db = new BokfinkDatabase(`kontera-uppstart-${(raknare += 1)}`);
     await db.open();
     return db;
   };

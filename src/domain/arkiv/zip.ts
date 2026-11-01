@@ -5,7 +5,7 @@ import { delar, type Datum } from '../tid/datum';
  *
  * Hand-rolled rather than a dependency, on the same reasoning as the SIE and
  * eSKD writers: this is the one file that has to open on whatever computer
- * someone reaches for in 2033, without Kontera and quite possibly without
+ * someone reaches for in 2033, without Bokfink and quite possibly without
  * this project's dependency tree still being installable. A few hundred
  * lines that can be read end to end is worth more here than a library that
  * has to be trusted unread.

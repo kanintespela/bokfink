@@ -21,8 +21,8 @@ function byggcommit(): string {
 
 export default defineConfig({
   define: {
-    __KONTERA_COMMIT__: JSON.stringify(byggcommit()),
-    __KONTERA_BYGGD__: JSON.stringify(
+    __BOKFINK_COMMIT__: JSON.stringify(byggcommit()),
+    __BOKFINK_BYGGD__: JSON.stringify(
       new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' }),
     ),
   },

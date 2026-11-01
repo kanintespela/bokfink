@@ -30,7 +30,7 @@ import {
   senastBokforda,
   type Verifikatpost,
 } from '../data/bokforing';
-import type { KonteraDatabase } from '../data/db';
+import type { BokfinkDatabase } from '../data/db';
 import { newIdentifier } from '../data/id';
 import {
   annulleraVerifikat,
@@ -288,7 +288,7 @@ function forraArsslutet(idag: Datum): Datum {
  * and the one-tap backup on Att göra, so the two paths cannot drift apart.
  */
 async function skapaKrypteradKopia(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   losenfras: string,
 ): Promise<string> {
   const klartext = await exporteraSomText(db);
@@ -304,7 +304,7 @@ async function skapaKrypteradKopia(
   });
 }
 
-async function skrivkontext(db: KonteraDatabase): Promise<Skrivkontext> {
+async function skrivkontext(db: BokfinkDatabase): Promise<Skrivkontext> {
   const enhet = await db.getMeta<string>('deviceId');
   return {
     enhet: enhet ?? 'okand',
@@ -322,7 +322,7 @@ const ASSISTENT_LASTID_MS = 5 * 60 * 1000;
 /** How long a receipt the assistant left without a draft says so. */
 const ASSISTENT_BESKED_MS = 60 * 60 * 1000;
 
-export function Kontera({ db, bokval }: { db: KonteraDatabase; bokval: Bokval }) {
+export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval }) {
   const [begardVy, setVy] = useVy();
   const filprefix = useFilprefix();
   // Stable, so the NE screen reads a year once rather than on every render.

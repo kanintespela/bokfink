@@ -23,7 +23,7 @@ import { bokfor, skapaUtkast, type Kontering } from '../domain/verifikat/verifik
 import type { Rakenskapsar } from '../domain/rakenskapsar/rakenskapsar';
 import type { Uuid } from '../domain/id/uuidv7';
 import { lasTillstand, tillampa, type VerifikatRad } from './bokforing';
-import type { KonteraDatabase } from './db';
+import type { BokfinkDatabase } from './db';
 import { newIdentifier } from './id';
 import {
   avslutaRakenskapsar,
@@ -57,7 +57,7 @@ export interface Importinstallningar {
   readonly avslutaTomOchMed?: Datum;
 }
 
-/** SIE's four account types mapped onto Kontera's five. */
+/** SIE's four account types mapped onto Bokfink's five. */
 const FRAN_SIE: Record<'T' | 'S' | 'K' | 'I', Kontotyp | undefined> = {
   T: 'tillgang',
   // S covers both equity and debt, so the number decides which.
@@ -79,7 +79,7 @@ const FRAN_SIE: Record<'T' | 'S' | 'K' | 'I', Kontotyp | undefined> = {
  * disagree with the ones they were exported from.
  */
 export async function importeraSieFiler(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   filer: readonly Uint8Array[],
   installningar: Importinstallningar = {},
@@ -263,7 +263,7 @@ function ingaendeBalanser(doc: Siedokument, varningar: string[]): Ingaendebalans
 }
 
 async function skrivOmNytt(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   konto: Siekonto,
 ): Promise<boolean> {
@@ -291,7 +291,7 @@ async function skrivOmNytt(
 }
 
 async function hittaArMedStart(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   start: Datum,
 ): Promise<Rakenskapsar | undefined> {
   return db
@@ -302,7 +302,7 @@ async function hittaArMedStart(
 }
 
 async function finnsRedan(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   rakenskapsarId: Uuid,
   serie: string,
   nummer: number,
@@ -316,7 +316,7 @@ async function finnsRedan(
 }
 
 async function avslutaTidigareAr(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   tomOchMed: Datum | undefined,
 ): Promise<number> {
@@ -363,7 +363,7 @@ function projektPaRad(
  * is written as one that does, and said.
  */
 async function projektFranFil(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   doc: Siedokument,
   varningar: string[],

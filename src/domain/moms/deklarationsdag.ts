@@ -54,7 +54,7 @@ export interface VantandeMomsdeklaration {
  *
  * Only quarterly periods are covered. Monthly ones can follow either of two
  * tables in 26 kap. 26-28 §§, and yearly ones depend on EU trade (33 and
- * 33 a §§) - which applies is something Kontera does not know, so it gives
+ * 33 a §§) - which applies is something Bokfink does not know, so it gives
  * no date rather than guess one.
  */
 export function vantandeMomsdeklarationer(

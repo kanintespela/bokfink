@@ -3,14 +3,14 @@ import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
 
 import { oreFromKronor } from '../domain/belopp/ore';
-import { KonteraDatabase } from './db';
+import { BokfinkDatabase } from './db';
 import { lasEgnaPrisbasbelopp, sparaPrisbasbelopp } from './skattetal';
 
 let raknare = 0;
 
 describe('egna prisbasbelopp', () => {
   it('remembers each year that is added', async () => {
-    const db = new KonteraDatabase(`kontera-skattetal-${(raknare += 1)}`);
+    const db = new BokfinkDatabase(`kontera-skattetal-${(raknare += 1)}`);
     await db.open();
 
     await sparaPrisbasbelopp(db, 2027, oreFromKronor('59600'));
@@ -23,7 +23,7 @@ describe('egna prisbasbelopp', () => {
   });
 
   it('refuses a figure that cannot be a prisbasbelopp', async () => {
-    const db = new KonteraDatabase(`kontera-skattetal-${(raknare += 1)}`);
+    const db = new BokfinkDatabase(`kontera-skattetal-${(raknare += 1)}`);
     await db.open();
 
     await expect(sparaPrisbasbelopp(db, 2027, oreFromKronor('59650'))).rejects.toThrow(

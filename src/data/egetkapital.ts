@@ -14,7 +14,7 @@ import type { Datum } from '../domain/tid/datum';
 import type { Verifikatserie } from '../domain/verifikat/serie';
 import { skapaUtkast, type BokfortVerifikat } from '../domain/verifikat/verifikat';
 import { lasTillstand } from './bokforing';
-import type { KonteraDatabase } from './db';
+import type { BokfinkDatabase } from './db';
 import { bokforUtkast, nyttId, type Skrivkontext } from './kommandon';
 
 export interface Egetkapitalsammanstallning {
@@ -50,7 +50,7 @@ export interface Egetkapitalsammanstallning {
  * berakningAvArsAvskrivning använder för att skilja inköp från avyttrat.
  */
 export async function egetkapitalsammanstallning(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   ar: Rakenskapsar,
   uttagInsattningKonton: readonly Kontonummer[],
 ): Promise<Egetkapitalsammanstallning> {
@@ -130,7 +130,7 @@ export async function egetkapitalsammanstallning(
  * move, the same way `bokforLagerforandring` refuses no change.
  */
 export async function bokforResultatoverforing(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   ar: Rakenskapsar,
   serie: Verifikatserie,
@@ -173,7 +173,7 @@ function arEgetKapitalkonto(konto: Kontonummer): boolean {
  * side is debited follows from `typ`.
  */
 export async function bokforEgetUttagInsattning(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   datum: Datum,
   serie: Verifikatserie,

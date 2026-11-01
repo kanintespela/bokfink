@@ -32,14 +32,14 @@ export const ARETS_RESULTAT_EGET_KAPITAL_KONTO = kontonummer('2019');
 /**
  * The rows that move the year's result from the result accounts onto eget
  * kapital, the way other bookkeeping programs do it (8999 mot 2019) - beslut
- * 2026-09-13 att göra likadant i Kontera.
+ * 2026-09-13 att göra likadant i Bokfink.
  *
  * `forenkladArsbokslut.ts` needs no such entry: R11 and B10 come out the
  * same whether or not it exists, because B10 always adds in whatever part
  * of the result sits unbooked on the result accounts (see
  * `resultatEjOverfortTillEgetKapital`). This is booked anyway so that 2019's
  * own saldo, and a huvudbok or SIE export read on its own, show the year's
- * result without relying on that computation - and so that Kontera's
+ * result without relying on that computation - and so that Bokfink's
  * böcker look like every other program's when someone compares them.
  *
  * Not a money movement: nothing leaves the firm, so `resultat` is exactly

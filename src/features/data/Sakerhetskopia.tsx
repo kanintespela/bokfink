@@ -48,7 +48,7 @@ export function Sakerhetskopia({
 
       {/*
        * The passphrase belongs to the backup, not to the app: it is asked for
-       * here, used, and forgotten. Kontera has nowhere to keep it that would
+       * here, used, and forgotten. Bokfink has nowhere to keep it that would
        * not defeat the point of having one.
        */}
       <div className="faltgrupp">

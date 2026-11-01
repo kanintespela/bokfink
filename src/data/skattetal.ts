@@ -1,6 +1,6 @@
 import { kontrolleraPrisbasbelopp } from '../domain/skatt/skattetabell';
 import type { Ore } from '../domain/belopp/ore';
-import type { KonteraDatabase } from './db';
+import type { BokfinkDatabase } from './db';
 
 const NYCKEL = 'skattetal.prisbasbelopp';
 
@@ -12,7 +12,7 @@ const NYCKEL = 'skattetal.prisbasbelopp';
  * backup. Each device keeps its own - fetching it is one tap.
  */
 export async function lasEgnaPrisbasbelopp(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
 ): Promise<ReadonlyMap<number, Ore>> {
   const sparat = await db.getMeta<Record<string, number>>(NYCKEL);
   const egna = new Map<number, Ore>();
@@ -29,7 +29,7 @@ export async function lasEgnaPrisbasbelopp(
 }
 
 export async function sparaPrisbasbelopp(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   ar: number,
   belopp: Ore,
 ): Promise<void> {

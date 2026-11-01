@@ -8,7 +8,7 @@ import { createContext, useContext } from 'react';
  * levels down, and none of them has any other reason to know which book is
  * open.
  */
-export const FilprefixContext = createContext('kontera');
+export const FilprefixContext = createContext('bokfink');
 
 export function useFilprefix(): string {
   return useContext(FilprefixContext);

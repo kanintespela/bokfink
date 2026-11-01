@@ -44,7 +44,7 @@ describe('halvtPrisbasbelopp', () => {
 });
 
 /*
- * A year Kontera ships without can be added by the owner - fetched from SCB
+ * A year Bokfink ships without can be added by the owner - fetched from SCB
  * or typed in - rather than waiting for a new version of the app. The table
  * in the code still wins where it has the year: those figures are checked
  * against regeringen's decision one by one.

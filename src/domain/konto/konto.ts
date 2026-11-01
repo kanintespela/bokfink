@@ -29,7 +29,7 @@ export interface Konto {
    * Carried rather than dropped because SIE files state them - 194 of the 299
    * accounts in the export this was built against - and the NE-bilaga needs
    * them. An import that discarded them would have to guess them back later,
-   * and leaving Kontera is supposed to cost nothing.
+   * and leaving Bokfink is supposed to cost nothing.
    */
   readonly sru: readonly string[];
 }

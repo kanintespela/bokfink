@@ -5,7 +5,7 @@ import { omfattar } from '../domain/rakenskapsar/rakenskapsar';
 import type { Datum } from '../domain/tid/datum';
 import type { Sha256, Underlagstyp } from '../domain/underlag/underlag';
 import { lasTillstand } from './bokforing';
-import type { KonteraDatabase } from './db';
+import type { BokfinkDatabase } from './db';
 import type { Exportinstallningar } from './sieexport';
 import { exporteraSie } from './sieexport';
 import { lasFil } from './underlag';
@@ -33,7 +33,7 @@ export interface Arkivalternativ {
 }
 
 // BFL 7 kap. 1 §: räkenskapsinformation ska kunna tas fram i vanlig läsbar
-// form under hela arkiveringstiden. Nothing here needs Kontera to open: the
+// form under hela arkiveringstiden. Nothing here needs Bokfink to open: the
 // SIE file is text, the PDF is a PDF, the receipts are plain JPEG/PNG/WEBP.
 function lasmig(foretagsnamn: string, ar: Datum, arSlut: Datum, skapad: Datum): string {
   return (
@@ -42,7 +42,7 @@ function lasmig(foretagsnamn: string, ar: Datum, arSlut: Datum, skapad: Datum): 
     `Skapat: ${skapad}\n\n` +
     'Innehåll\n' +
     '--------\n\n' +
-    'kontera-*.se\n' +
+    'bokfink-*.se\n' +
     '    Hela årets bokföring i SIE 4-formatet. Läses in av praktiskt taget\n' +
     '    vilket svenskt bokföringsprogram som helst, eller läses som ren text.\n\n' +
     'verifikationslista.pdf\n' +
@@ -64,7 +64,7 @@ function lasmig(foretagsnamn: string, ar: Datum, arSlut: Datum, skapad: Datum): 
 /**
  * The seven-year archive package: SIE, a printable verifikationslista, every
  * underlag that year, a checksum per file, and a read-me - zipped into one
- * file that survives leaving Kontera behind entirely.
+ * file that survives leaving Bokfink behind entirely.
  *
  * Every included file is checksummed against its own stored hash before it
  * goes in. A receipt that has quietly rotted in IndexedDB must not end up
@@ -72,7 +72,7 @@ function lasmig(foretagsnamn: string, ar: Datum, arSlut: Datum, skapad: Datum): 
  * artifact that has no second chance to notice.
  */
 export async function byggArkivpaket(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   rakenskapsarId: Uuid,
   skapad: Datum,
   alternativ: Arkivalternativ,
@@ -104,7 +104,7 @@ export async function byggArkivpaket(
   ]);
 
   const filer: Ziparkivfil[] = [
-    { namn: `kontera-${ar.start.slice(0, 4)}.se`, data: sie },
+    { namn: `bokfink-${ar.start.slice(0, 4)}.se`, data: sie },
     { namn: 'verifikationslista.pdf', data: pdf },
   ];
 

@@ -16,7 +16,7 @@ const MAX_TIMESTAMP_MS = 2 ** 48 - 1;
  * Builds a version 7 UUID: 48 bits of Unix milliseconds followed by 74 random
  * bits, laid out as RFC 9562 section 5.7 specifies.
  *
- * Kontera synchronises by merging append-only operation logs between devices
+ * Bokfink synchronises by merging append-only operation logs between devices
  * (docs/UTVECKLINGSPLAN.md, 3.1). Because the timestamp leads, identifiers
  * sort in creation order as plain strings, so a device can ask for everything
  * after the last id it saw instead of maintaining a sequence that two offline

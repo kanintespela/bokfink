@@ -15,14 +15,14 @@ import {
   registreraFastighetstillgang,
 } from './fastighet';
 import { lasTillstand, skyddaBokfordaVerifikat } from './bokforing';
-import { KonteraDatabase } from './db';
+import { BokfinkDatabase } from './db';
 import { skrivKonto, skrivRakenskapsar, type Skrivkontext } from './kommandon';
 
 let raknare = 0;
 let klockslag = 1_788_554_000_000;
 
 const nyDb = async () => {
-  const db = new KonteraDatabase(`kontera-fastighet-${(raknare += 1)}`);
+  const db = new BokfinkDatabase(`kontera-fastighet-${(raknare += 1)}`);
   skyddaBokfordaVerifikat(db);
   await db.open();
   return db;
@@ -36,7 +36,7 @@ const kontext: Skrivkontext = {
 
 const AR_2026 = '019b76da-a800-7000-8000-000000002026' as Uuid;
 
-async function skrivKonton(db: KonteraDatabase): Promise<void> {
+async function skrivKonton(db: BokfinkDatabase): Promise<void> {
   await skrivKonto(db, kontext, skapaKonto({ nummer: '1120', namn: 'Byggnader' }));
   await skrivKonto(
     db,
@@ -50,7 +50,7 @@ async function skrivKonton(db: KonteraDatabase): Promise<void> {
   );
 }
 
-async function nyttAr(db: KonteraDatabase) {
+async function nyttAr(db: BokfinkDatabase) {
   await skrivRakenskapsar(
     db,
     kontext,
@@ -64,7 +64,7 @@ async function nyttAr(db: KonteraDatabase) {
 }
 
 describe('registreraFastighetstillgang och avyttraFastighetstillgang', () => {
-  let db: KonteraDatabase;
+  let db: BokfinkDatabase;
 
   beforeEach(async () => {
     db = await nyDb();
@@ -96,7 +96,7 @@ describe('registreraFastighetstillgang och avyttraFastighetstillgang', () => {
 });
 
 describe('fastighetsavskrivningsforslag och bokforFastighetsavskrivning', () => {
-  let db: KonteraDatabase;
+  let db: BokfinkDatabase;
 
   beforeEach(async () => {
     db = await nyDb();

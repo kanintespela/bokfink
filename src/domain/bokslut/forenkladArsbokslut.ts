@@ -96,7 +96,7 @@ export const UPPGIFTSRADER: readonly Uppgiftsrad[] = ['U1', 'U2', 'U3', 'U4'];
  * - `rad`: one box, decided by the account number.
  * - `val`: BAS names two boxes, because the right one depends on what the
  *   booking concerns rather than on the number - a rabatt follows the sale
- *   it was given on, which may or may not have carried moms. Kontera does
+ *   it was given on, which may or may not have carried moms. Bokfink does
  *   not know that, so the user chooses (hard rule 10).
  * - `eget-kapital`: part of B10, which also takes in the year's result.
  * - `utjamning`: 2090, the counter-entry that keeps U1-U4 out of B10.
@@ -266,7 +266,7 @@ export interface ForenkladArsbokslut {
  * B10 is eget kapital at the year's end, and the form has no separate line
  * for the result on the balance side - so B10 takes in whatever part of the
  * result has not yet been booked over to eget kapital. That makes the figure
- * the same before and after a closing entry, which is what lets Kontera book
+ * the same before and after a closing entry, which is what lets Bokfink book
  * one too (beslut 2026-09-13, see src/domain/bokslut/egetkapital.ts) without
  * this table needing to know whether it happened.
  *

@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { oreFromKronor } from '../domain/belopp/ore';
 import type { Uuid } from '../domain/id/uuidv7';
 import type { Justeringsrad } from '../domain/skatt/nebilaga';
-import { KonteraDatabase } from './db';
+import { BokfinkDatabase } from './db';
 import {
   lasDeklarant,
   lasNejusteringar,
@@ -16,7 +16,7 @@ import {
 let raknare = 0;
 
 const nyDb = async () => {
-  const db = new KonteraDatabase(`kontera-nebilaga-${(raknare += 1)}`);
+  const db = new BokfinkDatabase(`kontera-nebilaga-${(raknare += 1)}`);
   await db.open();
   return db;
 };

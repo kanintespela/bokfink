@@ -4,13 +4,13 @@ import { describe, expect, it } from 'vitest';
 
 import type { Resultatrad } from '../domain/bokslut/forenkladArsbokslut';
 import { kontonummer } from '../domain/konto/konto';
-import { KonteraDatabase } from './db';
+import { BokfinkDatabase } from './db';
 import { lasRutval, sparaRutval } from './rutval';
 
 let raknare = 0;
 
 const nyDb = async () => {
-  const db = new KonteraDatabase(`kontera-rutval-${(raknare += 1)}`);
+  const db = new BokfinkDatabase(`kontera-rutval-${(raknare += 1)}`);
   await db.open();
   return db;
 };

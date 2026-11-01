@@ -4,7 +4,7 @@ import type { Transaction } from 'dexie';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { KonteraDatabase, MissingBackupError } from './db';
+import { BokfinkDatabase, MissingBackupError } from './db';
 import { getOrCreateDeviceId } from './device';
 import { latestSchemaVersion, schemaVersions } from './schema';
 
@@ -18,7 +18,7 @@ function uniqueName(): string {
 
 const clock = () => '2026-01-15T10:00:00.000Z';
 
-describe('KonteraDatabase', () => {
+describe('BokfinkDatabase', () => {
   let name: string;
 
   beforeEach(() => {
@@ -26,7 +26,7 @@ describe('KonteraDatabase', () => {
   });
 
   it('opens at the latest declared schema version', async () => {
-    const db = new KonteraDatabase(name, { now: clock });
+    const db = new BokfinkDatabase(name, { now: clock });
     await db.open();
 
     expect(db.verno).toBe(latestSchemaVersion());
@@ -36,7 +36,7 @@ describe('KonteraDatabase', () => {
   });
 
   it('round-trips metadata', async () => {
-    const db = new KonteraDatabase(name, { now: clock });
+    const db = new BokfinkDatabase(name, { now: clock });
     await db.setMeta('momsperiod', 'kvartal');
 
     expect(await db.getMeta<string>('momsperiod')).toBe('kvartal');
@@ -50,7 +50,7 @@ describe('KonteraDatabase', () => {
   });
 
   it('returns undefined for metadata that was never written', async () => {
-    const db = new KonteraDatabase(name, { now: clock });
+    const db = new BokfinkDatabase(name, { now: clock });
     expect(await db.getMeta('finns-inte')).toBeUndefined();
     db.close();
   });
@@ -84,11 +84,11 @@ describe('destructive migrations', () => {
   it('aborts and preserves data when no backup is configured', async () => {
     const name = uniqueName();
 
-    const before = new KonteraDatabase(name, { now: clock });
+    const before = new BokfinkDatabase(name, { now: clock });
     await before.setMeta('bevara', 'mig');
     before.close();
 
-    const upgraded = new KonteraDatabase(name, {
+    const upgraded = new BokfinkDatabase(name, {
       now: clock,
       schema: laterSchema(async (tx) => {
         await tx.table('meta').clear();
@@ -99,7 +99,7 @@ describe('destructive migrations', () => {
     upgraded.close();
 
     // Hard rule 8: the database must be exactly as it was.
-    const after = new KonteraDatabase(name, { now: clock });
+    const after = new BokfinkDatabase(name, { now: clock });
     await after.open();
     expect(after.verno).toBe(latestSchemaVersion());
     expect(await after.getMeta<string>('bevara')).toBe('mig');
@@ -110,7 +110,7 @@ describe('destructive migrations', () => {
     const name = uniqueName();
     const order: string[] = [];
 
-    const before = new KonteraDatabase(name, { now: clock });
+    const before = new BokfinkDatabase(name, { now: clock });
     await before.setMeta('bevara', 'mig');
     before.close();
 
@@ -118,7 +118,7 @@ describe('destructive migrations', () => {
       order.push('backup');
     });
 
-    const upgraded = new KonteraDatabase(name, {
+    const upgraded = new BokfinkDatabase(name, {
       now: clock,
       backupBeforeMigration: backup,
       schema: laterSchema(async (tx) => {
@@ -144,7 +144,7 @@ describe('destructive migrations', () => {
 
 describe('getOrCreateDeviceId', () => {
   it('creates an id once and reuses it afterwards', async () => {
-    const db = new KonteraDatabase(uniqueName(), { now: clock });
+    const db = new BokfinkDatabase(uniqueName(), { now: clock });
     const newId = vi.fn(() => 'enhet-1');
 
     expect(await getOrCreateDeviceId(db, newId)).toBe('enhet-1');
@@ -169,7 +169,7 @@ describe('identifiers outside a secure context', () => {
     });
 
     try {
-      const db = new KonteraDatabase(uniqueName(), { now: clock });
+      const db = new BokfinkDatabase(uniqueName(), { now: clock });
       const id = await getOrCreateDeviceId(db);
 
       expect(id).toMatch(

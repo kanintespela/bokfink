@@ -10,7 +10,7 @@ import { datum } from '../domain/tid/datum';
 import { verifikatserie } from '../domain/verifikat/serie';
 import { skapaUtkast } from '../domain/verifikat/verifikat';
 import { lasTillstand, skyddaBokfordaVerifikat } from './bokforing';
-import { KonteraDatabase } from './db';
+import { BokfinkDatabase } from './db';
 import {
   foreningsarsbokslut,
   lasRadval,
@@ -28,7 +28,7 @@ import {
 let raknare = 0;
 let klockslag = 1_788_554_000_000;
 const nyDb = async () => {
-  const db = new KonteraDatabase(`kontera-foreningsbokslut-${(raknare += 1)}`);
+  const db = new BokfinkDatabase(`kontera-foreningsbokslut-${(raknare += 1)}`);
   skyddaBokfordaVerifikat(db);
   await db.open();
   return db;
@@ -43,7 +43,7 @@ const kr = oreFromKronor;
 const AR_2025 = '019b76da-a800-7000-8000-000000002025' as Uuid;
 const AR_2026 = '019b76da-a800-7000-8000-000000002026' as Uuid;
 
-async function bokfor(db: KonteraDatabase, dag: string, rader: [string, string][]) {
+async function bokfor(db: BokfinkDatabase, dag: string, rader: [string, string][]) {
   await bokforUtkast(
     db,
     kontext,

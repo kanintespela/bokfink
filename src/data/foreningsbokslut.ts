@@ -9,7 +9,7 @@ import { kontonummer, type Kontonummer } from '../domain/konto/konto';
 import { omfattar, type Rakenskapsar } from '../domain/rakenskapsar/rakenskapsar';
 import { beraknaSaldon } from '../domain/rapport/saldon';
 import { addDagar } from '../domain/tid/datum';
-import type { KonteraDatabase } from './db';
+import type { BokfinkDatabase } from './db';
 import { foreningskapitalFor } from './foreningskapital';
 import { lasTillstand } from './bokforing';
 import type { Foreningskapital } from '../domain/bokslut/foreningskapital';
@@ -28,7 +28,7 @@ const STYRELSE_NYCKEL = 'bokslut.styrelse';
  * then shown with the default again.
  */
 export async function lasRadval(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
 ): Promise<ReadonlyMap<Kontonummer, Foreningsrad>> {
   const sparat = await db.getMeta<Record<string, string>>(RADVAL_NYCKEL);
   const val = new Map<Kontonummer, Foreningsrad>();
@@ -48,7 +48,7 @@ export async function lasRadval(
 
 /** Sets or, with `rad` undefined, forgets the post for one account. */
 export async function sparaRadval(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   konto: Kontonummer,
   rad: Foreningsrad | undefined,
 ): Promise<void> {
@@ -77,7 +77,7 @@ export interface Styrelseledamot {
  * device and in the book's backup, and are printed on the signature lines.
  */
 export async function lasStyrelse(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
 ): Promise<readonly Styrelseledamot[]> {
   const sparat = await db.getMeta<readonly Styrelseledamot[]>(STYRELSE_NYCKEL);
   return (sparat ?? []).filter(
@@ -86,7 +86,7 @@ export async function lasStyrelse(
 }
 
 export async function sparaStyrelse(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   styrelse: readonly Styrelseledamot[],
 ): Promise<void> {
   await db.setMeta(
@@ -122,7 +122,7 @@ export interface Foreningsarsbokslut {
  * ones, and the page says so.
  */
 export async function foreningsarsbokslut(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   ar: Rakenskapsar,
 ): Promise<Foreningsarsbokslut> {
   const tillstand = await lasTillstand(db);

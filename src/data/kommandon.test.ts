@@ -15,7 +15,7 @@ import { verifikatserie } from '../domain/verifikat/serie';
 import { beteckning, skapaUtkast } from '../domain/verifikat/verifikat';
 import { lasTillstand, skyddaBokfordaVerifikat } from './bokforing';
 import { tillampaMall } from '../domain/mall/konteringsmall';
-import { KonteraDatabase } from './db';
+import { BokfinkDatabase } from './db';
 import {
   annulleraVerifikat,
   bokforUtkast,
@@ -62,10 +62,10 @@ const utkast = (datumtext: string, id?: Uuid) =>
   });
 
 describe('kommandon', () => {
-  let db: KonteraDatabase;
+  let db: BokfinkDatabase;
 
   beforeEach(async () => {
-    db = new KonteraDatabase(`kontera-kommandon-${(raknare += 1)}`);
+    db = new BokfinkDatabase(`kontera-kommandon-${(raknare += 1)}`);
     skyddaBokfordaVerifikat(db);
     await db.open();
     await skrivRakenskapsar(
@@ -361,7 +361,7 @@ describe('kommandon', () => {
 });
 
 describe('konteringsmallar', () => {
-  let db: KonteraDatabase;
+  let db: BokfinkDatabase;
 
   const MALL_ID = '019b76da-a800-7000-8000-0000000000f1' as Uuid;
 
@@ -376,7 +376,7 @@ describe('konteringsmallar', () => {
   };
 
   beforeEach(async () => {
-    db = new KonteraDatabase(`kontera-mall-${(raknare += 1)}`);
+    db = new BokfinkDatabase(`kontera-mall-${(raknare += 1)}`);
     skyddaBokfordaVerifikat(db);
     await db.open();
     await skrivRakenskapsar(
@@ -480,8 +480,8 @@ describe('konteringsmallar', () => {
   });
 });
 
-async function nyDb(): Promise<KonteraDatabase> {
-  const db = new KonteraDatabase(`kontera-kommandon-${(raknare += 1)}`);
+async function nyDb(): Promise<BokfinkDatabase> {
+  const db = new BokfinkDatabase(`kontera-kommandon-${(raknare += 1)}`);
   skyddaBokfordaVerifikat(db);
   await db.open();
   return db;

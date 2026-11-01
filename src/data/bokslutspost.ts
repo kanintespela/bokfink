@@ -14,7 +14,7 @@ import {
 import type { Verifikatserie } from '../domain/verifikat/serie';
 import { skapaUtkast, type BokfortVerifikat } from '../domain/verifikat/verifikat';
 import { skapaNastaRakenskapsar } from './arsavslut';
-import type { KonteraDatabase } from './db';
+import type { BokfinkDatabase } from './db';
 import { bokforUtkast, nyttId, type Skrivkontext } from './kommandon';
 
 /**
@@ -28,7 +28,7 @@ import { bokforUtkast, nyttId, type Skrivkontext } from './kommandon';
  * its start date, so a second device doing the same arrives at the same year.
  */
 export async function bokforBokslutspost(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   ar: Rakenskapsar,
   post: Bokslutspost,

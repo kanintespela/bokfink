@@ -18,7 +18,7 @@ import type { Verifikatserie } from '../domain/verifikat/serie';
 import { skapaUtkast, type BokfortVerifikat } from '../domain/verifikat/verifikat';
 import { lasTillstand, tillampa } from './bokforing';
 import { lasReserveradeKonton } from './foreningskapital';
-import type { KonteraDatabase } from './db';
+import type { BokfinkDatabase } from './db';
 import {
   bokforUtkast,
   huvud,
@@ -34,7 +34,7 @@ import {
  * worrying about calling it twice.
  */
 export async function skapaNastaRakenskapsar(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   ar: Rakenskapsar,
 ): Promise<Rakenskapsar> {
@@ -74,7 +74,7 @@ export interface Arsavslutschecklista {
  * judgement call (hård regel 10), not something to fake a checkmark for.
  */
 export async function arsavslutschecklista(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   ar: Rakenskapsar,
   idag: Datum,
 ): Promise<Arsavslutschecklista> {
@@ -132,7 +132,7 @@ export interface Balansoverforing {
  * good.
  */
 export async function forUtgaendeBalanserTillNastaAr(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   ar: Rakenskapsar,
   nastaArId: Rakenskapsar['id'],

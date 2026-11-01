@@ -7,10 +7,10 @@
  *
  * Filled in by Vite's `define` at build time (vite.config.ts).
  */
-declare const __KONTERA_COMMIT__: string;
-declare const __KONTERA_BYGGD__: string;
+declare const __BOKFINK_COMMIT__: string;
+declare const __BOKFINK_BYGGD__: string;
 
 export const byggversion = {
-  commit: __KONTERA_COMMIT__,
-  byggd: __KONTERA_BYGGD__,
+  commit: __BOKFINK_COMMIT__,
+  byggd: __BOKFINK_BYGGD__,
 } as const;

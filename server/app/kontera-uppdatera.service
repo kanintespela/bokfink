@@ -1,5 +1,5 @@
 [Unit]
-Description=Kontera - hämta senaste gröna bygget av main
+Description=Bokfink - hämta senaste gröna bygget av main
 After=network-online.target
 
 [Service]

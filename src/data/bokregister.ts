@@ -2,7 +2,7 @@ import Dexie, { type Table } from 'dexie';
 
 import type { Bokprofil } from '../domain/bok/bokprofil';
 import { BOK_ID_NYCKEL, BOK_PROFIL_NYCKEL, URSPRUNGLIG_BOK } from './bokidentitet';
-import { KonteraDatabase } from './db';
+import { BokfinkDatabase } from './db';
 import { lasLogg, lasTillstand } from './bokforing';
 import { newIdentifier } from './id';
 import { arEnbartStartdata } from './uppstart';
@@ -189,7 +189,7 @@ export async function skapaBok(
     skapad: kontext.nu(),
   };
 
-  const db = new KonteraDatabase(bok.databas);
+  const db = new BokfinkDatabase(bok.databas);
   try {
     await db.setMeta(BOK_ID_NYCKEL, id);
     await db.setMeta(BOK_PROFIL_NYCKEL, profil);
@@ -221,13 +221,14 @@ export async function bytNamnPaBok(
  * How the files a book exports begin, so that a folder of backups and SIE
  * files says whose books each one holds.
  *
- * The original book keeps the names it always had - its backups are already
- * sitting in folders under them. Any other book adds its own name, folded to
+ * The original book gets plain "bokfink" (before the app took that name
+ * its files began with "kontera"; those still import, the name is not read).
+ * Any other book adds its own name, folded to
  * what every file system accepts.
  */
 export function filprefix(bok: Bok): string {
   if (bok.databas === URSPRUNGLIG_DATABAS) {
-    return 'kontera';
+    return 'bokfink';
   }
   const namn = bok.namn
     .toLocaleLowerCase('sv')
@@ -235,7 +236,7 @@ export function filprefix(bok: Bok): string {
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
-  return namn.length === 0 ? 'kontera-bok' : `kontera-${namn}`;
+  return namn.length === 0 ? 'bokfink-bok' : `bokfink-${namn}`;
 }
 
 /** Remembers which book this device opens next time. */
@@ -273,7 +274,7 @@ export interface Bokinnehall {
  * a receipt, an account of one's own, a project - is, and is not thrown away
  * on a single press.
  */
-export async function lasBokinnehall(db: KonteraDatabase): Promise<Bokinnehall> {
+export async function lasBokinnehall(db: BokfinkDatabase): Promise<Bokinnehall> {
   const [logg, tillstand, synk] = await Promise.all([
     lasLogg(db),
     lasTillstand(db),

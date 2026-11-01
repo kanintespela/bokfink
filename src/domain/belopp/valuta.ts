@@ -12,7 +12,7 @@ import { ore, type Ore } from './ore';
  * Which rate is the right one is a question for whoever books it. It differs
  * between a card purchase (the bank's own rate, printed on the statement) and
  * the beskattningsunderlag for an EU purchase (a published rate for the day).
- * Kontera records what it was told; it does not decide.
+ * Bokfink records what it was told; it does not decide.
  */
 
 /** An ISO 4217 code, three uppercase letters. */

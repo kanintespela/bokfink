@@ -3,7 +3,7 @@ import { oreFromKronor, type Ore } from '../domain/belopp/ore';
 /**
  * SCB's statistikdatabas, table PR0101E "Prisbasbeloppet (Basbeloppet)".
  *
- * The only request Kontera makes to anyone but the owner's own sync server,
+ * The only request Bokfink makes to anyone but the owner's own sync server,
  * and only when the owner presses Hämta från SCB - decided 2026-09-13 as an
  * exception to hard rule 7 (docs/UTVECKLINGSPLAN.md, beslut Q). All it sends
  * is the year asked about. The data is published under CC0 and the API

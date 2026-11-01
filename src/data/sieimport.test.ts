@@ -11,7 +11,7 @@ import { granskaSerie, verifikatserie } from '../domain/verifikat/serie';
 import { skapaUtkast } from '../domain/verifikat/verifikat';
 import { kodaPC8 } from '../domain/sie/pc8';
 import { lasTillstand, skyddaBokfordaVerifikat } from './bokforing';
-import { KonteraDatabase } from './db';
+import { BokfinkDatabase } from './db';
 import { bokforUtkast, skrivRakenskapsar, type Skrivkontext } from './kommandon';
 import { exporteraSie } from './sieexport';
 import { importeraSieFiler } from './sieimport';
@@ -69,7 +69,7 @@ const köp = (serie: string, nr: number, ar: number, dag: string) => [
 
 describe('en fil i UTF-8 under en PC8-rubrik', () => {
   it('keeps å, ä and ö right and says how it was read', async () => {
-    const db = new KonteraDatabase(`kontera-sie-utf8-${(raknare += 1)}`);
+    const db = new BokfinkDatabase(`kontera-sie-utf8-${(raknare += 1)}`);
     skyddaBokfordaVerifikat(db);
     await db.open();
     const text = [
@@ -100,7 +100,7 @@ describe('en fil i UTF-8 under en PC8-rubrik', () => {
   });
 
   it('says nothing about the character set for a file that is in PC8', async () => {
-    const db = new KonteraDatabase(`kontera-sie-pc8-${(raknare += 1)}`);
+    const db = new BokfinkDatabase(`kontera-sie-pc8-${(raknare += 1)}`);
     skyddaBokfordaVerifikat(db);
     await db.open();
     const res = await importeraSieFiler(db, kontext, [siefil(2026)]);
@@ -109,10 +109,10 @@ describe('en fil i UTF-8 under en PC8-rubrik', () => {
 });
 
 describe('importeraSieFiler', () => {
-  let db: KonteraDatabase;
+  let db: BokfinkDatabase;
 
   beforeEach(async () => {
-    db = new KonteraDatabase(`kontera-sieimport-${(raknare += 1)}`);
+    db = new BokfinkDatabase(`kontera-sieimport-${(raknare += 1)}`);
     skyddaBokfordaVerifikat(db);
     await db.open();
   });
@@ -288,10 +288,10 @@ describe('importeraSieFiler', () => {
 });
 
 describe('ingående balanser på ett år som redan finns', () => {
-  let db: KonteraDatabase;
+  let db: BokfinkDatabase;
 
   beforeEach(async () => {
-    db = new KonteraDatabase(`kontera-sieib-${(raknare += 1)}`);
+    db = new BokfinkDatabase(`kontera-sieib-${(raknare += 1)}`);
     skyddaBokfordaVerifikat(db);
     await db.open();
   });
@@ -349,10 +349,10 @@ describe('ingående balanser på ett år som redan finns', () => {
 });
 
 describe('importeraSieFiler och projekt', () => {
-  let db: KonteraDatabase;
+  let db: BokfinkDatabase;
 
   beforeEach(async () => {
-    db = new KonteraDatabase(`kontera-sieimport-projekt-${(raknare += 1)}`);
+    db = new BokfinkDatabase(`kontera-sieimport-projekt-${(raknare += 1)}`);
     skyddaBokfordaVerifikat(db);
     await db.open();
   });
@@ -491,7 +491,7 @@ describe('importeraSieFiler och projekt', () => {
     const ar = [...(await lasTillstand(db)).rakenskapsar.values()][0]!;
     const fil = await exporteraSie(db, ar.id);
 
-    const ny = new KonteraDatabase(`kontera-sieimport-projekt-${(raknare += 1)}`);
+    const ny = new BokfinkDatabase(`kontera-sieimport-projekt-${(raknare += 1)}`);
     skyddaBokfordaVerifikat(ny);
     await ny.open();
     await importeraSieFiler(ny, kontext, [fil]);

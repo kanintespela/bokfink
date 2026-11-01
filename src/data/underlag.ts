@@ -11,7 +11,7 @@ import {
 } from '../domain/underlag/underlag';
 import type { Verifikatutkast } from '../domain/verifikat/verifikat';
 import { tillampa } from './bokforing';
-import type { KonteraDatabase } from './db';
+import type { BokfinkDatabase } from './db';
 import { huvud, nyttId, taBortUtkast, type Skrivkontext } from './kommandon';
 import { FIL_TABLE, UNDERLAG_TABLE, UTKAST_TABLE } from './schema';
 
@@ -56,7 +56,7 @@ export interface Underlagsfil {
  * bookkeeping with its evidence missing.
  */
 export async function sparaUnderlag(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   fil: Underlagsfil,
 ): Promise<{ underlag: Underlag; nytt: boolean }> {
@@ -86,7 +86,7 @@ export async function sparaUnderlag(
 }
 
 export async function kopplaUnderlag(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   underlagId: Uuid,
   verifikatId: Uuid,
@@ -100,7 +100,7 @@ export async function kopplaUnderlag(
 }
 
 export async function frikopplaUnderlag(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   underlagId: Uuid,
   verifikatId: Uuid,
@@ -128,7 +128,7 @@ export async function frikopplaUnderlag(
  * them, since content addressing means two rows can share one file.
  */
 export async function taBortUnderlag(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   underlagId: Uuid,
 ): Promise<void> {
@@ -172,7 +172,7 @@ export async function taBortUnderlag(
  * the receipt lost.
  */
 export async function kasseraUtkast(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   utkastId: Uuid,
 ): Promise<void> {
@@ -186,7 +186,7 @@ export async function kasseraUtkast(
 
 /** Records what OCR read out of the file, so it can be searched later. */
 export async function sparaUnderlagstext(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   underlagId: Uuid,
   text: string,
@@ -203,7 +203,7 @@ export async function sparaUnderlagstext(
 
 /** Sets the day an invoice waiting as an underlag is due, or removes it. */
 export async function sparaForfallodag(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   underlagId: Uuid,
   forfallodag: Datum | undefined,
@@ -218,14 +218,14 @@ export async function sparaForfallodag(
 
 /** The bytes behind an underlag, for showing it or writing it to an archive. */
 export async function lasFil(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   sha256: Sha256,
 ): Promise<FilRad | undefined> {
   return db.table<FilRad, Sha256>(FIL_TABLE).get(sha256);
 }
 
 export async function lasUnderlag(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   id: Uuid,
 ): Promise<Underlag | undefined> {
   return db.table<Underlag, Uuid>(UNDERLAG_TABLE).get(id);
@@ -233,7 +233,7 @@ export async function lasUnderlag(
 
 /** What evidence a verifikat has, through the multiEntry index. */
 export async function underlagForVerifikat(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   verifikatId: Uuid,
 ): Promise<Underlag[]> {
   return db
@@ -253,13 +253,13 @@ export async function underlagForVerifikat(
  * because the list is meant to be short: an underlag stays here only until it
  * is booked.
  */
-export async function okoppladeUnderlag(db: KonteraDatabase): Promise<Underlag[]> {
+export async function okoppladeUnderlag(db: BokfinkDatabase): Promise<Underlag[]> {
   const alla = await db.table<Underlag, Uuid>(UNDERLAG_TABLE).toArray();
   return alla.filter(arOkopplat).sort((a, b) => a.tillagd.localeCompare(b.tillagd));
 }
 
 async function underlagMedHash(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   sha256: Sha256,
 ): Promise<Underlag | undefined> {
   return db.table<Underlag, Uuid>(UNDERLAG_TABLE).where('sha256').equals(sha256).first();

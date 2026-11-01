@@ -11,7 +11,7 @@ import { verifikatserie } from '../domain/verifikat/serie';
 import { skapaUtkast } from '../domain/verifikat/verifikat';
 import { franBase64, tillBase64 } from './base64';
 import { lasLogg, lasTillstand } from './bokforing';
-import { KonteraDatabase } from './db';
+import { BokfinkDatabase } from './db';
 import {
   bokforUtkast,
   momslas,
@@ -112,13 +112,13 @@ const hasha = async (data: Uint8Array): Promise<Sha256> => {
   return sha256(summa.toString(16).padStart(6, '0').repeat(11).slice(0, 64));
 };
 
-async function nyDb(): Promise<KonteraDatabase> {
-  const db = new KonteraDatabase(`kontera-synk-${(raknare += 1)}`);
+async function nyDb(): Promise<BokfinkDatabase> {
+  const db = new BokfinkDatabase(`kontera-synk-${(raknare += 1)}`);
   await db.open();
   return db;
 }
 
-async function grundlagg(db: KonteraDatabase, enhet: string): Promise<void> {
+async function grundlagg(db: BokfinkDatabase, enhet: string): Promise<void> {
   await skrivRakenskapsar(
     db,
     kontext(enhet),
@@ -149,8 +149,8 @@ function utkast(datumtext: string, belopp: string) {
 }
 
 describe('synka', () => {
-  let telefonen: KonteraDatabase;
-  let datorn: KonteraDatabase;
+  let telefonen: BokfinkDatabase;
+  let datorn: BokfinkDatabase;
   let server: ReturnType<typeof fejkserver>;
 
   beforeEach(async () => {
@@ -527,8 +527,8 @@ describe('synka', () => {
 describe('a new device joining books that already exist', () => {
   const IDAG = fastKlocka(datum('2026-09-13'));
 
-  let telefonen: KonteraDatabase;
-  let nya: KonteraDatabase;
+  let telefonen: BokfinkDatabase;
+  let nya: BokfinkDatabase;
   let server: ReturnType<typeof fejkserver>;
 
   beforeEach(async () => {

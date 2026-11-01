@@ -13,7 +13,7 @@ import type { Datum } from '../domain/tid/datum';
 import type { Verifikatserie } from '../domain/verifikat/serie';
 import { skapaUtkast, type BokfortVerifikat } from '../domain/verifikat/verifikat';
 import { lasTillstand } from './bokforing';
-import type { KonteraDatabase } from './db';
+import type { BokfinkDatabase } from './db';
 import { bokforUtkast, nyttId, skrivKonto, type Skrivkontext } from './kommandon';
 
 /** Where the accounts holding reserved funds are listed, in the book's metadata. */
@@ -28,7 +28,7 @@ export const RESERVERADE_KONTON_NYCKEL = 'reserveradeMedelKonton';
  * page agree on which accounts they are.
  */
 export async function lasReserveradeKonton(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
 ): Promise<readonly Kontonummer[]> {
   const lagrade = (await db.getMeta<readonly string[]>(RESERVERADE_KONTON_NYCKEL)) ?? [];
   return lagrade.map((konto) => kontonummer(konto));
@@ -36,7 +36,7 @@ export async function lasReserveradeKonton(
 
 /** The association's capital for a year, split on what is reserved. */
 export async function foreningskapitalFor(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   ar: Rakenskapsar,
 ): Promise<Foreningskapital> {
   const tillstand = await lasTillstand(db);
@@ -67,7 +67,7 @@ export async function foreningskapitalFor(
  * be folded into 2010 at the next year-end.
  */
 export async function bokforReservering(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   uppgifter: {
     readonly datum: Datum;

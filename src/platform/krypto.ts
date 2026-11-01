@@ -2,7 +2,7 @@
  * Encryption for the things that leave the device.
  *
  * Web Crypto only: AES-GCM for the data and PBKDF2 for turning a passphrase
- * into a key. Both are in every browser Kontera targets, reviewed by people
+ * into a key. Both are in every browser Bokfink targets, reviewed by people
  * who do this for a living, and hardware-accelerated - which matters when a
  * backup carries a year of receipt photographs.
  *

@@ -5,7 +5,7 @@ import { datumAv, delar, sistaIManaden, type Datum } from '../tid/datum';
  *
  * Which one applies depends on turnover and on what was chosen at
  * registration: skatteförfarandelagen 26 kap. sets monthly, quarterly or
- * yearly periods. It is a setting rather than something Kontera can work out.
+ * yearly periods. It is a setting rather than something Bokfink can work out.
  */
 export type Momsperiod = 'manad' | 'kvartal' | 'ar';
 

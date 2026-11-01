@@ -16,7 +16,7 @@ import { verifikatserie } from '../domain/verifikat/serie';
 import { FORENINGENS_BOKSLUTSPOSTER } from '../domain/bokslut/bokslutspost';
 import { bokforBokslutspost } from './bokslutspost';
 import { lasTillstand, skyddaBokfordaVerifikat } from './bokforing';
-import { KonteraDatabase } from './db';
+import { BokfinkDatabase } from './db';
 import { momslas, skrivKonto, skrivRakenskapsar, type Skrivkontext } from './kommandon';
 
 let raknare = 0;
@@ -38,11 +38,11 @@ const faktura = {
 };
 
 describe('bokforBokslutspost', () => {
-  let db: KonteraDatabase;
+  let db: BokfinkDatabase;
   let ar: Rakenskapsar;
 
   beforeEach(async () => {
-    db = new KonteraDatabase(`kontera-bokslutspost-${(raknare += 1)}`);
+    db = new BokfinkDatabase(`kontera-bokslutspost-${(raknare += 1)}`);
     skyddaBokfordaVerifikat(db);
     await db.open();
     ar = skapaRakenskapsar({
@@ -123,7 +123,7 @@ describe('bokforBokslutspost', () => {
 
 describe('bokforBokslutspost för en förening', () => {
   it('takes a decided grant up on 31 December and reverses it on 1 January', async () => {
-    const db = new KonteraDatabase(`kontera-bokslutspost-${(raknare += 1)}`);
+    const db = new BokfinkDatabase(`kontera-bokslutspost-${(raknare += 1)}`);
     skyddaBokfordaVerifikat(db);
     await db.open();
     const ar = skapaRakenskapsar({
@@ -167,7 +167,7 @@ describe('bokforBokslutspost för en förening', () => {
   });
 
   it("refuses an association's item to a book that uses the firm's list", async () => {
-    const db = new KonteraDatabase(`kontera-bokslutspost-${(raknare += 1)}`);
+    const db = new BokfinkDatabase(`kontera-bokslutspost-${(raknare += 1)}`);
     skyddaBokfordaVerifikat(db);
     await db.open();
     const ar = skapaRakenskapsar({

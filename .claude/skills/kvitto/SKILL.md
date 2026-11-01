@@ -1,9 +1,9 @@
 ---
 name: kvitto
-description: Använd när ägaren skickar en bild eller PDF på ett kvitto eller en faktura och vill ha det bokfört i Kontera. Föreslår kontering ur bokföringen, och efter ett uttryckligt ja skickas ett utkast med underlaget till appen via synken. Bokför aldrig själv – ägaren trycker Bokför i appen.
+description: Använd när ägaren skickar en bild eller PDF på ett kvitto eller en faktura och vill ha det bokfört i Bokfink. Föreslår kontering ur bokföringen, och efter ett uttryckligt ja skickas ett utkast med underlaget till appen via synken. Bokför aldrig själv – ägaren trycker Bokför i appen.
 ---
 
-# Kvitto till utkast i Kontera
+# Kvitto till utkast i Bokfink
 
 Ägaren skickar ett foto eller en PDF i Claude-appen. Du föreslår hur det ska
 bokföras, och när ägaren svarat ja skickar du ett **utkast** med underlaget

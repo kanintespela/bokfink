@@ -8,7 +8,7 @@ import { skapaRakenskapsar } from '../domain/rakenskapsar/rakenskapsar';
 import { datum } from '../domain/tid/datum';
 import { verifikatserie } from '../domain/verifikat/serie';
 import { lasLogg, lasTillstand } from '../data/bokforing';
-import { KonteraDatabase } from '../data/db';
+import { BokfinkDatabase } from '../data/db';
 import { bokforUtkast, skrivKonto, skrivRakenskapsar } from '../data/kommandon';
 import { synka, type Fjarrpost, type Krypto, type Synktransport } from '../data/synk';
 import { lasFil, okoppladeUnderlag, sparaUnderlag } from '../data/underlag';
@@ -62,11 +62,11 @@ function fejkserver(): Synktransport & { hamtadeFiler: number } {
 describe('the receipt assistant’s device', () => {
   let server: ReturnType<typeof fejkserver>;
   let krypto: Krypto;
-  let telefonen: KonteraDatabase;
+  let telefonen: BokfinkDatabase;
   let filer: Map<string, string>;
 
   const nyDb = async (namn: string) => {
-    const db = new KonteraDatabase(`kontera-agent-${namn}-${(raknare += 1)}`);
+    const db = new BokfinkDatabase(`kontera-agent-${namn}-${(raknare += 1)}`);
     await db.open();
     return db;
   };

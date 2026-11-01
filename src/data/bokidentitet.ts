@@ -1,5 +1,5 @@
 import { tolkaBokprofil, type Bokprofil } from '../domain/bok/bokprofil';
-import type { KonteraDatabase } from './db';
+import type { BokfinkDatabase } from './db';
 
 /** The metadata key a database's book identity is kept under. */
 export const BOK_ID_NYCKEL = 'bokId';
@@ -22,7 +22,7 @@ export const URSPRUNGLIG_BOK = 'kontera';
  * a copy of the association's books from a copy of the firm's before it
  * merges one into the other. A database without one holds the original book.
  */
-export async function lasBokId(db: KonteraDatabase): Promise<string> {
+export async function lasBokId(db: BokfinkDatabase): Promise<string> {
   return (await db.getMeta<string>(BOK_ID_NYCKEL)) ?? URSPRUNGLIG_BOK;
 }
 
@@ -44,7 +44,7 @@ export const BOK_PROFIL_NYCKEL = 'bokprofil';
  * a firm. A database that recorded none is a book from before there were two
  * kinds, and a firm's.
  */
-export async function lasBokprofil(db: KonteraDatabase): Promise<Bokprofil> {
+export async function lasBokprofil(db: BokfinkDatabase): Promise<Bokprofil> {
   return tolkaBokprofil(await db.getMeta<unknown>(BOK_PROFIL_NYCKEL));
 }
 

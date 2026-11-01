@@ -9,7 +9,7 @@ import { skapaRakenskapsar } from '../domain/rakenskapsar/rakenskapsar';
 import { datum } from '../domain/tid/datum';
 import type { Underlag } from '../domain/underlag/underlag';
 import { lasTillstand } from '../data/bokforing';
-import { KonteraDatabase } from '../data/db';
+import { BokfinkDatabase } from '../data/db';
 import { skrivKonto, skrivRakenskapsar } from '../data/kommandon';
 import { synka, type Fjarrpost, type Synktransport } from '../data/synk';
 import { sparaUnderlag } from '../data/underlag';
@@ -79,14 +79,14 @@ function fejkserver(): Synktransport {
 
 describe('the receipt watcher', () => {
   let server: Synktransport;
-  let telefonen: KonteraDatabase;
+  let telefonen: BokfinkDatabase;
   let minne: Vaktminne;
   let meddelanden: string[];
   let fragor: { fraga: string; bild?: Uint8Array }[];
   let svar: (fraga: string, bild?: Uint8Array) => string;
 
   const nyDb = async (namn: string) => {
-    const db = new KonteraDatabase(`kontera-vakt-${namn}-${(raknare += 1)}`);
+    const db = new BokfinkDatabase(`kontera-vakt-${namn}-${(raknare += 1)}`);
     await db.open();
     return db;
   };

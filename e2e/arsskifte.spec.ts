@@ -47,7 +47,7 @@ test('exports last year as SIE once the new year exists', async ({ page }) => {
   await page.getByLabel('Räkenskapsår att exportera').selectOption({ label: '2026' });
   const nedladdning = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Exportera 2026 som SIE' }).click();
-  expect((await nedladdning).suggestedFilename()).toBe('kontera-2026.se');
+  expect((await nedladdning).suggestedFilename()).toBe('bokfink-2026.se');
 });
 
 /*

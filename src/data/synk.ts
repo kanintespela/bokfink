@@ -2,7 +2,7 @@ import type { Handelse } from '../domain/handelse/handelse';
 import type { Uuid } from '../domain/id/uuidv7';
 import type { Sha256, Underlag } from '../domain/underlag/underlag';
 import { lasLogg, tillampaAlla } from './bokforing';
-import type { KonteraDatabase } from './db';
+import type { BokfinkDatabase } from './db';
 import { FIL_TABLE, HANDELSE_TABLE, SYNKKO_TABLE, UNDERLAG_TABLE } from './schema';
 import { harEnbartOskickadStartdata, slappStartdata } from './uppstart';
 import type { FilRad } from './underlag';
@@ -145,7 +145,7 @@ const MARKOR_NYCKEL = 'synkmarkor';
  * only for entries the server has confirmed.
  */
 export async function synka(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   transport: Synktransport,
   krypto: Krypto,
   enhet: string,
@@ -193,7 +193,7 @@ export async function synka(
  * passphrase must fail with the device as it was, not with it emptied.
  */
 async function slappOrordStartdata(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   transport: Synktransport,
   krypto: Krypto,
 ): Promise<void> {
@@ -233,7 +233,7 @@ async function slappOrordStartdata(
  * på betryggande sätt, which for a copy means checked rather than assumed.
  */
 async function synkaFiler(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   transport: Synktransport,
   krypto: Krypto,
   hasha: (data: Uint8Array) => Promise<Sha256>,
@@ -320,7 +320,7 @@ async function synkaFiler(
  * index turns everything it already has into a no-op, which makes this safe
  * to do against the old server too.
  */
-export async function glomServern(db: KonteraDatabase): Promise<void> {
+export async function glomServern(db: BokfinkDatabase): Promise<void> {
   await db.setMeta(MARKOR_NYCKEL, undefined);
   const logg = await lasLogg(db);
   await db
@@ -329,12 +329,12 @@ export async function glomServern(db: KonteraDatabase): Promise<void> {
 }
 
 /** How many entries are waiting to be sent. */
-export async function osankta(db: KonteraDatabase): Promise<number> {
+export async function osankta(db: BokfinkDatabase): Promise<number> {
   return db.table(SYNKKO_TABLE).count();
 }
 
 async function skickaKon(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   transport: Synktransport,
   krypto: Krypto,
   enhet: string,
@@ -393,7 +393,7 @@ async function skickaKon(
 }
 
 async function hamtaNya(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   transport: Synktransport,
   krypto: Krypto,
 ): Promise<{ mottagna: number; nya: number }> {
@@ -424,7 +424,7 @@ async function hamtaNya(
 }
 
 /** Everything in the log, for a device that is joining an existing set. */
-export async function heltLoggutdrag(db: KonteraDatabase): Promise<number> {
+export async function heltLoggutdrag(db: BokfinkDatabase): Promise<number> {
   const logg = await lasLogg(db);
   await db
     .table<{ id: Uuid }, Uuid>(SYNKKO_TABLE)
@@ -433,12 +433,12 @@ export async function heltLoggutdrag(db: KonteraDatabase): Promise<number> {
 }
 
 /** The marker, for showing how far a device has caught up. */
-export async function synkmarkor(db: KonteraDatabase): Promise<Markor | undefined> {
+export async function synkmarkor(db: BokfinkDatabase): Promise<Markor | undefined> {
   return db.getMeta<Markor>(MARKOR_NYCKEL);
 }
 
 /** Every entry id the log holds, used by tests and by a full resend. */
-export async function loggidn(db: KonteraDatabase): Promise<Uuid[]> {
+export async function loggidn(db: BokfinkDatabase): Promise<Uuid[]> {
   return (await db.table<Handelse, Uuid>(HANDELSE_TABLE).toArray()).map(
     (post) => post.id,
   );

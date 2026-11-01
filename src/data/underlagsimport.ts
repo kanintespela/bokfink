@@ -1,7 +1,7 @@
 import type { Importrad } from '../domain/underlag/underlagsimport';
 import type { Sha256 } from '../domain/underlag/underlag';
 import { arUnderlagstyp, MAX_UNDERLAG_BYTES } from '../domain/underlag/underlag';
-import type { KonteraDatabase } from './db';
+import type { BokfinkDatabase } from './db';
 import type { Skrivkontext } from './kommandon';
 import { kopplaUnderlag, sparaUnderlag } from './underlag';
 
@@ -45,7 +45,7 @@ export interface Underlagsimportutfall {
  * way to use this is to pick the folder again after fixing three filenames.
  */
 export async function importeraUnderlag(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   filer: readonly Importfil[],
   plan: readonly Importrad[],

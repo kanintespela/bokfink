@@ -17,7 +17,7 @@ import { delar, type Datum } from '../tid/datum';
  */
 
 /**
- * The beskattningsperioder whose NE fältnamnstabell Kontera has been checked
+ * The beskattningsperioder whose NE fältnamnstabell Bokfink has been checked
  * against, and the blankettblock name for each. A year missing from here is
  * refused rather than written with last year's codes: the form can change
  * between years, and a file that uploads with the wrong fields is worse than
@@ -61,7 +61,7 @@ export class SruError extends Error {
  * The beskattningsperiod for a fysisk person's NE: P4 of the calendar year
  * the räkenskapsår ends in. Only a räkenskapsår ending on 31 December is
  * handled; the SRU tables place a brutet år by the month it ends, and
- * Kontera has not been checked against that case.
+ * Bokfink has not been checked against that case.
  */
 export function beskattningsperiod(slut: Datum): string {
   const { ar, manad, dag } = delar(slut);

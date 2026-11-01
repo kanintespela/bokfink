@@ -31,7 +31,7 @@ export class MissingBackupError extends Error {
   }
 }
 
-export class KonteraDatabase extends Dexie {
+export class BokfinkDatabase extends Dexie {
   readonly meta!: Table<MetaRow, string>;
 
   readonly #now: () => string;

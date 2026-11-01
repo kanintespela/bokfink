@@ -82,7 +82,7 @@ test('says when there is no year to compare with', async ({ page }) => {
 });
 
 /*
- * The promise the whole project rests on: leaving Kontera costs nothing. A
+ * The promise the whole project rests on: leaving Bokfink costs nothing. A
  * report has to come out as a file that opens somewhere else, in a format
  * that outlives the app.
  */
@@ -96,7 +96,7 @@ test('hands the report over as a file a spreadsheet can open', async ({ page }) 
   const fil = await nedladdning;
 
   expect(fil.suggestedFilename()).toMatch(
-    /^kontera-resultat-2026-01-01-2026-12-31\.csv$/,
+    /^bokfink-resultat-2026-01-01-2026-12-31\.csv$/,
   );
 
   const innehall = await fil.createReadStream().then(async (strom) => {
@@ -129,7 +129,7 @@ test('hands over the result per account for the whole year, to build a budget on
   const nedladdning = page.waitForEvent('download');
   await page.getByTestId('budgetunderlag-csv').click();
   const fil = await nedladdning;
-  expect(fil.suggestedFilename()).toMatch(/^kontera-resultat-per-konto-2026\.csv$/);
+  expect(fil.suggestedFilename()).toMatch(/^bokfink-resultat-per-konto-2026\.csv$/);
 
   const innehall = await fil.createReadStream().then(async (strom) => {
     const bitar: Buffer[] = [];
@@ -150,7 +150,7 @@ test('hands over the result per account for the whole year, to build a budget on
   // The other export on the page is still the period's own report.
   const period = page.waitForEvent('download');
   await page.getByTestId('exportera-csv').click();
-  expect((await period).suggestedFilename()).toMatch(/^kontera-resultat-2026-01-/);
+  expect((await period).suggestedFilename()).toMatch(/^bokfink-resultat-2026-01-/);
 });
 
 test('puts last year beside the new one when there is a year before', async ({

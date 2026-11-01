@@ -5,7 +5,7 @@ import {
 import type { Datum } from '../domain/tid/datum';
 import type { Verifikatserie } from '../domain/verifikat/serie';
 import { skapaUtkast, type BokfortVerifikat } from '../domain/verifikat/verifikat';
-import type { KonteraDatabase } from './db';
+import type { BokfinkDatabase } from './db';
 import { bokforUtkast, nyttId, type Skrivkontext } from './kommandon';
 
 /**
@@ -15,7 +15,7 @@ import { bokforUtkast, nyttId, type Skrivkontext } from './kommandon';
  * balance it moves is the one the year ends with.
  */
 export async function bokforMomsomforing(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   bokslutsdag: Datum,
   serie: Verifikatserie,

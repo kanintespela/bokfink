@@ -101,7 +101,7 @@ export type Verifikat = Verifikatutkast | BokfortVerifikat;
  * öre between accounts. The accounts, the amounts, the serie and the nummer
  * are not here and must never be - correcting those changes what the books say
  * happened, which is what bokföringslagen 5 kap. 5 §'s särskild rättelsepost
- * exists for and what Kontera does with an annullering.
+ * exists for and what Bokfink does with an annullering.
  */
 export type Rattbartfalt = 'beskrivning' | 'datum' | 'projekt';
 

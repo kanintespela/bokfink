@@ -1,5 +1,5 @@
 [Unit]
-Description=Kontera - leta efter ett nytt bygge var femte minut
+Description=Bokfink - leta efter ett nytt bygge var femte minut
 
 [Timer]
 OnBootSec=2min

@@ -32,7 +32,7 @@ import {
   lasBokprofil,
   URSPRUNGLIG_BOK,
 } from './bokidentitet';
-import { KonteraDatabase } from './db';
+import { BokfinkDatabase } from './db';
 import { forberedBokforing, GRUNDKONTON } from './uppstart';
 import { fastKlocka } from '../domain/tid/klocka';
 import {
@@ -47,7 +47,7 @@ let raknare = 0;
 let klockslag = 1_788_554_000_000;
 
 const nyDb = async () => {
-  const db = new KonteraDatabase(`kontera-backup-${(raknare += 1)}`);
+  const db = new BokfinkDatabase(`kontera-backup-${(raknare += 1)}`);
   skyddaBokfordaVerifikat(db);
   await db.open();
   return db;
@@ -72,7 +72,7 @@ const utkast = (datumtext: string) =>
     ],
   });
 
-async function fyll(db: KonteraDatabase): Promise<void> {
+async function fyll(db: BokfinkDatabase): Promise<void> {
   await skrivRakenskapsar(
     db,
     kontext,
@@ -91,7 +91,7 @@ async function fyll(db: KonteraDatabase): Promise<void> {
 }
 
 describe('backup av underlag', () => {
-  let db: KonteraDatabase;
+  let db: BokfinkDatabase;
 
   const bytes = new TextEncoder().encode('kvitto-bytes');
 
@@ -163,7 +163,7 @@ describe('backup av underlag', () => {
 });
 
 describe('backup', () => {
-  let db: KonteraDatabase;
+  let db: BokfinkDatabase;
 
   beforeEach(async () => {
     db = await nyDb();
@@ -173,7 +173,7 @@ describe('backup', () => {
   /*
    * The acceptance criterion for the whole safety valve: export followed by
    * import into an empty database gives back the same books. If this ever
-   * fails, leaving Kontera costs data, which is the one thing the project
+   * fails, leaving Bokfink costs data, which is the one thing the project
    * promises it never will.
    */
   it('restores identical books into an empty database', async () => {
@@ -431,7 +431,7 @@ describe('restoring onto a new device', () => {
 });
 
 describe('en säkerhetskopia från en annan bok', () => {
-  let firman: KonteraDatabase;
+  let firman: BokfinkDatabase;
 
   beforeEach(async () => {
     firman = await nyDb();

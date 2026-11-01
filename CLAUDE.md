@@ -4,7 +4,7 @@ Instruktioner för AI-assistenter och människor som arbetar i det här repot. L
 
 ## Projektet i en mening
 
-Kontera är en local-first PWA för bokföring i svensk enskild firma: all data på användarens enhet, inga serverberoenden, öppna exportformat, och bokföringsreglerna implementerade i koden.
+Bokfink är en local-first PWA för bokföring i svensk enskild firma: all data på användarens enhet, inga serverberoenden, öppna exportformat, och bokföringsreglerna implementerade i koden.
 
 Projektet drivs av **en person med AI-assistans**. Det betyder att koden ska vara skriven för att kunna granskas snabbt av en trött människa på en telefon, och att en AI ska kunna göra rätt utan att fråga om trivialiteter — men fråga om allt som rör tolkning av regelverk.
 

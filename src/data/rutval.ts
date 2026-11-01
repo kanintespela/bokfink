@@ -1,6 +1,6 @@
 import { arGiltigtRutval, type Resultatrad } from '../domain/bokslut/forenkladArsbokslut';
 import { kontonummer, type Kontonummer } from '../domain/konto/konto';
-import type { KonteraDatabase } from './db';
+import type { BokfinkDatabase } from './db';
 
 const NYCKEL = 'bokslut.rutval';
 
@@ -19,7 +19,7 @@ const NYCKEL = 'bokslut.rutval';
  * a choice again on the bokslut screen, which is where the user would notice.
  */
 export async function lasRutval(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
 ): Promise<ReadonlyMap<Kontonummer, Resultatrad>> {
   const sparat = await db.getMeta<Record<string, string>>(NYCKEL);
   const val = new Map<Kontonummer, Resultatrad>();
@@ -39,7 +39,7 @@ export async function lasRutval(
 
 /** Sets or, with `rad` undefined, forgets the choice for one account. */
 export async function sparaRutval(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   konto: Kontonummer,
   rad: Resultatrad | undefined,
 ): Promise<void> {

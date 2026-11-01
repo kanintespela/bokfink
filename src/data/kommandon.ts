@@ -31,7 +31,7 @@ import {
   type Verifikatutkast,
 } from '../domain/verifikat/verifikat';
 import { lasLogg, lasTillstand, tillampa, type VerifikatRad } from './bokforing';
-import type { KonteraDatabase } from './db';
+import type { BokfinkDatabase } from './db';
 import { newIdentifier } from './id';
 import { PROJEKT_TABLE, RAKENSKAPSAR_TABLE, VERIFIKAT_TABLE } from './schema';
 
@@ -67,7 +67,7 @@ export function huvud(kontext: Skrivkontext) {
 }
 
 export async function skrivKonto(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   konto: Konto,
   finnsSedanTidigare = false,
@@ -79,7 +79,7 @@ export async function skrivKonto(
 }
 
 export async function skrivRakenskapsar(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   rakenskapsar: Rakenskapsar,
 ): Promise<void> {
@@ -112,7 +112,7 @@ export class AvslutatProjektError extends Error {
  * it would leave a mistake on a finished project with no way to correct it.
  */
 async function kontrolleraProjekt(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   projektIdn: Iterable<Uuid>,
   tillatAvslutat = false,
 ): Promise<void> {
@@ -129,7 +129,7 @@ async function kontrolleraProjekt(
 
 /** Creates a project. Its code is how it is told apart in a file, so no two share one. */
 export async function skrivProjekt(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   uppgifter: { readonly kod: string; readonly namn: string },
 ): Promise<Projekt> {
@@ -149,7 +149,7 @@ export async function skrivProjekt(
  * A budget replaces the one before, and an empty one takes it away.
  */
 export async function andraProjektet(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   projektId: Uuid,
   andring: {
@@ -169,7 +169,7 @@ export async function andraProjektet(
 }
 
 export async function sparaUtkast(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   utkast: Verifikatutkast,
 ): Promise<void> {
@@ -181,7 +181,7 @@ export async function sparaUtkast(
 }
 
 export async function taBortUtkast(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   utkastId: Uuid,
 ): Promise<void> {
@@ -189,7 +189,7 @@ export async function taBortUtkast(
 }
 
 export async function momslas(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   rakenskapsarId: Uuid,
   tom: Datum,
@@ -203,7 +203,7 @@ export async function momslas(
 }
 
 export async function sattIngaendeBalanser(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   rakenskapsarId: Uuid,
   balanser: readonly Ingaendebalans[],
@@ -217,7 +217,7 @@ export async function sattIngaendeBalanser(
 }
 
 export async function avslutaRakenskapsar(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   rakenskapsarId: Uuid,
 ): Promise<void> {
@@ -264,7 +264,7 @@ export class EndaAretError extends Error {
  * year with nothing in it is a row that exists by accident.
  */
 export async function taBortRakenskapsar(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   rakenskapsarId: Uuid,
 ): Promise<void> {
@@ -316,7 +316,7 @@ export async function taBortRakenskapsar(
  * drift from the command the first time either changed.
  */
 export async function borttagbaraRakenskapsar(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
 ): Promise<ReadonlySet<Uuid>> {
   const tillstand = await lasTillstand(db);
   const aren = [...tillstand.rakenskapsar.values()];
@@ -340,7 +340,7 @@ export async function borttagbaraRakenskapsar(
 }
 
 export async function sparaMall(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   mall: Konteringsmall,
 ): Promise<void> {
@@ -348,7 +348,7 @@ export async function sparaMall(
 }
 
 export async function taBortMall(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   mallId: Uuid,
 ): Promise<void> {
@@ -363,7 +363,7 @@ export async function taBortMall(
  * for: a counter could fall out of step with the entries it counts, a pass
  * cannot.
  */
-export async function mallanvandning(db: KonteraDatabase): Promise<Map<Uuid, number>> {
+export async function mallanvandning(db: BokfinkDatabase): Promise<Map<Uuid, number>> {
   const antal = new Map<Uuid, number>();
   for (const handelse of await lasLogg(db)) {
     if (handelse.typ === 'verifikat.bokfort' && handelse.verifikat.mall !== undefined) {
@@ -384,7 +384,7 @@ export async function mallanvandning(db: KonteraDatabase): Promise<Map<Uuid, num
  * one fails rather than both succeeding with the same number.
  */
 export async function bokforUtkast(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   utkast: Verifikatutkast,
   serie: Verifikatserie,
@@ -435,7 +435,7 @@ export async function bokforUtkast(
  *     boundary would carry a number belonging to the other year's series.
  */
 export async function rattaVerifikat(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   original: BokfortVerifikat,
   andring: {
@@ -513,7 +513,7 @@ export async function rattaVerifikat(
  * books whatever should have been there instead.
  */
 export async function annulleraVerifikat(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   original: BokfortVerifikat,
   datum: Datum,
@@ -529,7 +529,7 @@ export async function annulleraVerifikat(
 
 /** The highest number handed out in a series within a fiscal year. */
 export async function hogstaNummer(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   rakenskapsarId: Uuid,
   serie: Verifikatserie,
 ): Promise<number | undefined> {
@@ -552,19 +552,19 @@ export async function hogstaNummer(
  * and never synchronised.
  */
 export async function serieForEnhet(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
 ): Promise<Verifikatserie | undefined> {
   return db.getMeta<Verifikatserie>('verifikatserie');
 }
 
 export async function sattSerieForEnhet(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   serie: Verifikatserie,
 ): Promise<void> {
   await db.setMeta('verifikatserie', serie);
 }
 
-async function hittaAr(db: KonteraDatabase, datum: Datum): Promise<Rakenskapsar> {
+async function hittaAr(db: BokfinkDatabase, datum: Datum): Promise<Rakenskapsar> {
   const alla = await db.table<Rakenskapsar, Uuid>(RAKENSKAPSAR_TABLE).toArray();
   const ar = alla.find((kandidat) => omfattar(kandidat, datum));
   if (ar === undefined) {

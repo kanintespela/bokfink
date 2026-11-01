@@ -20,11 +20,11 @@ import { ar, type Datum } from '../domain/tid/datum';
 import type { Verifikatserie } from '../domain/verifikat/serie';
 import { skapaUtkast, type BokfortVerifikat } from '../domain/verifikat/verifikat';
 import { lasTillstand, tillampa } from './bokforing';
-import type { KonteraDatabase } from './db';
+import type { BokfinkDatabase } from './db';
 import { bokforUtkast, huvud, nyttId, type Skrivkontext } from './kommandon';
 
 export async function registreraAnlaggningstillgang(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   uppgifter: Omit<Anlaggningstillgangsuppgifter, 'id'>,
 ): Promise<Anlaggningstillgang> {
@@ -34,7 +34,7 @@ export async function registreraAnlaggningstillgang(
 }
 
 export async function avyttraAnlaggningstillgang(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   tillgangId: Uuid,
   avyttring: Anlaggningsavyttring,
@@ -77,7 +77,7 @@ export interface Arsavskrivningsunderlag {
  * describes - a single-account chart of accounts just passes one konto.
  */
 export async function berakningAvArsAvskrivning(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   rakenskapsar: Rakenskapsar,
   poolkonton: readonly Kontonummer[],
 ): Promise<Arsavskrivningsunderlag> {
@@ -135,7 +135,7 @@ export async function berakningAvArsAvskrivning(
  * given.
  */
 export async function bokforAvskrivning(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   datum: Datum,
   serie: Verifikatserie,

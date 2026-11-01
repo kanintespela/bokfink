@@ -16,7 +16,7 @@ import {
   type Sha256,
 } from '../domain/underlag/underlag';
 import { lasLogg, lasTillstand, tillampaAlla } from './bokforing';
-import { KonteraDatabase } from './db';
+import { BokfinkDatabase } from './db';
 import {
   bokforUtkast,
   skrivKonto,
@@ -63,10 +63,10 @@ const fil = (tecken = 'a', innehall = 'kvitto') => ({
 });
 
 describe('underlag', () => {
-  let db: KonteraDatabase;
+  let db: BokfinkDatabase;
 
   beforeEach(async () => {
-    db = new KonteraDatabase(`kontera-underlag-${(raknare += 1)}`);
+    db = new BokfinkDatabase(`kontera-underlag-${(raknare += 1)}`);
     await db.open();
   });
 
@@ -321,7 +321,7 @@ describe('underlag', () => {
      * books: no receipt, and the draft without it.
      */
     it('agrees on both devices when a receipt is removed while a draft claims it', async () => {
-      const servern = new KonteraDatabase(`kontera-underlag-${(raknare += 1)}`);
+      const servern = new BokfinkDatabase(`kontera-underlag-${(raknare += 1)}`);
       await servern.open();
       const { underlag } = await sparaUnderlag(db, kontext, fil());
       await tillampaAlla(servern, await lasLogg(db), 'fjarr');

@@ -11,11 +11,11 @@ import { beraknaSaldon } from '../domain/rapport/saldon';
 import type { Verifikatserie } from '../domain/verifikat/serie';
 import { skapaUtkast, type BokfortVerifikat } from '../domain/verifikat/verifikat';
 import { lasTillstand, tillampa } from './bokforing';
-import type { KonteraDatabase } from './db';
+import type { BokfinkDatabase } from './db';
 import { bokforUtkast, huvud, nyttId, type Skrivkontext } from './kommandon';
 
 export async function registreraDjurlagerinventering(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   uppgifter: Omit<Djurlagerinventeringsuppgifter, 'id'>,
 ): Promise<Djurlagerinventering> {
@@ -26,7 +26,7 @@ export async function registreraDjurlagerinventering(
 
 /** Alla inventeringar, senaste först - den senaste är lagrets nuvarande värde. */
 export async function djurlagerinventeringar(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
 ): Promise<readonly Djurlagerinventering[]> {
   const tillstand = await lasTillstand(db);
   return [...tillstand.djurlagerinventeringar.values()].sort((a, b) =>
@@ -44,7 +44,7 @@ export async function djurlagerinventeringar(
  * nothing the second time and says why.
  */
 export async function bokforLagerforandring(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   inventering: Djurlagerinventering,
   serie: Verifikatserie,

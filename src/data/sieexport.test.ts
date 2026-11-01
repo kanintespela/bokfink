@@ -12,7 +12,7 @@ import { verifikatserie } from '../domain/verifikat/serie';
 import { skapaUtkast } from '../domain/verifikat/verifikat';
 import { OkodbartTeckenError } from '../domain/sie/pc8';
 import { lasTillstand, skyddaBokfordaVerifikat } from './bokforing';
-import { KonteraDatabase } from './db';
+import { BokfinkDatabase } from './db';
 import { byggSiedokument, exporteraSie } from './sieexport';
 import { importeraSieFiler } from './sieimport';
 import { bokforUtkast, type Skrivkontext } from './kommandon';
@@ -58,10 +58,10 @@ function siefil(ar: number, extra: string[] = []) {
 }
 
 describe('byggSiedokument', () => {
-  let db: KonteraDatabase;
+  let db: BokfinkDatabase;
 
   beforeEach(async () => {
-    db = new KonteraDatabase(`kontera-sieexport-${(raknare += 1)}`);
+    db = new BokfinkDatabase(`kontera-sieexport-${(raknare += 1)}`);
     skyddaBokfordaVerifikat(db);
     await db.open();
     await importeraSieFiler(db, kontext, [siefil(2026)]);
@@ -136,10 +136,10 @@ describe('byggSiedokument', () => {
 });
 
 describe('exporteraSie', () => {
-  let db: KonteraDatabase;
+  let db: BokfinkDatabase;
 
   beforeEach(async () => {
-    db = new KonteraDatabase(`kontera-sieexport-b-${(raknare += 1)}`);
+    db = new BokfinkDatabase(`kontera-sieexport-b-${(raknare += 1)}`);
     skyddaBokfordaVerifikat(db);
     await db.open();
     await importeraSieFiler(db, kontext, [siefil(2026)]);
@@ -155,7 +155,7 @@ describe('exporteraSie', () => {
     const ar = [...(await lasTillstand(db)).rakenskapsar.values()][0]!;
     const bytes = await exporteraSie(db, ar.id);
 
-    const tillbaka = new KonteraDatabase(`kontera-sieexport-c-${(raknare += 1)}`);
+    const tillbaka = new BokfinkDatabase(`kontera-sieexport-c-${(raknare += 1)}`);
     skyddaBokfordaVerifikat(tillbaka);
     await tillbaka.open();
     await importeraSieFiler(tillbaka, kontext, [bytes]);
@@ -190,10 +190,10 @@ describe('exporteraSie', () => {
 });
 
 describe('exporteraSie och tecken som PC8 saknar', () => {
-  let db: KonteraDatabase;
+  let db: BokfinkDatabase;
 
   beforeEach(async () => {
-    db = new KonteraDatabase(`kontera-sieexport-d-${(raknare += 1)}`);
+    db = new BokfinkDatabase(`kontera-sieexport-d-${(raknare += 1)}`);
     skyddaBokfordaVerifikat(db);
     await db.open();
     await importeraSieFiler(db, kontext, [siefil(2026)]);

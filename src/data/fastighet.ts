@@ -13,11 +13,11 @@ import type { Datum } from '../domain/tid/datum';
 import type { Verifikatserie } from '../domain/verifikat/serie';
 import { skapaUtkast, type BokfortVerifikat } from '../domain/verifikat/verifikat';
 import { lasTillstand, tillampa } from './bokforing';
-import type { KonteraDatabase } from './db';
+import type { BokfinkDatabase } from './db';
 import { bokforUtkast, huvud, nyttId, type Skrivkontext } from './kommandon';
 
 export async function registreraFastighetstillgang(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   uppgifter: Omit<Fastighetstillgangsuppgifter, 'id'>,
 ): Promise<Fastighetstillgang> {
@@ -27,7 +27,7 @@ export async function registreraFastighetstillgang(
 }
 
 export async function avyttraFastighetstillgang(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   tillgangId: Uuid,
   avyttring: Fastighetsavyttring,
@@ -57,7 +57,7 @@ export interface Fastighetsavskrivningsforslag {
  * av för sig.
  */
 export async function fastighetsavskrivningsforslag(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
 ): Promise<readonly Fastighetsavskrivningsforslag[]> {
   const tillstand = await lasTillstand(db);
   return [...tillstand.fastigheter.values()]
@@ -83,7 +83,7 @@ export async function fastighetsavskrivningsforslag(
  * nästa års beräkning har rätt underlag.
  */
 export async function bokforFastighetsavskrivning(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   datum: Datum,
   serie: Verifikatserie,

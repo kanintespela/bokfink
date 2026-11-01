@@ -12,7 +12,7 @@ import {
   bokprofilIMeta,
   lasBokId,
 } from './bokidentitet';
-import type { KonteraDatabase } from './db';
+import type { BokfinkDatabase } from './db';
 import {
   FIL_TABLE,
   HANDELSE_TABLE,
@@ -104,7 +104,7 @@ export class OlasbarSakerhetskopiaError extends Error {
 }
 
 export async function exportera(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   nu: () => string = () => new Date().toISOString(),
 ): Promise<Sakerhetskopia> {
   const [meta, handelser, filer] = await Promise.all([
@@ -130,7 +130,7 @@ export async function exportera(
 }
 
 export async function exporteraSomText(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   nu?: () => string,
 ): Promise<string> {
   return `${JSON.stringify(await exportera(db, nu), undefined, 2)}\n`;
@@ -203,7 +203,7 @@ export interface Importalternativ {
  * be folded into another.
  */
 export async function importera(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kopia: Sakerhetskopia,
   alternativ: Importalternativ = {},
 ): Promise<{ nyaHandelser: number; nyaFiler: number }> {
@@ -282,6 +282,6 @@ export async function importera(
 }
 
 /** How many entries a backup holds, without applying any of them. */
-export async function antalHandelser(db: KonteraDatabase): Promise<number> {
+export async function antalHandelser(db: BokfinkDatabase): Promise<number> {
   return db.table<Handelse, Uuid>(HANDELSE_TABLE).count();
 }

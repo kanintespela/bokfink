@@ -17,7 +17,7 @@ import {
   registerkontext,
   stangDatabas,
 } from './data/instance';
-import { Kontera } from './features/Kontera';
+import { Bokfink } from './features/Bokfink';
 import { FilprefixContext } from './ui/bok';
 import { UpdateBanner } from './ui/UpdateBanner';
 import { Varumarke } from './ui/Varumarke';
@@ -98,7 +98,7 @@ export function App() {
         </p>
       )}
       <FilprefixContext.Provider value={filprefix(aktiv)}>
-        <Kontera
+        <Bokfink
           key={aktiv.id}
           db={databasFor(aktiv)}
           bokval={{

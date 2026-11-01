@@ -5,7 +5,7 @@ import { franBase64, tillBase64 } from './base64';
 /**
  * The envelope an encrypted backup travels in.
  *
- * A backup ends up somewhere Kontera does not control - iCloud, a hard disk,
+ * A backup ends up somewhere Bokfink does not control - iCloud, a hard disk,
  * an email to oneself - carrying a year of bookkeeping and every receipt
  * photograph. Encrypting it is what makes that acceptable.
  *

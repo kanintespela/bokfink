@@ -4,7 +4,7 @@
 
 Bokföring för enskild firma, i telefonen — utan prenumeration och utan att din bokföring lämnar din enhet.
 
-Bokfink är en **local-first PWA**. Projektet hette tidigare Kontera, och det namnet finns kvar i koden, i filformaten och i databasen. All data ligger på dina egna enheter, appen fungerar offline, och det finns ingen molntjänst som kan höja priset, lägga ner eller läsa dina siffror. Projektet är öppen källkod och byggs för att ersätta kommersiella bokföringsappar för enskild firma.
+Bokfink är en **local-first PWA**. Interna namn i filformat och databas är äldre och ändras inte, så att tidigare säkerhetskopior och böcker går att öppna. All data ligger på dina egna enheter, appen fungerar offline, och det finns ingen molntjänst som kan höja priset, lägga ner eller läsa dina siffror. Projektet är öppen källkod och byggs för att ersätta kommersiella bokföringsappar för enskild firma.
 
 > **Status: i bruk för den löpande bokföringen.** Etapp 1 och 2 är färdiga: en utgift bokförs på några sekunder genom att svara på vad som hänt, en bokförd kontering rättas med annullering medan beskrivning och datum kan rättas direkt, en befintlig bokföring importeras från SIE-fil och exporteras tillbaka utan förlust, och momsdeklarationen räknas fram ruta för ruta. Kvitton med OCR, rapporter, krypterad säkerhetskopia, synk mellan telefon och dator (byggd, inte driftsatt), anläggningsregister och årsbokslut är i stort sett klara. Kvar är främst att bekräfta eSKD-, NE- och SRU-filerna mot Skatteverket, konfliktvyn för synken, samt fakturering och körjournal — se [utvecklingsplanen](docs/UTVECKLINGSPLAN.md).
 

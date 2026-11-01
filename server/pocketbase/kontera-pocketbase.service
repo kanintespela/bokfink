@@ -1,5 +1,5 @@
 [Unit]
-Description=Kontera PocketBase
+Description=Bokfink PocketBase
 After=network.target
 
 [Service]

@@ -25,7 +25,7 @@ import {
  *
  * Amounts are strings of kronor, never numbers: JSON has only floats, and a
  * suggestion that passed "400.1" through one would already have broken hard
- * rule 1 before Kontera saw it. Positive is debet and negative is kredit,
+ * rule 1 before Bokfink saw it. Positive is debet and negative is kredit,
  * the same sign convention every kontering in the app uses.
  */
 const forslagsschema = z.object({

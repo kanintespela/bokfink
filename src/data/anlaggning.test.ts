@@ -19,7 +19,7 @@ import {
   registreraAnlaggningstillgang,
 } from './anlaggning';
 import { lasTillstand, skyddaBokfordaVerifikat } from './bokforing';
-import { KonteraDatabase } from './db';
+import { BokfinkDatabase } from './db';
 import {
   bokforUtkast,
   skrivKonto,
@@ -31,7 +31,7 @@ let raknare = 0;
 let klockslag = 1_788_554_000_000;
 
 const nyDb = async () => {
-  const db = new KonteraDatabase(`kontera-anlaggning-${(raknare += 1)}`);
+  const db = new BokfinkDatabase(`kontera-anlaggning-${(raknare += 1)}`);
   skyddaBokfordaVerifikat(db);
   await db.open();
   return db;
@@ -45,7 +45,7 @@ const kontext: Skrivkontext = {
 
 const AR_2026 = '019b76da-a800-7000-8000-000000002026' as Uuid;
 
-async function skrivKonton(db: KonteraDatabase): Promise<void> {
+async function skrivKonton(db: BokfinkDatabase): Promise<void> {
   await skrivKonto(db, kontext, skapaKonto({ nummer: '1220', namn: 'Inventarier' }));
   await skrivKonto(
     db,
@@ -60,7 +60,7 @@ async function skrivKonton(db: KonteraDatabase): Promise<void> {
   await skrivKonto(db, kontext, skapaKonto({ nummer: '1930', namn: 'Företagskontot' }));
 }
 
-async function nyttAr(db: KonteraDatabase, ib: Rakenskapsar['ingaendeBalanser'] = []) {
+async function nyttAr(db: BokfinkDatabase, ib: Rakenskapsar['ingaendeBalanser'] = []) {
   await skrivRakenskapsar(
     db,
     kontext,
@@ -73,7 +73,7 @@ async function nyttAr(db: KonteraDatabase, ib: Rakenskapsar['ingaendeBalanser'] 
   );
 }
 
-async function kopInventarie(db: KonteraDatabase, kronor: string, datumtext: string) {
+async function kopInventarie(db: BokfinkDatabase, kronor: string, datumtext: string) {
   await bokforUtkast(
     db,
     kontext,
@@ -91,7 +91,7 @@ async function kopInventarie(db: KonteraDatabase, kronor: string, datumtext: str
 }
 
 describe('registreraAnlaggningstillgang och avyttraAnlaggningstillgang', () => {
-  let db: KonteraDatabase;
+  let db: BokfinkDatabase;
 
   beforeEach(async () => {
     db = await nyDb();
@@ -123,7 +123,7 @@ describe('registreraAnlaggningstillgang och avyttraAnlaggningstillgang', () => {
 });
 
 describe('berakningAvArsAvskrivning', () => {
-  let db: KonteraDatabase;
+  let db: BokfinkDatabase;
 
   beforeEach(async () => {
     db = await nyDb();
@@ -226,7 +226,7 @@ describe('berakningAvArsAvskrivning', () => {
 });
 
 describe('bokforAvskrivning', () => {
-  let db: KonteraDatabase;
+  let db: BokfinkDatabase;
 
   beforeEach(async () => {
     db = await nyDb();

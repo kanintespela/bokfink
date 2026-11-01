@@ -3,7 +3,7 @@ import type { Bokforingstillstand } from '../domain/handelse/handelse';
 import type { Uuid } from '../domain/id/uuidv7';
 import type { Datum } from '../domain/tid/datum';
 import type { Sha256, Underlag } from '../domain/underlag/underlag';
-import type { KonteraDatabase } from '../data/db';
+import type { BokfinkDatabase } from '../data/db';
 import { sparaUtkast, type Skrivkontext } from '../data/kommandon';
 import { osankta, type Krypto, type Synktransport } from '../data/synk';
 import { kopplaUnderlag } from '../data/underlag';
@@ -157,7 +157,7 @@ export function kvittonAttLasa(
 }
 
 export async function lasNyaKvitton(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   bocker: Bokforingstillstand,
   prova: boolean,
   beroenden: Vaktberoenden,
@@ -259,7 +259,7 @@ async function meddela(vakt: Kvittovakt, text: string): Promise<void> {
 }
 
 async function lasEtt(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   bocker: Bokforingstillstand,
   kvitto: Underlag,
   prova: boolean,

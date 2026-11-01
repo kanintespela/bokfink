@@ -823,7 +823,7 @@ test('refuses an account number that is not one', async ({ page }) => {
 
 /*
  * The safety valve, driven the way it will be used: book something, take a
- * copy, and read it back. The stage's promise is that leaving Kontera never
+ * copy, and read it back. The stage's promise is that leaving Bokfink never
  * costs anything, and a backup nobody can restore is not a backup.
  */
 test('takes a backup and reads it back', async ({ page }) => {
@@ -892,7 +892,7 @@ test('takes a quick backup without a passphrase when asked for a plain copy', as
   await page.goto('/');
   const nedladdning = page.waitForEvent('download');
   await page.getByTestId('snabb-backup-oskyddad').click();
-  expect((await nedladdning).suggestedFilename()).toMatch(/^kontera-oskyddad-kopia-/);
+  expect((await nedladdning).suggestedFilename()).toMatch(/^bokfink-oskyddad-kopia-/);
 
   await expect(page.getByTestId('snabb-backup-besked')).toContainText(
     'Den oskyddade kopian',
@@ -940,7 +940,7 @@ test('exports an archive package with the SIE file, a PDF and the receipt', asyn
   const bytes = new Uint8Array(await readFile(sokvag!));
   const namn = lasZip(bytes).map((post) => post.namn);
 
-  expect(namn).toContain('kontera-2026.se');
+  expect(namn).toContain('bokfink-2026.se');
   expect(namn).toContain('verifikationslista.pdf');
   expect(namn).toContain('checksummor.txt');
   expect(namn).toContain('LASMIG.txt');

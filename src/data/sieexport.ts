@@ -19,9 +19,9 @@ import { jamfor } from '../domain/tid/datum';
 import type { Uuid } from '../domain/id/uuidv7';
 import type { BokfortVerifikat } from '../domain/verifikat/verifikat';
 import { lasTillstand } from './bokforing';
-import type { KonteraDatabase } from './db';
+import type { BokfinkDatabase } from './db';
 
-/** Kontera's five account types folded back into the four SIE has. */
+/** Bokfink's five account types folded back into the four SIE has. */
 const TILL_SIE: Record<Kontotyp, 'T' | 'S' | 'K' | 'I'> = {
   tillgang: 'T',
   egetKapital: 'S',
@@ -44,7 +44,7 @@ export interface Exportinstallningar {
  * accountant did.
  */
 export async function byggSiedokument(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   rakenskapsarId: Uuid,
   installningar: Exportinstallningar = {},
 ): Promise<Siedokument> {
@@ -124,7 +124,7 @@ export async function byggSiedokument(
 
 /** The finished file, as the bytes a SIE file actually contains. */
 export async function exporteraSie(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   rakenskapsarId: Uuid,
   installningar: Exportinstallningar = {},
 ): Promise<Uint8Array> {

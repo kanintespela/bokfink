@@ -11,7 +11,7 @@ import { verifikatserie } from '../domain/verifikat/serie';
 import { skapaUtkast } from '../domain/verifikat/verifikat';
 import { forUtgaendeBalanserTillNastaAr, skapaNastaRakenskapsar } from './arsavslut';
 import { lasTillstand, skyddaBokfordaVerifikat } from './bokforing';
-import { KonteraDatabase } from './db';
+import { BokfinkDatabase } from './db';
 import {
   bokforReservering,
   foreningskapitalFor,
@@ -29,7 +29,7 @@ let raknare = 0;
 let klockslag = 1_788_554_000_000;
 
 const nyDb = async () => {
-  const db = new KonteraDatabase(`kontera-foreningskapital-${(raknare += 1)}`);
+  const db = new BokfinkDatabase(`kontera-foreningskapital-${(raknare += 1)}`);
   skyddaBokfordaVerifikat(db);
   await db.open();
   return db;

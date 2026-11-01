@@ -10,7 +10,7 @@ test('hands over the coming deadlines as a calendar file', async ({ page }) => {
   const nedladdning = page.waitForEvent('download');
   await page.getByTestId('exportera-kalender').click();
   const fil = await nedladdning;
-  expect(fil.suggestedFilename()).toBe('kontera-datum.ics');
+  expect(fil.suggestedFilename()).toBe('bokfink-datum.ics');
   await expect(page.getByTestId('kalender-besked')).toContainText('sparades');
 
   const ics = await readFile(await fil.path(), 'utf8');

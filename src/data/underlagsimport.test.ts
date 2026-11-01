@@ -6,7 +6,7 @@ import { uuidv7, type Uuid } from '../domain/id/uuidv7';
 import { sha256, type Sha256 } from '../domain/underlag/underlag';
 import type { Importrad } from '../domain/underlag/underlagsimport';
 import { lasLogg } from './bokforing';
-import { KonteraDatabase } from './db';
+import { BokfinkDatabase } from './db';
 import type { Skrivkontext } from './kommandon';
 import { okoppladeUnderlag, underlagForVerifikat } from './underlag';
 import { importeraUnderlag, type Importfil } from './underlagsimport';
@@ -49,10 +49,10 @@ const rad = (namn: string, filnamn: string, verifikat?: Uuid): Importrad =>
     : { namn, filnamn, verifikat, beteckning: 'A50' };
 
 describe('importeraUnderlag', () => {
-  let db: KonteraDatabase;
+  let db: BokfinkDatabase;
 
   beforeEach(async () => {
-    db = new KonteraDatabase(`kontera-underlagsimport-${(raknare += 1)}`);
+    db = new BokfinkDatabase(`kontera-underlagsimport-${(raknare += 1)}`);
     await db.open();
   });
 

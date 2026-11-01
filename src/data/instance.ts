@@ -2,7 +2,7 @@ import Dexie from 'dexie';
 
 import { skyddaBokfordaVerifikat } from './bokforing';
 import { Bokregister, lasBocker, type Bok, type Registerkontext } from './bokregister';
-import { KonteraDatabase } from './db';
+import { BokfinkDatabase } from './db';
 
 /**
  * The application's databases: the register of books, and one database per
@@ -18,7 +18,7 @@ export const registerkontext: Registerkontext = {
   databaser: () => Dexie.getDatabaseNames(),
 };
 
-const oppna = new Map<string, KonteraDatabase>();
+const oppna = new Map<string, BokfinkDatabase>();
 
 /**
  * The database a book lives in, opened once per page load.
@@ -27,12 +27,12 @@ const oppna = new Map<string, KonteraDatabase>();
  * same database would carry its own copy of the hooks below, and switching
  * back and forth would stack them up.
  */
-export function databasFor(bok: Bok): KonteraDatabase {
+export function databasFor(bok: Bok): BokfinkDatabase {
   const redan = oppna.get(bok.databas);
   if (redan !== undefined) {
     return redan;
   }
-  const db = new KonteraDatabase(bok.databas);
+  const db = new BokfinkDatabase(bok.databas);
   // Hard rule 5, applied to the live database rather than left to callers.
   skyddaBokfordaVerifikat(db);
   oppna.set(bok.databas, db);

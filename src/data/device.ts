@@ -1,4 +1,4 @@
-import type { KonteraDatabase } from './db';
+import type { BokfinkDatabase } from './db';
 import { newIdentifier } from './id';
 
 const DEVICE_ID_KEY = 'deviceId';
@@ -12,7 +12,7 @@ const DEVICE_ID_KEY = 'deviceId';
  * exist before the first verifikat is written, not after.
  */
 export async function getOrCreateDeviceId(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   newId: () => string = newIdentifier,
 ): Promise<string> {
   const existing = await db.getMeta<string>(DEVICE_ID_KEY);

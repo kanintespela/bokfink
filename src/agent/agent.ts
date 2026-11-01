@@ -6,7 +6,7 @@ import type { Datum } from '../domain/tid/datum';
 import type { Sha256 } from '../domain/underlag/underlag';
 import { beteckning } from '../domain/verifikat/verifikat';
 import { lasTillstand } from '../data/bokforing';
-import type { KonteraDatabase } from '../data/db';
+import type { BokfinkDatabase } from '../data/db';
 import { sparaUtkast, type Skrivkontext } from '../data/kommandon';
 import { osankta, synka, type Krypto, type Synktransport } from '../data/synk';
 import { kopplaUnderlag, sparaUnderlag } from '../data/underlag';
@@ -90,7 +90,7 @@ export function tolkaKommando(argv: readonly string[]): Agentkommando {
 }
 
 export async function korAgent(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kommando: Agentkommando,
   beroenden: Agentberoenden,
 ): Promise<string> {
@@ -123,7 +123,7 @@ export async function korAgent(
 }
 
 async function skickaUtkast(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   bocker: Bokforingstillstand,
   { sokvag, prova }: { sokvag: string; prova: boolean },
   beroenden: Agentberoenden,
@@ -259,7 +259,7 @@ function beskrivForslag(
  * the server had none, which the sync treats as nothing to fetch; uploads go
  * through untouched.
  */
-async function synkaMed(db: KonteraDatabase, beroenden: Agentberoenden): Promise<void> {
+async function synkaMed(db: BokfinkDatabase, beroenden: Agentberoenden): Promise<void> {
   const transport: Synktransport = {
     ...beroenden.transport,
     hamtaFil: async () => undefined,

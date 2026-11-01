@@ -17,7 +17,7 @@ import {
   egetkapitalsammanstallning,
 } from './egetkapital';
 import { lasTillstand, skyddaBokfordaVerifikat } from './bokforing';
-import { KonteraDatabase } from './db';
+import { BokfinkDatabase } from './db';
 import {
   annulleraVerifikat,
   bokforUtkast,
@@ -31,7 +31,7 @@ let raknare = 0;
 let klockslag = 1_788_554_000_000;
 
 const nyDb = async () => {
-  const db = new KonteraDatabase(`kontera-egetkapital-${(raknare += 1)}`);
+  const db = new BokfinkDatabase(`kontera-egetkapital-${(raknare += 1)}`);
   skyddaBokfordaVerifikat(db);
   await db.open();
   return db;
@@ -256,7 +256,7 @@ describe('egetkapitalsammanstallning för ett år med resultatöverföring', () 
   };
 
   const bokslut = async (
-    db: KonteraDatabase,
+    db: BokfinkDatabase,
     ar: Awaited<ReturnType<typeof uppsattning>>['ar'],
   ) => {
     const tillstand = await lasTillstand(db);

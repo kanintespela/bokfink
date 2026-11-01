@@ -7,7 +7,7 @@ import type { Handelse } from '../domain/handelse/handelse';
 import { kontonummer } from '../domain/konto/konto';
 import { lasBokprofil } from './bokidentitet';
 import { lasLogg, lasTillstand } from './bokforing';
-import type { KonteraDatabase } from './db';
+import type { BokfinkDatabase } from './db';
 import { skrivKonto, skrivRakenskapsar, type Skrivkontext } from './kommandon';
 import {
   HANDELSE_TABLE,
@@ -230,7 +230,7 @@ export interface Uppstartsresultat {
  * so imported books keep their own names.
  */
 export async function forberedBokforing(
-  db: KonteraDatabase,
+  db: BokfinkDatabase,
   kontext: Skrivkontext,
   klocka: Klocka,
 ): Promise<Uppstartsresultat> {
@@ -318,7 +318,7 @@ export function arEnbartStartdata(logg: readonly Handelse[]): boolean {
  * give up what it holds when real books arrive. Everything queued means
  * nothing has left the device; the content check is {@link arEnbartStartdata}.
  */
-export async function harEnbartOskickadStartdata(db: KonteraDatabase): Promise<boolean> {
+export async function harEnbartOskickadStartdata(db: BokfinkDatabase): Promise<boolean> {
   const logg = await lasLogg(db);
   const kade = await db.table(SYNKKO_TABLE).count();
   return logg.length > 0 && kade === logg.length && arEnbartStartdata(logg);
@@ -331,7 +331,7 @@ export async function harEnbartOskickadStartdata(db: KonteraDatabase): Promise<b
  * entries never left the device and record nothing anyone did. The tables
  * the starter set writes are the only ones touched.
  */
-export async function slappStartdata(db: KonteraDatabase): Promise<void> {
+export async function slappStartdata(db: BokfinkDatabase): Promise<void> {
   const tabeller = [
     HANDELSE_TABLE,
     SYNKKO_TABLE,

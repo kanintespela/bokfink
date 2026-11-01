@@ -27,7 +27,7 @@ import {
   type Bok,
   type Registerkontext,
 } from './bokregister';
-import { KonteraDatabase } from './db';
+import { BokfinkDatabase } from './db';
 import { uuidv7 } from '../domain/id/uuidv7';
 import { forberedBokforing } from './uppstart';
 import { bokforUtkast, skrivKonto, type Skrivkontext } from './kommandon';
@@ -93,17 +93,17 @@ describe('granskaBoknamn', () => {
 
 describe('filprefix', () => {
   it('keeps the names the original books have always had', () => {
-    expect(filprefix({ ...bok('Firman'), databas: URSPRUNGLIG_DATABAS })).toBe('kontera');
+    expect(filprefix({ ...bok('Firman'), databas: URSPRUNGLIG_DATABAS })).toBe('bokfink');
   });
 
   it("adds another book's name, without accents or spaces", () => {
     expect(filprefix(bok('Exempelbygdens Bygdegårdsförening'))).toBe(
-      'kontera-exempelbygdens-bygdegardsforening',
+      'bokfink-exempelbygdens-bygdegardsforening',
     );
   });
 
   it('falls back to a plain name when nothing in the name survives', () => {
-    expect(filprefix(bok('!!!'))).toBe('kontera-bok');
+    expect(filprefix(bok('!!!'))).toBe('bokfink-bok');
   });
 });
 
@@ -137,7 +137,7 @@ describe('bokregistret', () => {
     );
 
     expect(forening.databas).not.toBe(URSPRUNGLIG_DATABAS);
-    const db = new KonteraDatabase(forening.databas);
+    const db = new BokfinkDatabase(forening.databas);
     expect(await lasBokId(db)).toBe(forening.id);
     expect(await db.getMeta(BOK_ID_NYCKEL)).toBe(forening.id);
     db.close();
@@ -159,7 +159,7 @@ describe('bokregistret', () => {
       [forening, 'forening'],
       [firma, 'enskild_firma'],
     ] as const) {
-      const db = new KonteraDatabase(bok.databas);
+      const db = new BokfinkDatabase(bok.databas);
       expect(await db.getMeta(BOK_PROFIL_NYCKEL)).toBe(profil);
       expect(await lasBokprofil(db)).toBe(profil);
       db.close();
@@ -169,7 +169,7 @@ describe('bokregistret', () => {
   });
 
   it('takes the original book, which recorded no profile, for a firm', async () => {
-    const db = new KonteraDatabase(URSPRUNGLIG_DATABAS);
+    const db = new BokfinkDatabase(URSPRUNGLIG_DATABAS);
     expect(await db.getMeta(BOK_PROFIL_NYCKEL)).toBeUndefined();
     expect(await lasBokprofil(db)).toBe('enskild_firma');
     db.close();
@@ -235,7 +235,7 @@ describe('lasBokinnehall och tabortBok', () => {
   });
 
   const bokforAlltSomEnNybok = async (databas: string) => {
-    const db = new KonteraDatabase(databas);
+    const db = new BokfinkDatabase(databas);
     skyddaBokfordaVerifikat(db);
     await db.open();
     await forberedBokforing(db, skrivkontext, fastKlocka(datum('2026-10-30')));
