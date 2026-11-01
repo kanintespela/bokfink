@@ -112,11 +112,6 @@ export function Mer({ onValj, dolda, profil, momsregistrerad, onKalender }: Prop
           </div>
         );
       })}
-      <p className="hjalptext">
-        <a href="/skarmtest.html">
-          Skärmtest (felsökning av toppen och bottenmenyn på iPhone)
-        </a>
-      </p>
     </section>
   );
 }

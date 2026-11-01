@@ -993,11 +993,11 @@ main {
   --bok-gron: #2f7d5b;
   --bok-bla: #2f6fb3;
   --bok-lila: #7a4fb0;
-  --bok-rosa: #c4467e;
+  --bok-rosa: #b83b72;
   --bok-rod: #c0392b;
-  --bok-orange: #d9741c;
-  --bok-gul: #b8920a;
-  --bok-turkos: #1f8a92;
+  --bok-orange: #a85208;
+  --bok-gul: #8a6d00;
+  --bok-turkos: #187a82;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -1038,9 +1038,20 @@ main {
   --bokfarg: var(--bok-turkos);
 }
 
+/* The book's colour is the app's accent too: buttons, links, the active tab.
+   The light palette is dark enough for the paper-coloured text on a button
+   (at least 4.3:1); the dark one is light enough for dark text. */
 html[data-bokfarg] {
+  --ink: var(--bokfarg);
+  --ink-svag: color-mix(in srgb, var(--bokfarg) 82%, black);
   --vyval-bakgrund: color-mix(in srgb, var(--bokfarg) 14%, var(--yta));
   --topp-bakgrund: color-mix(in srgb, var(--bokfarg) 14%, var(--paper));
+}
+
+@media (prefers-color-scheme: dark) {
+  html[data-bokfarg] {
+    --ink-svag: color-mix(in srgb, var(--bokfarg) 82%, white);
+  }
 }
 
 .bokrubrik {
@@ -1145,7 +1156,7 @@ html[data-bokfarg] {
    Fixed, opaque and tinted. Measured on an iPhone with iOS 26 as an installed
    app: the system blurs everything under the status bar and fades what
    scrolls under the top edge, down to about 95 pt. A fixed element is sharp
-   from about 70 pt, a sticky one is not (public/skarmtest.html, "linjal"). So
+   from about 70 pt, a sticky one is not (measured with a ruler page, since removed). So
    the bar is fixed, its text starts a good way below the status bar (the first try, 14 px, was still a little soft), and the page begins
    under the bar rather than behind the fade. */
 
