@@ -38,6 +38,7 @@
      deliberately larger still, because it is the one hit while walking. */
   --tapp: 44px;
   --tapp-stor: 56px;
+  --vyval-hojd: 52px;
 
   color-scheme: light;
 }
@@ -930,7 +931,9 @@ dd {
   inset: auto 0 0 0;
   background: var(--vyval-bakgrund, var(--yta));
   border-top: 1px solid var(--bokfarg, var(--line));
-  padding-bottom: env(safe-area-inset-bottom);
+  /* Half of the home indicator's inset: the labels sit well clear of it, and
+     the bar is not a thumb's width of empty space under them. */
+  padding-bottom: calc(env(safe-area-inset-bottom) * 0.5);
   z-index: 10;
 }
 
@@ -938,14 +941,14 @@ dd {
   display: flex;
 }
 
-.vyval button:not(.vyval__bok) {
+.vyval button {
   flex: 1;
   /* A flex box, so a count beside the name cannot lift one tab's text above
      the others': every label is centred on the same line. */
   display: flex;
   align-items: center;
   justify-content: center;
-  height: var(--tapp-stor);
+  height: var(--vyval-hojd);
   border: 0;
   background: none;
   color: var(--muted);
@@ -977,7 +980,9 @@ dd {
 
 /* Room for the bar, so the last row of a list is never trapped under it. */
 main {
-  padding-bottom: calc(var(--tapp-stor) + env(safe-area-inset-bottom) + var(--rum-5));
+  padding-bottom: calc(
+    var(--vyval-hojd) + env(safe-area-inset-bottom) * 0.5 + var(--rum-5)
+  );
 }
 
 /* ── Book colours ──────────────────────────────────────────────────────────
@@ -1044,6 +1049,9 @@ html[data-bokfarg]::after {
   position: fixed;
   inset: 0;
   border: 4px solid var(--bokfarg);
+  /* The screen's own corners: about 1.35 times the home indicator's inset on
+     every iPhone with one, and square where there is none. */
+  border-radius: calc(env(safe-area-inset-bottom, 0px) * 1.35);
   pointer-events: none;
   z-index: 40;
 }
@@ -1147,15 +1155,24 @@ html[data-bokfarg]::after {
 }
 
 /* ── The top bar ───────────────────────────────────────────────────────────
-   Sticky at top: 0 with a solid background that runs up behind the status bar. iOS 26
-   fades the top edge of whatever scrolls; with this over that edge, the fade
-   falls on the bar, not on the page's first heading. */
+   Fixed, opaque and tinted. Measured on an iPhone with iOS 26 as an installed
+   app: the system blurs everything under the status bar and fades what
+   scrolls under the top edge, down to about 95 pt. A fixed element is sharp
+   from about 70 pt, a sticky one is not (public/skarmtest.html, "linjal"). So
+   the bar is fixed, its text starts below the status bar, and the page begins
+   under the bar rather than behind the fade. */
+
+:root {
+  --topprad-hojd: 2rem;
+  --topprad-total: calc(env(safe-area-inset-top, 0px) + 14px + var(--topprad-hojd) + 1px);
+}
 
 .topprad {
-  position: sticky;
-  top: 0;
+  position: fixed;
+  inset: 0 0 auto 0;
   z-index: 15;
-  padding: env(safe-area-inset-top) max(var(--rum-4), env(safe-area-inset-right)) 0
+  padding: calc(env(safe-area-inset-top, 0px) + 14px)
+    max(var(--rum-4), env(safe-area-inset-right)) 0
     max(var(--rum-4), env(safe-area-inset-left));
   background: var(--topp-bakgrund, var(--paper));
   border-bottom: 1px solid var(--bokfarg, var(--line));
@@ -1197,10 +1214,30 @@ html[data-bokfarg]::after {
   color: var(--text);
 }
 
-:root {
-  --topprad-hojd: 2.75rem;
+body:has(.topprad) {
+  padding-top: var(--topprad-total);
 }
 
 body:has(.topprad) main {
   padding-top: var(--rum-4);
+}
+
+body:has(.topprad) .update-banner {
+  padding-top: var(--rum-3);
+}
+
+/* ── A page that can always scroll ─────────────────────────────────────────
+   In an installed iOS 26 app a page too short to scroll gets a window as
+   much shorter as the status bar is tall, which leaves a strip of bare
+   background under the bar (measured: 762 instead of 812 pt). A page that
+   overflows by at least that much gets the full window. Tried 2 px: not
+   enough. 50, 100 and 200 px: full window. */
+@supports (-webkit-touch-callout: none) {
+  html {
+    height: 100%;
+  }
+
+  body {
+    min-height: calc(100% + env(safe-area-inset-top, 0px));
+  }
 }
