@@ -326,7 +326,7 @@ const ASSISTENT_BESKED_MS = 60 * 60 * 1000;
 export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval }) {
   const [begardVy, setVy] = useVy();
   const filprefix = useFilprefix();
-  // The open book's colour goes on the root, where the frame and the bar read it.
+  // The open book's colour goes on the root, where the bars read it.
   const bokfarg = bokval.aktiv.farg;
   useEffect(() => {
     if (bokfarg === undefined) {

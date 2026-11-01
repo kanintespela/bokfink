@@ -24,7 +24,7 @@ export interface Bok {
   /** The IndexedDB database the book lives in. */
   readonly databas: string;
   readonly skapad: string;
-  /** What colours the frame and the bar while the book is open. Chosen, not required. */
+  /** What colours the top bar and the tab bar while the book is open. Chosen, not required. */
   readonly farg?: Bokfarg;
 }
 

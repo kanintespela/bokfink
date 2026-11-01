@@ -987,7 +987,7 @@ main {
 
 /* ── Book colours ──────────────────────────────────────────────────────────
    Chosen per book (Mer, Böcker). The open book's colour is on the root as
-   data-bokfarg: a thin frame round the screen, and a tint on the bar. */
+   data-bokfarg: a tint and a line on the top bar and on the tab bar. */
 
 :root {
   --bok-gron: #2f7d5b;
@@ -1041,19 +1041,6 @@ main {
 html[data-bokfarg] {
   --vyval-bakgrund: color-mix(in srgb, var(--bokfarg) 14%, var(--yta));
   --topp-bakgrund: color-mix(in srgb, var(--bokfarg) 14%, var(--paper));
-}
-
-/* The frame: over everything, never in the way of a touch. */
-html[data-bokfarg]::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  border: 4px solid var(--bokfarg);
-  /* The screen's own corners: about 1.35 times the home indicator's inset on
-     every iPhone with one, and square where there is none. */
-  border-radius: calc(env(safe-area-inset-bottom, 0px) * 1.35);
-  pointer-events: none;
-  z-index: 40;
 }
 
 .bokrubrik {
@@ -1159,19 +1146,19 @@ html[data-bokfarg]::after {
    app: the system blurs everything under the status bar and fades what
    scrolls under the top edge, down to about 95 pt. A fixed element is sharp
    from about 70 pt, a sticky one is not (public/skarmtest.html, "linjal"). So
-   the bar is fixed, its text starts below the status bar, and the page begins
+   the bar is fixed, its text starts a good way below the status bar (the first try, 14 px, was still a little soft), and the page begins
    under the bar rather than behind the fade. */
 
 :root {
-  --topprad-hojd: 2rem;
-  --topprad-total: calc(env(safe-area-inset-top, 0px) + 14px + var(--topprad-hojd) + 1px);
+  --topprad-hojd: 1.75rem;
+  --topprad-total: calc(env(safe-area-inset-top, 0px) + 26px + var(--topprad-hojd) + 1px);
 }
 
 .topprad {
   position: fixed;
   inset: 0 0 auto 0;
   z-index: 15;
-  padding: calc(env(safe-area-inset-top, 0px) + 14px)
+  padding: calc(env(safe-area-inset-top, 0px) + 26px)
     max(var(--rum-4), env(safe-area-inset-right)) 0
     max(var(--rum-4), env(safe-area-inset-left));
   background: var(--topp-bakgrund, var(--paper));

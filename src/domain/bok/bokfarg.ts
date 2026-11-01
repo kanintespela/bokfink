@@ -1,7 +1,7 @@
 /**
  * The colours a book can be given, so that the open book can be told from the
- * others at a glance: a thin frame round the screen and a tint on the bar
- * along the bottom.
+ * others at a glance: a tint and a line on the bar at the top and on the
+ * tab bar along the bottom.
  *
  * The values live in base.css, one rule per id, because they differ between
  * the light and the dark theme. What is kept with a book is only the id.

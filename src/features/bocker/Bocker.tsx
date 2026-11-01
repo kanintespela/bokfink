@@ -103,8 +103,8 @@ export function Bocker({
 
       <h2>Färg för {aktiv.namn}</h2>
       <p className="hjalptext">
-        Färgen syns som en tunn ram runt skärmen och i fliken längst ner medan boken är
-        öppen, så att du ser vilken bok du bokför i.
+        Färgen syns i toppen och i fliken längst ner medan boken är öppen, så att du ser
+        vilken bok du bokför i.
       </p>
       <div className="fargval" role="group" aria-label={`Färg för ${aktiv.namn}`}>
         {BOKFARGER.map((farg) => (

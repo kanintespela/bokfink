@@ -395,7 +395,9 @@ test('offers no way to take away the first book', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Ta bort en bok' })).toHaveCount(0);
 });
 
-test('colours the frame and the bar with the open book’s colour', async ({ page }) => {
+test('colours the top bar and the tab bar with the open book’s colour', async ({
+  page,
+}) => {
   await oppnaBocker(page);
   const rot = page.locator('html');
   // One book with no colour chosen: nothing is painted.
