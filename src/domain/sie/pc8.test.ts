@@ -1,7 +1,13 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { avkodaPC8, kodaPC8, medPC8Motsvarigheter, OkodbartTeckenError } from './pc8';
+import {
+  avkodaPC8,
+  avkodaSieText,
+  kodaPC8,
+  medPC8Motsvarigheter,
+  OkodbartTeckenError,
+} from './pc8';
 
 const bytes = (...v: number[]) => new Uint8Array(v);
 
@@ -118,5 +124,52 @@ describe('medPC8Motsvarigheter', () => {
   it('does not guess at a character with no plain equivalent', () => {
     expect(medPC8Motsvarigheter('☺ 😀 ł')).toBe('☺ 😀 ł');
     expect(() => kodaPC8(medPC8Motsvarigheter('Läger 😀'))).toThrow(OkodbartTeckenError);
+  });
+});
+
+describe('avkodaSieText', () => {
+  const utf8 = (text: string) => new TextEncoder().encode(text);
+
+  // The case that was reported: UTF-8 under a PC8 header came out as "IT-tj├ñnster".
+  it('reads a file written in UTF-8 although the header says PC8', () => {
+    const ut = avkodaSieText(utf8('#KONTO 6540 "IT-tjänster åäö ÅÄÖ"'));
+    expect(ut.text).toBe('#KONTO 6540 "IT-tjänster åäö ÅÄÖ"');
+    expect(ut.teckenuppsattning).toBe('UTF-8');
+    // And shows what a read as PC8 would have made of the same bytes.
+    expect(avkodaPC8(utf8('tjänster'))).toBe('tj├ñnster');
+  });
+
+  it('reads a file in PC8 as PC8', () => {
+    const ut = avkodaSieText(kodaPC8('#KONTO 6540 "IT-tjänster åäö ÅÄÖ"'));
+    expect(ut.text).toBe('#KONTO 6540 "IT-tjänster åäö ÅÄÖ"');
+    expect(ut.teckenuppsattning).toBe('PC8');
+  });
+
+  it('does not take PC8 for UTF-8 when a letter stands alone, as every Swedish one does', () => {
+    for (const byte of [0x86, 0x84, 0x94, 0x8f, 0x8e, 0x99]) {
+      const ut = avkodaSieText(bytes(0x41, byte, 0x42));
+      expect(ut.teckenuppsattning).toBe('PC8');
+      expect(ut.text).toBe(`A${avkodaPC8(bytes(byte))}B`);
+    }
+  });
+
+  it('calls a file with nothing outside ASCII PC8, which is what it says', () => {
+    const ut = avkodaSieText(utf8('#FLAGGA 0'));
+    expect(ut).toEqual({ text: '#FLAGGA 0', teckenuppsattning: 'PC8' });
+  });
+
+  it('drops a byte order mark, which would stand in front of the first #', () => {
+    const ut = avkodaSieText(new Uint8Array([0xef, 0xbb, 0xbf, ...utf8('#FLAGGA 0')]));
+    expect(ut.text).toBe('#FLAGGA 0');
+    expect(ut.teckenuppsattning).toBe('UTF-8');
+  });
+
+  it('keeps characters PC8 has no place for when the file is UTF-8', () => {
+    expect(avkodaSieText(utf8('Kaffe – 5 € "citat”')).text).toBe('Kaffe – 5 € "citat”');
+  });
+
+  it('reads an invalid mix as PC8 instead of failing', () => {
+    // A lone continuation byte after a lead byte that wants two: not UTF-8.
+    expect(avkodaSieText(bytes(0xc3, 0x41)).teckenuppsattning).toBe('PC8');
   });
 });

@@ -67,6 +67,47 @@ const köp = (serie: string, nr: number, ar: number, dag: string) => [
   '}',
 ];
 
+describe('en fil i UTF-8 under en PC8-rubrik', () => {
+  it('keeps å, ä and ö right and says how it was read', async () => {
+    const db = new KonteraDatabase(`kontera-sie-utf8-${(raknare += 1)}`);
+    skyddaBokfordaVerifikat(db);
+    await db.open();
+    const text = [
+      '#FLAGGA 0',
+      '#FORMAT PC8',
+      '#SIETYP 4',
+      '#RAR 0 20260101 20261231',
+      '#KONTO 1930 "Företagskonto"',
+      '#KONTO 6540 "IT-tjänster"',
+      '#KTYP 1930 T',
+      '#KTYP 6540 K',
+      '#VER "A" 1 20260115 "Månadsavgift för IT-tjänster" 20260115 ""',
+      '{',
+      '#TRANS 6540 {} 800.00',
+      '#TRANS 1930 {} -800.00',
+      '}',
+      '',
+    ].join('\n');
+
+    const res = await importeraSieFiler(db, kontext, [new TextEncoder().encode(text)]);
+
+    const tillstand = await lasTillstand(db);
+    expect(tillstand.konton.get(kontonummer('6540'))?.namn).toBe('IT-tjänster');
+    expect([...tillstand.verifikat.values()][0]?.beskrivning).toBe(
+      'Månadsavgift för IT-tjänster',
+    );
+    expect(res.varningar.join(' ')).toContain('UTF-8');
+  });
+
+  it('says nothing about the character set for a file that is in PC8', async () => {
+    const db = new KonteraDatabase(`kontera-sie-pc8-${(raknare += 1)}`);
+    skyddaBokfordaVerifikat(db);
+    await db.open();
+    const res = await importeraSieFiler(db, kontext, [siefil(2026)]);
+    expect(res.varningar.join(' ')).not.toContain('UTF-8');
+  });
+});
+
 describe('importeraSieFiler', () => {
   let db: KonteraDatabase;
 

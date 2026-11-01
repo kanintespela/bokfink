@@ -1,4 +1,4 @@
-import { avkodaPC8 } from '../domain/sie/pc8';
+import { avkodaSieText } from '../domain/sie/pc8';
 import {
   PROJEKTDIMENSION,
   tolkaSie,
@@ -84,8 +84,17 @@ export async function importeraSieFiler(
   filer: readonly Uint8Array[],
   installningar: Importinstallningar = {},
 ): Promise<Importresultat> {
-  const dokument = filer.map((bytes) => tolkaSie(avkodaPC8(bytes)));
   const varningar: string[] = [];
+  const dokument = filer.map((bytes) => {
+    const { text, teckenuppsattning } = avkodaSieText(bytes);
+    if (teckenuppsattning === 'UTF-8') {
+      varningar.push(
+        'En fil är skriven i UTF-8, fast SIE-formatet bara tillåter PC8 och filen säger PC8. ' +
+          'Den lästes som UTF-8, så å, ä och ö blev rätt.',
+      );
+    }
+    return tolkaSie(text);
+  });
 
   const iOrdning = [...dokument].sort((a, b) =>
     jamfor(aktuelltAr(a).start, aktuelltAr(b).start),

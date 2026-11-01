@@ -152,6 +152,42 @@ export function avkodaPC8(bytes: Uint8Array): string {
   return text;
 }
 
+export type Teckenuppsattning = 'PC8' | 'UTF-8';
+
+/**
+ * Reads the bytes of a SIE file as text, in whichever of the two sets it is in.
+ *
+ * The format allows PC8 only, and that is what the header of every file says,
+ * but some programs write UTF-8 under that header all the same. Read as PC8,
+ * the two bytes of an ä (C3 A4) come out as "├ñ", so a file that says one thing
+ * and is the other has to be told by its bytes.
+ *
+ * UTF-8 is tried first and strictly: Swedish text in PC8 has bytes like 0x84
+ * and 0x86 that stand alone, which UTF-8 rejects, so a PC8 file is not taken
+ * for UTF-8 by accident. The reverse mistake needs PC8 text that happens to
+ * form valid UTF-8 sequences, which takes box-drawing characters a SIE file
+ * has no use for. A file with no byte above 127 reads the same either way and
+ * is called PC8, which is what it says. A byte order mark is dropped, since it
+ * would otherwise stand in front of the first #.
+ */
+export function avkodaSieText(bytes: Uint8Array): {
+  readonly text: string;
+  readonly teckenuppsattning: Teckenuppsattning;
+} {
+  const harBom = bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf;
+  const innehall = harBom ? bytes.subarray(3) : bytes;
+
+  if (harBom || innehall.some((byte) => byte >= 128)) {
+    try {
+      const text = new TextDecoder('utf-8', { fatal: true }).decode(innehall);
+      return { text, teckenuppsattning: 'UTF-8' };
+    } catch {
+      // Not UTF-8: the file is in PC8 after all.
+    }
+  }
+  return { text: avkodaPC8(innehall), teckenuppsattning: 'PC8' };
+}
+
 export class OkodbartTeckenError extends Error {
   constructor(
     readonly tecken: string,
