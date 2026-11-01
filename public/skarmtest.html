@@ -118,6 +118,7 @@
       }
       /* kort: A with almost no content, so the document cannot scroll */
       .v-kort .topp,
+      .v-kort2 .topp,
       .v-kort1 .topp,
       .v-skal3 .topp {
         position: sticky;
@@ -125,11 +126,13 @@
         z-index: 5;
       }
       .v-kort .nav,
+      .v-kort2 .nav,
       .v-kort1 .nav {
         position: fixed;
         inset: auto 0 0 0;
       }
       .v-kort .innehall,
+      .v-kort2 .innehall,
       .v-kort1 .innehall {
         padding-bottom: calc(56px + var(--botten) + 24px);
       }
@@ -140,7 +143,7 @@
       }
       .v-kort1 body,
       .v-skal3 body {
-        min-height: calc(100% + 2px);
+        min-height: calc(100% + var(--n, 2px));
       }
       /* skal3: the shell, with the document forced to scroll by 2px */
       .v-skal3 .app {
@@ -279,6 +282,11 @@
             slutar<br />
             <a href="?v=kort">kort</a> – som sticky men nästan inget innehåll<br />
             <a href="?v=kort1">kort1</a> – som kort, men sidan tvingas rulla 2 px<br />
+            <a href="?v=kort2">kort2</a> – riktigt kort sida, inget trick (rent test av om
+            sidan måste kunna rulla)<br />
+            <a href="?v=skal3&n=50px">skal3 +50</a> ·
+            <a href="?v=skal3&n=100px">+100</a> · <a href="?v=skal3&n=200px">+200</a> –
+            skalet, sidan tvingas rulla så många px<br />
             <a href="?v=skal3">skal3</a> – som skal, men sidan tvingas rulla 2 px<br />
             <a href="/#mer">Tillbaka till Bokfink</a>
           </div>
@@ -300,7 +308,17 @@
     </div>
     <script>
       const rader = document.getElementById('rader');
-      const kort = /v-kort/.test(document.documentElement.className);
+      const q = new URLSearchParams(location.search);
+      if (q.get('n'))
+        document.documentElement.style.setProperty(
+          '--n',
+          q.get('n').replace(/[^0-9a-z]/g, ''),
+        );
+      const kort = /v-kort2/.test(document.documentElement.className);
+      if (kort) {
+        document.querySelectorAll('main .kort')[1].innerHTML =
+          '<a href="?v=sticky">Till menyn</a>';
+      }
       if (kort) {
         document.getElementById('rader').remove();
         document.querySelector('main p').remove();
