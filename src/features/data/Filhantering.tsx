@@ -64,7 +64,11 @@ export function Filhantering({
       <input
         ref={filvaljare}
         type="file"
-        accept=".se,.si,.sie,.zip"
+        /*
+         * No accept filter. Android's file picker greys out a file whose
+         * extension it has no MIME type for, and ".se" has none, while ".zip"
+         * does. The content is checked on import anyway.
+         */
         multiple
         hidden
         data-testid="siefiler"
