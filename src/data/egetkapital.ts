@@ -1,4 +1,5 @@
 import {
+  arEgetKapitalomforing,
   beraknaUtgaendeEgetKapital,
   resultatoverforingKonteringar,
 } from '../domain/bokslut/egetkapital';
@@ -6,7 +7,7 @@ import {
   beraknaForenkladArsbokslut,
   placeringForKonto,
 } from '../domain/bokslut/forenkladArsbokslut';
-import { add, isZero, negate, ZERO, type Ore } from '../domain/belopp/ore';
+import { add, isZero, negate, subtract, ZERO, type Ore } from '../domain/belopp/ore';
 import type { Kontonummer } from '../domain/konto/konto';
 import { omfattar, type Rakenskapsar } from '../domain/rakenskapsar/rakenskapsar';
 import { beraknaSaldon } from '../domain/rapport/saldon';
@@ -21,6 +22,12 @@ export interface Egetkapitalsammanstallning {
   readonly ibEgetKapital: Ore;
   readonly uttagIAr: Ore;
   readonly insattningarIAr: Ore;
+  /**
+   * What else moved eget kapital in the year: the skattekonto (2012), the
+   * other 20xx accounts, a rättelse. Zero in a book that keeps to uttag and
+   * insättningar. It is what makes the closing figure the same as B10.
+   */
+  readonly ovrigaForandringar: Ore;
   readonly aretsResultat: Ore;
   readonly ubEgetKapital: Ore;
 }
@@ -85,6 +92,14 @@ export async function egetkapitalsammanstallning(
     if (annulleradeIAret.has(verifikat.id)) {
       continue;
     }
+    /*
+     * The year's opening entry folds last year's uttag, insättningar and
+     * result into 2010. Nothing moved in or out of the firm; counted, it made
+     * last year's uttag this year's insättningar and the reverse.
+     */
+    if (verifikat.datum === ar.start && arEgetKapitalomforing(verifikat.konteringar)) {
+      continue;
+    }
     for (const rad of verifikat.konteringar) {
       if (!uttagInsattningKonton.includes(rad.konto)) {
         continue;
@@ -98,19 +113,26 @@ export async function egetkapitalsammanstallning(
   }
 
   const saldon = beraknaSaldon(ar.ingaendeBalanser, iAret);
-  const resultat = beraknaForenkladArsbokslut(saldon).resultatEnligtBokforingen;
+  const bokslut = beraknaForenkladArsbokslut(saldon);
+  const resultat = bokslut.resultatEnligtBokforingen;
+
+  const enligtUttagOchInsattningar = beraknaUtgaendeEgetKapital(
+    ibEgetKapital,
+    uttagIAr,
+    insattningarIAr,
+    resultat,
+  );
+  // B10 is the answer the year-end statement gives; the rest is what the
+  // listed accounts do not explain.
+  const ubEgetKapital = bokslut.rutor.get('B10')?.belopp ?? ZERO;
 
   return {
     ibEgetKapital,
     uttagIAr,
     insattningarIAr,
+    ovrigaForandringar: subtract(ubEgetKapital, enligtUttagOchInsattningar),
     aretsResultat: resultat,
-    ubEgetKapital: beraknaUtgaendeEgetKapital(
-      ibEgetKapital,
-      uttagIAr,
-      insattningarIAr,
-      resultat,
-    ),
+    ubEgetKapital,
   };
 }
 

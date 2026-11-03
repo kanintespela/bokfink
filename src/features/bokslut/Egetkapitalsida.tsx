@@ -143,6 +143,14 @@ export function Egetkapitalsida({
           <dd>{formatKronor(sammanstallning.uttagIAr)}</dd>
           <dt>Insättningar i år</dt>
           <dd>{formatKronor(sammanstallning.insattningarIAr)}</dd>
+          {sammanstallning.ovrigaForandringar !== 0 && (
+            <>
+              <dt>Övriga förändringar (till exempel skattekontot)</dt>
+              <dd data-testid="egetkapital-ovriga">
+                {formatKronor(sammanstallning.ovrigaForandringar)}
+              </dd>
+            </>
+          )}
           <dt>Årets resultat hittills</dt>
           <dd>{formatKronor(sammanstallning.aretsResultat)}</dd>
           <dt>Utgående eget kapital</dt>

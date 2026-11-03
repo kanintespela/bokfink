@@ -365,6 +365,129 @@ describe('egetkapitalsammanstallning med ett annullerat verifikat', () => {
   });
 });
 
+/*
+ * Found in a two-year test book: the sheet and the year-end statement gave
+ * two different closing equity (141 297,50 against B10's 133 786,50) because
+ * the skattekonto (2012) is eget kapital in B10 but is neither an uttag nor
+ * an insättning. And the second year counted the opening omföring of last
+ * year's balances as that year's uttag and insättningar, swapped.
+ */
+describe('egetkapitalsammanstallning och bokslutets B10', () => {
+  const b10 = async (db: BokfinkDatabase, ar: ReturnType<typeof skapaRakenskapsar>) => {
+    const tillstand = await lasTillstand(db);
+    const iAret = [...tillstand.verifikat.values()].filter((v) => omfattar(ar, v.datum));
+    const bokslut = beraknaForenkladArsbokslut(beraknaSaldon(ar.ingaendeBalanser, iAret));
+    return bokslut.rutor.get('B10')?.belopp;
+  };
+
+  async function grund() {
+    const db = await nyDb();
+    for (const [nummer, namn] of [
+      ['1930', 'Företagskontot'],
+      ['2010', 'Eget kapital'],
+      ['2012', 'Skattekonto'],
+      ['2013', 'Övriga egna uttag'],
+      ['2017', 'Egna insättningar'],
+      ['2019', 'Årets resultat'],
+      ['3010', 'Försäljning'],
+    ] as const) {
+      await skrivKonto(db, kontext, skapaKonto({ nummer, namn }));
+    }
+    return db;
+  }
+
+  it('lägger det som flyttats via skattekontot i en egen rad, så summan blir B10', async () => {
+    const db = await grund();
+    const ar = skapaRakenskapsar({
+      id: AR_2026,
+      start: datum('2026-01-01'),
+      slut: datum('2026-12-31'),
+      ingaendeBalanser: [
+        { konto: kontonummer('1930'), belopp: oreFromKronor('50000') },
+        { konto: kontonummer('2010'), belopp: oreFromKronor('-50000') },
+      ],
+    });
+    await skrivRakenskapsar(db, kontext, ar);
+    await bokforUtkast(
+      db,
+      kontext,
+      skapaUtkast({
+        id: nyttId(kontext),
+        datum: datum('2026-02-12'),
+        beskrivning: 'Moms tillbaka till skattekontot',
+        konteringar: [
+          { konto: kontonummer('2012'), belopp: oreFromKronor('929') },
+          { konto: kontonummer('1930'), belopp: oreFromKronor('-929') },
+        ],
+      }),
+      verifikatserie('A'),
+    );
+
+    const s = await egetkapitalsammanstallning(db, ar, [
+      kontonummer('2013'),
+      kontonummer('2017'),
+    ]);
+
+    expect(s.ovrigaForandringar).toBe(oreFromKronor('-929'));
+    expect(s.ubEgetKapital).toBe(oreFromKronor('49071'));
+    expect(s.ubEgetKapital).toBe(await b10(db, ar));
+  });
+
+  it('räknar inte årsskiftets omföring av eget kapital som årets uttag och insättningar', async () => {
+    const db = await grund();
+    // Last year ended with 20 000 taken out and 124 000 put in, on their own accounts.
+    const ar = skapaRakenskapsar({
+      id: AR_2026,
+      start: datum('2026-01-01'),
+      slut: datum('2026-12-31'),
+      ingaendeBalanser: [
+        { konto: kontonummer('1930'), belopp: oreFromKronor('104000') },
+        { konto: kontonummer('2013'), belopp: oreFromKronor('20000') },
+        { konto: kontonummer('2017'), belopp: oreFromKronor('-124000') },
+      ],
+    });
+    await skrivRakenskapsar(db, kontext, ar);
+    // The opening entry that folds them into 2010, as the year change books it.
+    await bokforUtkast(
+      db,
+      kontext,
+      skapaUtkast({
+        id: nyttId(kontext),
+        datum: datum('2026-01-01'),
+        beskrivning: 'Omföring av eget kapital',
+        konteringar: [
+          { konto: kontonummer('2013'), belopp: oreFromKronor('-20000') },
+          { konto: kontonummer('2017'), belopp: oreFromKronor('124000') },
+          { konto: kontonummer('2010'), belopp: oreFromKronor('-104000') },
+        ],
+      }),
+      verifikatserie('A'),
+    );
+    await bokforEgetUttagInsattning(
+      db,
+      kontext,
+      datum('2026-12-12'),
+      verifikatserie('A'),
+      'uttag',
+      kontonummer('1930'),
+      kontonummer('2013'),
+      oreFromKronor('15000'),
+    );
+
+    const s = await egetkapitalsammanstallning(db, ar, [
+      kontonummer('2013'),
+      kontonummer('2017'),
+    ]);
+
+    expect(s.ibEgetKapital).toBe(oreFromKronor('104000'));
+    expect(s.uttagIAr).toBe(oreFromKronor('15000'));
+    expect(s.insattningarIAr).toBe(oreFromKronor('0'));
+    expect(s.ovrigaForandringar).toBe(oreFromKronor('0'));
+    expect(s.ubEgetKapital).toBe(oreFromKronor('89000'));
+    expect(s.ubEgetKapital).toBe(await b10(db, ar));
+  });
+});
+
 describe('bokforResultatoverforing', () => {
   const medBok = async () => {
     const db = await nyDb();
