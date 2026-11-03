@@ -1,8 +1,10 @@
 import { z } from 'zod';
 
+import { add, formatKronor, isZero, ZERO, type Ore } from '../domain/belopp/ore';
 import type { Handelse } from '../domain/handelse/handelse';
 import type { Uuid } from '../domain/id/uuidv7';
 import { sha256, type Sha256 } from '../domain/underlag/underlag';
+import { beteckning } from '../domain/verifikat/verifikat';
 import { franBase64, tillBase64 } from './base64';
 import { lasLogg, tillampaAlla } from './bokforing';
 import {
@@ -172,6 +174,17 @@ export class SkadadFilError extends Error {
   }
 }
 
+export class ObalanseratVerifikatError extends Error {
+  constructor(beteckning: string, skillnad: Ore) {
+    super(
+      `Säkerhetskopian innehåller verifikat ${beteckning} där debet och kredit skiljer ` +
+        `${formatKronor(skillnad)} kr. Ett sådant verifikat kan inte bokföras, så kopian ` +
+        'är skadad eller har ändrats för hand. Ingenting lästes in.',
+    );
+    this.name = 'ObalanseratVerifikatError';
+  }
+}
+
 export class AnnanBokError extends Error {
   constructor() {
     super(
@@ -215,6 +228,24 @@ export async function importera(
    * A database holding nothing yet, or nothing but its starter set, is where
    * a book is restored onto a new device, and takes the copy's identity.
    */
+  /*
+   * Hard rule 4: debit equals credit. The log is replayed as it stands, so a
+   * verifikat that does not balance would be booked as it is. Checked first
+   * of all, so a refusal leaves nothing behind.
+   */
+  for (const handelse of kopia.handelser) {
+    if (handelse.typ !== 'verifikat.bokfort') {
+      continue;
+    }
+    const skillnad = handelse.verifikat.konteringar.reduce(
+      (summa, rad) => add(summa, rad.belopp),
+      ZERO,
+    );
+    if (!isZero(skillnad)) {
+      throw new ObalanseratVerifikatError(beteckning(handelse.verifikat), skillnad);
+    }
+  }
+
   const kopiansBok = bokIdIMeta(kopia.meta);
   if (kopiansBok !== (await lasBokId(db))) {
     const tom =

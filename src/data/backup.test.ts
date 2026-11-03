@@ -15,6 +15,7 @@ import {
   exporteraSomText,
   importera,
   AnnanBokError,
+  ObalanseratVerifikatError,
   las,
   OlasbarSakerhetskopiaError,
   SkadadFilError,
@@ -427,6 +428,65 @@ describe('restoring onto a new device', () => {
     await importera(nya, kopia);
 
     expect((await lasTillstand(nya)).konton.has(kontonummer('6110'))).toBe(true);
+  });
+});
+
+/*
+ * Hard rule 4 is kept by the booking form, but a backup is a file: edited by
+ * hand or damaged in a way that leaves valid JSON, it carried a verifikat
+ * with debit and credit apart straight into the books, and from there into
+ * an unbalanced SIE file.
+ */
+describe('en säkerhetskopia med ett verifikat som inte balanserar', () => {
+  it('is refused before anything is written', async () => {
+    const firman = await nyDb();
+    await fyll(firman);
+    const kopia = las(await exporteraSomText(firman));
+    const bokfort = kopia.handelser.find((h) => h.typ === 'verifikat.bokfort');
+    if (bokfort === undefined || bokfort.typ !== 'verifikat.bokfort') {
+      throw new Error('testet behöver ett bokfört verifikat');
+    }
+    const skadad = {
+      ...kopia,
+      handelser: kopia.handelser.map((h) =>
+        h === bokfort
+          ? {
+              ...bokfort,
+              verifikat: {
+                ...bokfort.verifikat,
+                konteringar: bokfort.verifikat.konteringar.map((rad, i) =>
+                  i === 0 ? { ...rad, belopp: oreFromKronor('999.00') } : rad,
+                ),
+              },
+            }
+          : h,
+      ),
+    };
+
+    const ny = await nyDb();
+    await expect(importera(ny, skadad)).rejects.toBeInstanceOf(ObalanseratVerifikatError);
+    expect(await lasLogg(ny)).toHaveLength(0);
+  });
+
+  it('names the verifikat in the message', async () => {
+    const firman = await nyDb();
+    await fyll(firman);
+    const kopia = las(await exporteraSomText(firman));
+    const skadad = {
+      ...kopia,
+      handelser: kopia.handelser.map((h) =>
+        h.typ === 'verifikat.bokfort' && h.verifikat.nummer === 2
+          ? {
+              ...h,
+              verifikat: {
+                ...h.verifikat,
+                konteringar: [h.verifikat.konteringar[0]!],
+              },
+            }
+          : h,
+      ),
+    };
+    await expect(importera(await nyDb(), skadad)).rejects.toThrow(/A2/);
   });
 });
 
