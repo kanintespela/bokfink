@@ -690,4 +690,22 @@ describe('tolkaKvitto, netto and öresutjämning', () => {
 
     expect(forslag.netto).toBeUndefined();
   });
+
+  describe('kreditnota', () => {
+    it('flags a document that calls itself a credit note', () => {
+      const forslag = tolkaKvitto(
+        'Biodlarcentrum\nKREDITNOTA 20260803\nATT BETALA: 1 812,50 SEK',
+        datum('2026-09-01'),
+      );
+      expect(forslag.kreditnota).toBe(true);
+    });
+
+    it('does not take a card payment for a credit note', () => {
+      const forslag = tolkaKvitto(
+        'Butiken\nKredit 125,00\nSumma 125,00',
+        datum('2026-09-01'),
+      );
+      expect(forslag.kreditnota).toBeUndefined();
+    });
+  });
 });

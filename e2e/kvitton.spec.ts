@@ -550,3 +550,24 @@ test('reads a scanned PDF by drawing its pages and recognising them', async ({
   await expect(erbjudande).toContainText('851,16', { timeout: 150_000 });
   await expect(erbjudande).toContainText('2025-07-19');
 });
+
+/*
+ * The amounts of a credit note are printed without a sign. The offer used to
+ * say "Fyll i 1 812,50" and nothing more, so clicking it booked a credit as
+ * a purchase.
+ */
+test('warns that a PDF is a credit note when offering its amount', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto('/#kvitton');
+  await page.getByTestId('valj-underlag').setInputFiles('e2e/fixtures/kreditnota.pdf');
+  await expect(page.getByTestId('kvitto-besked')).toContainText('sparades');
+  await page.getByRole('button', { name: 'Bokför kvittot' }).click();
+
+  await page.getByLabel('Sök').fill('förbruknings');
+  await page
+    .getByTestId('sokresultat')
+    .getByRole('button', { name: /Förbrukningsmaterial/ })
+    .click();
+  await expect(page.getByTestId('anvand-kvittot')).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByTestId('forslag-kreditnota')).toContainText('kreditnota');
+});

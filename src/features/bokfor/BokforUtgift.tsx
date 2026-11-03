@@ -1091,6 +1091,15 @@ function Forslagsknapp({
       >
         Fyll i {text}
       </button>
+      {forslag?.kreditnota === true && (
+        <>
+          <br />
+          <span role="alert" className="hjalptext" data-testid="forslag-kreditnota">
+            Underlaget ser ut som en kreditnota. Beloppet är utskrivet utan minustecken:
+            skriv det med minus om pengarna kommer tillbaka.
+          </span>
+        </>
+      )}
       {varfor !== undefined && (
         <>
           <br />

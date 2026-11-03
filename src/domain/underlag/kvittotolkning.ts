@@ -38,6 +38,14 @@ export interface Kvittoforslag {
   readonly leverantor?: string;
   readonly orgnr?: string;
   /**
+   * Whether the document calls itself a credit note.
+   *
+   * The amounts on one are printed without a sign, so the figures read out
+   * of it look like a purchase. It is only a flag: the person is told, and
+   * decides, since a word in the text is not proof of what the document is.
+   */
+  readonly kreditnota?: boolean;
+  /**
    * How many times the suggested total appears on the receipt.
    *
    * A receipt prints what was paid several times over - under Totalt, beside
@@ -186,6 +194,7 @@ export function tolkaKvitto(text: string, idag: Datum): Kvittoforslag {
     momssats?: number;
     leverantor?: string;
     orgnr?: string;
+    kreditnota?: boolean;
     stod?: number;
   } = {};
 
@@ -229,8 +238,18 @@ export function tolkaKvitto(text: string, idag: Datum): Kvittoforslag {
     forslag.orgnr = orgnr;
   }
 
+  if (rader.some((rad) => KREDITNOTA.test(normalisera(rad)))) {
+    forslag.kreditnota = true;
+  }
+
   return forslag;
 }
+
+/**
+ * The words a credit note names itself with. Plain "kredit" is left out: it
+ * is also what a card is called at the till.
+ */
+const KREDITNOTA = /\b(kreditnota|kreditfaktura|credit note)\b/;
 
 /**
  * The date the purchase was made.
