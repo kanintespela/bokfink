@@ -1,4 +1,5 @@
 import { kronorString, type Ore } from '../belopp/ore';
+import { harGiltigKontrollsiffra } from '../skatt/luhn';
 import type { Nebilaga } from '../skatt/nebilaga';
 import { delar, type Datum } from '../tid/datum';
 
@@ -145,22 +146,10 @@ export function kontrolleratPersonnummer(nummer: string): string {
       `Personnumret ska ha tolv siffror, ÅÅÅÅMMDDNNNK, fick "${nummer}".`,
     );
   }
-  if (!luhn(siffror.slice(2))) {
+  if (!harGiltigKontrollsiffra(siffror.slice(2))) {
     throw new SruError(`Personnumret ${nummer} har fel kontrollsiffra.`);
   }
   return siffror;
-}
-
-function luhn(tio: string): boolean {
-  let summa = 0;
-  for (let i = 0; i < tio.length; i += 1) {
-    let siffra = Number(tio[i]) * (i % 2 === 0 ? 2 : 1);
-    if (siffra > 9) {
-      siffra -= 9;
-    }
-    summa += siffra;
-  }
-  return summa % 10 === 0;
 }
 
 /** Whole kronor, a leading minus when negative, no leading zeros. */

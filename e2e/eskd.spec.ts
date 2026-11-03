@@ -26,3 +26,19 @@ test('makes the eSKD file from a personnummer written with its century', async (
   expect((await nedladdning).suggestedFilename()).toMatch(/^eSKD_Moms_/);
   await expect(page.getByTestId('moms-fel')).toBeHidden();
 });
+
+test('warns about a wrong check digit as soon as the number is complete', async ({
+  page,
+}) => {
+  await page.goto('/#foretag');
+  const falt = page.getByLabel('Organisationsnummer');
+
+  await falt.fill('121212-12');
+  await expect(page.getByTestId('orgnr-fel')).toBeHidden();
+
+  await falt.fill('121212-1213');
+  await expect(page.getByTestId('orgnr-fel')).toContainText('kontrollsiffran');
+
+  await falt.fill('121212-1212');
+  await expect(page.getByTestId('orgnr-fel')).toBeHidden();
+});

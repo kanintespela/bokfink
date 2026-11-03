@@ -1,4 +1,5 @@
 import { kronorString, type Ore } from '../belopp/ore';
+import { harGiltigKontrollsiffra } from '../skatt/luhn';
 import { delar, type Datum } from '../tid/datum';
 import type { Momsrapport } from './momsrapport';
 
@@ -164,7 +165,8 @@ function period(till: Datum): string {
   return `${ar}${String(manad).padStart(2, '0')}`;
 }
 
-function organisationsnummer(nummer: string): string {
+/** The ten digits of a typed number, or undefined if it cannot be one. */
+function tioSiffror(nummer: string): string | undefined {
   const alla = nummer.replace(/\D/g, '');
   /*
    * A personnummer written with its century, as the NE-bilaga asks for it.
@@ -172,11 +174,32 @@ function organisationsnummer(nummer: string): string {
    * twelve-digit form uses; anything else is a typing error, not a century.
    */
   const siffror = /^(16|19|20)\d{10}$/.test(alla) ? alla.slice(2) : alla;
-  if (siffror.length !== 10) {
+  return siffror.length === 10 ? siffror : undefined;
+}
+
+/**
+ * Whether a typed number is one the return can be filed under: ten digits,
+ * or twelve with a century, ending in the check digit every personnummer and
+ * organisationsnummer carries.
+ */
+export function giltigtOrganisationsnummer(nummer: string): boolean {
+  const siffror = tioSiffror(nummer);
+  return siffror !== undefined && harGiltigKontrollsiffra(siffror);
+}
+
+function organisationsnummer(nummer: string): string {
+  const siffror = tioSiffror(nummer);
+  if (siffror === undefined) {
     throw new TypeError(
       `Organisationsnumret måste ha tio siffror, eller tolv med sekelsiffror, fick ` +
         `"${nummer}". För enskild firma är det innehavarens personnummer. Fyll i det ` +
         'under Inställningar, Företaget.',
+    );
+  }
+  if (!harGiltigKontrollsiffra(siffror)) {
+    throw new TypeError(
+      `Organisationsnumret "${nummer}" har fel kontrollsiffra, så Skatteverket skulle ` +
+        'avvisa filen. Kontrollera siffrorna under Inställningar, Företaget.',
     );
   }
   return `${siffror.slice(0, 6)}-${siffror.slice(6)}`;

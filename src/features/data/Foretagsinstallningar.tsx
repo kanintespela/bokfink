@@ -1,4 +1,5 @@
 import type { Bokprofil } from '../../domain/bok/bokprofil';
+import { giltigtOrganisationsnummer } from '../../domain/moms/eskd';
 import type { Momsperiod } from '../../domain/moms/period';
 import {
   METODBESKRIVNING,
@@ -39,6 +40,11 @@ export function Foretagsinstallningar({
   metod,
   onMetod,
 }: Props) {
+  // Not while the number is still being typed: a short one is just unfinished.
+  const ogiltigt =
+    organisationsnummer.replace(/\D/g, '').length >= 10 &&
+    !giltigtOrganisationsnummer(organisationsnummer);
+
   return (
     <section aria-label="Företaget">
       <h2>Företaget</h2>
@@ -52,8 +58,17 @@ export function Foretagsinstallningar({
           autoComplete="off"
           placeholder="ÅÅMMDD-NNNN"
           value={organisationsnummer}
+          aria-invalid={ogiltigt}
+          aria-describedby={ogiltigt ? 'orgnr-fel' : undefined}
           onChange={(handelse) => void onOrganisationsnummer(handelse.target.value)}
         />
+        {ogiltigt && (
+          <p id="orgnr-fel" role="alert" data-testid="orgnr-fel">
+            Numret stämmer inte: kontrollsiffran på slutet passar inte de andra siffrorna.
+            Kontrollera att du skrivit rätt, annars avvisar Skatteverket
+            momsdeklarationen.
+          </p>
+        )}
       </div>
 
       {profil === 'forening' ? (

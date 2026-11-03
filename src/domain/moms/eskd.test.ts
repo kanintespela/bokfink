@@ -6,7 +6,7 @@ import { datum } from '../tid/datum';
 import type { Uuid } from '../id/uuidv7';
 import { verifikatserie } from '../verifikat/serie';
 import { bokfor, skapaUtkast } from '../verifikat/verifikat';
-import { OkandRutaError, skrivEskd } from './eskd';
+import { giltigtOrganisationsnummer, OkandRutaError, skrivEskd } from './eskd';
 import { beraknaMomsrapport } from './momsrapport';
 
 let raknare = 0;
@@ -198,5 +198,22 @@ describe('skrivEskd', () => {
     expect(() =>
       skrivEskd({ organisationsnummer: '123', rapport: forsaljning() }),
     ).toThrow(TypeError);
+  });
+
+  /*
+   * The check digit is in every personnummer and organisationsnummer, so a
+   * typo is caught here instead of when Skatteverket rejects the upload.
+   */
+  it('refuses an organisation number with a wrong check digit', () => {
+    expect(() =>
+      skrivEskd({ organisationsnummer: '1212121213', rapport: forsaljning() }),
+    ).toThrow(/kontrollsiffra/);
+  });
+
+  it('says whether a typed number can be filed', () => {
+    expect(giltigtOrganisationsnummer('121212-1212')).toBe(true);
+    expect(giltigtOrganisationsnummer('19121212-1212')).toBe(true);
+    expect(giltigtOrganisationsnummer('121212-1213')).toBe(false);
+    expect(giltigtOrganisationsnummer('123')).toBe(false);
   });
 });
