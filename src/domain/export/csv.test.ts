@@ -58,4 +58,26 @@ describe('skrivCsv', () => {
   it('ends the last row too, which is what a reader expects', () => {
     expect(skrivCsv([['a']])).toBe(`${BOM}a\r\n`);
   });
+
+  /*
+   * A description can come from a bank statement or an invoice, so it is
+   * not the user's own text. A spreadsheet runs a cell that starts with one
+   * of these characters as a formula.
+   */
+  it.each(['=HYPERLINK("http://x","y")', '+1+1', '@SUM(A1)', '-cmd', '\tfliken'])(
+    'defuses a text field that a spreadsheet would run as a formula: %s',
+    (text) => {
+      const csv = skrivCsv([[text]]);
+      expect(csv).toContain(`'${text.replaceAll('"', '""')}`);
+      expect(csv).not.toMatch(/\uFEFF"?[=+@\t-]/);
+    },
+  );
+
+  it('leaves a negative number written as text alone', () => {
+    expect(skrivCsv([['-1004,00']])).toContain('\uFEFF-1004,00');
+  });
+
+  it('leaves a negative number cell alone', () => {
+    expect(skrivCsv([[-5]])).toContain('\uFEFF-5');
+  });
 });

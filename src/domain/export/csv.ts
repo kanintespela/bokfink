@@ -53,6 +53,23 @@ function skrivRad(rad: readonly Falt[]): string {
 }
 
 /**
+ * A text that starts with =, +, @, a tab or a carriage return is run as a
+ * formula by Excel and Calc, and so is one that starts with - unless it is
+ * just a number. Texts here can come from a bank statement or an invoice, so
+ * they are not the user's own words. A leading apostrophe makes the
+ * spreadsheet show the text as it is (OWASP, "CSV Injection").
+ *
+ * Only text is touched: a number cell or an amount is written by this file
+ * and cannot be a formula.
+ */
+function skyddaMotFormel(text: string): string {
+  if (/^[=+@\t\r]/.test(text) || (/^-/.test(text) && !/^-[\d\s.,]+$/.test(text))) {
+    return `'${text}`;
+  }
+  return text;
+}
+
+/**
  * One field, quoted when it has to be.
  *
  * A field is quoted if it contains the separator, a quote or a line break;
@@ -69,7 +86,7 @@ function skrivFalt(falt: Falt): string {
     // between the thousands is what a spreadsheet cannot read back.
     return kronorString(falt.ore).replace('.', ',');
   }
-  const text = String(falt);
+  const text = typeof falt === 'string' ? skyddaMotFormel(falt) : String(falt);
   if (!/[;"\r\n]/.test(text)) {
     return text;
   }
