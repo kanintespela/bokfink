@@ -1208,3 +1208,30 @@ test('says what is wrong with a zip that holds no SIE file', async ({ page }) =>
     'foton.zip innehåller ingen SIE-fil',
   );
 });
+
+/*
+ * "1.234,56" and "10,005" used to leave the Bokför button disabled without a
+ * word, and 99 999 999 999,99 was booked with 20 billion in moms.
+ */
+test('says why an amount cannot be booked', async ({ page }) => {
+  await tillBokfor(page);
+  await valjLov(page, 'foder', 'Foder och strö');
+  const belopp = page.getByLabel('Att betala');
+
+  await belopp.fill('1.234,56');
+  await expect(page.getByTestId('beloppshjalp')).toContainText('tusentalsavgränsare');
+  await expect(bokforKnapp(page)).toBeDisabled();
+
+  await belopp.fill('10,005');
+  await expect(page.getByTestId('beloppshjalp')).toContainText('två decimaler');
+
+  await belopp.fill('99999999999,99');
+  await expect(page.getByTestId('beloppshjalp')).toContainText('för stort');
+  await expect(bokforKnapp(page)).toBeDisabled();
+
+  await belopp.fill('12,');
+  await expect(page.getByTestId('beloppshjalp')).toBeHidden();
+
+  await belopp.fill('1 234,56');
+  await expect(page.getByTestId('beloppshjalp')).toBeHidden();
+});
