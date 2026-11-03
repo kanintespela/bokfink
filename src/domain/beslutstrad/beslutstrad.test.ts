@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { oreFromKronor } from '../belopp/ore';
 import { kontonummer } from '../konto/konto';
-import { tillampaMall } from '../mall/konteringsmall';
+import { sokMallar, tillampaMall } from '../mall/konteringsmall';
 import { datum } from '../tid/datum';
 import {
   allaLov,
@@ -224,4 +224,19 @@ describe('what a leaf books', () => {
       ['1930', kr('-62500')],
     ]);
   });
+
+  /*
+   * Found by someone who sold honey and typed "honung": no word in the tree
+   * matched, though the leaf for food is what it belongs on.
+   */
+  it.each(['honung', 'mjölk', 'ost', 'bär', 'grönsaker'])(
+    'finds the sale of food by the word %s',
+    (ord) => {
+      const traffar = sokMallar(
+        allaLov().map((lov) => lovTillMall(lov, 12)),
+        ord,
+      );
+      expect(traffar.map((mall) => mall.namn)).toContain('Försäljning av livsmedel');
+    },
+  );
 });
