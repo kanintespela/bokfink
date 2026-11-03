@@ -911,8 +911,8 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
       if (text.trim().length === 0) {
         throw new Error(
           underlag.mime === 'application/pdf'
-            ? 'PDF:en innehåller ingen text att läsa. Den är förmodligen en inskannad ' +
-                'bild - fyll i uppgifterna för hand, underlaget är sparat.'
+            ? 'Varken text eller läsbar skrift hittades i PDF:en. Fyll i uppgifterna ' +
+                'för hand - underlaget är sparat.'
             : 'Ingen text kunde läsas ur underlaget.',
         );
       }

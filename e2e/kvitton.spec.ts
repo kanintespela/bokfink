@@ -524,3 +524,29 @@ test('photographs a receipt straight onto a booked verifikat', async ({ page }) 
 
   await expect(page.locator('[data-testid^="underlag-"]')).toContainText('kvitto.jpg');
 });
+
+/*
+ * A scanned invoice is a picture inside a PDF. It has no text layer, so it
+ * used to end in "fill it in by hand" although the same picture as a PNG was
+ * read without trouble.
+ */
+test('reads a scanned PDF by drawing its pages and recognising them', async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  await page.goto('/#kvitton');
+  await page
+    .getByTestId('valj-underlag')
+    .setInputFiles('e2e/fixtures/skannat-kvitto.pdf');
+  await expect(page.getByTestId('kvitto-besked')).toContainText('sparades');
+  await page.getByRole('button', { name: 'Bokför kvittot' }).click();
+
+  await page.getByLabel('Sök').fill('drivmedel');
+  await page
+    .getByTestId('sokresultat')
+    .getByRole('button', { name: /Drivmedel till bilen/ })
+    .click();
+  const erbjudande = page.getByTestId('anvand-kvittot');
+  await expect(erbjudande).toContainText('851,16', { timeout: 150_000 });
+  await expect(erbjudande).toContainText('2025-07-19');
+});

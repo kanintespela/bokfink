@@ -1,5 +1,5 @@
 import { forOcr } from './bild';
-import { lasPdftext } from './pdf';
+import { lasPdftext, ritaSidorForOcr } from './pdf';
 import type { Underlagstyp } from '../domain/underlag/underlag';
 
 /**
@@ -129,8 +129,32 @@ async function lasInnehall(
      * an invoice and comes back empty, which the caller reports as such.
      */
     const text = await lasPdftext(data);
+    if (text.trim().length > 0) {
+      onFramsteg?.(1);
+      return [{ text, sakerhet: 100 }];
+    }
+
+    /*
+     * No text layer: a scan. The pages are drawn and recognised like photos,
+     * with the confidence the engine itself reports - unlike a text layer,
+     * this is a guess, and the caller warns when it is a poor one.
+     */
+    const motor = await starta(onFramsteg);
+    onFramsteg?.(0.5);
+    const lasta: Ocrresultat[] = [];
+    for (const sida of await ritaSidorForOcr(data)) {
+      lasta.push(await las(motor, sida));
+    }
     onFramsteg?.(1);
-    return [{ text, sakerhet: text.trim().length === 0 ? 0 : 100 }];
+    if (lasta.length === 0) {
+      return [{ text: '', sakerhet: 0 }];
+    }
+    return [
+      {
+        text: lasta.map((sida) => sida.text).join('\n'),
+        sakerhet: Math.min(...lasta.map((sida) => sida.sakerhet)),
+      },
+    ];
   }
 
   const motor = await starta(onFramsteg);

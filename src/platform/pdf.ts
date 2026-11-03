@@ -218,3 +218,54 @@ export async function oppnaPdf(data: Uint8Array): Promise<Pdfvisning> {
     stang: () => dokument.loadingTask.destroy(),
   };
 }
+
+/**
+ * How wide a page is drawn when it is to be recognised rather than shown.
+ *
+ * Two thousand pixels across an A4 page is about 240 dots per inch, which
+ * is what the recogniser reads small print at; the cap on canvas size
+ * ({@link MAX_PIXLAR}) still applies.
+ */
+const OCR_BREDD = 2000;
+
+/** The most pages recognised in one go: an invoice's totals are on the first few. */
+const MAX_OCR_SIDOR = 3;
+
+/**
+ * Draws the first pages of a PDF as pictures, for a PDF with no text layer.
+ *
+ * A scanned invoice is a picture inside a PDF. Handing the recogniser the
+ * PDF itself gets nothing back, so the pages are drawn here and read as the
+ * photographs they are.
+ */
+export async function ritaSidorForOcr(data: Uint8Array): Promise<Blob[]> {
+  const dokument = await oppnaDokument(data);
+  try {
+    const bilder: Blob[] = [];
+    const antal = Math.min(dokument.numPages, MAX_OCR_SIDOR);
+    for (let nummer = 1; nummer <= antal; nummer += 1) {
+      const sida = await dokument.getPage(nummer);
+      const vy = sida.getViewport({
+        scale: ritskala(sida.getViewport({ scale: 1 }), OCR_BREDD, 1),
+      });
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.floor(vy.width);
+      canvas.height = Math.floor(vy.height);
+      await sida.render({ canvas, viewport: vy }).promise;
+      bilder.push(
+        await new Promise<Blob>((klar, fel) =>
+          canvas.toBlob(
+            (blob) =>
+              blob === null
+                ? fel(new Error('Sidan kunde inte ritas om till en bild.'))
+                : klar(blob),
+            'image/png',
+          ),
+        ),
+      );
+    }
+    return bilder;
+  } finally {
+    await dokument.cleanup();
+  }
+}
