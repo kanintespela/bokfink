@@ -8,7 +8,7 @@ import type { Rakenskapsar } from '../rakenskapsar/rakenskapsar';
 import { datum } from '../tid/datum';
 import { verifikatserie } from '../verifikat/serie';
 import type { BokfortVerifikat } from '../verifikat/verifikat';
-import { skrivVerifikationslistaPdf } from './verifikationslistaPdf';
+import { rattelsetext, skrivVerifikationslistaPdf } from './verifikationslistaPdf';
 
 /*
  * Content-stream compression makes the produced bytes unreadable as plain
@@ -112,5 +112,65 @@ describe('skrivVerifikationslistaPdf', () => {
 
     const inlast = await PDFDocument.load(pdf);
     expect(inlast.getPageCount()).toBe(1);
+  });
+
+  it('does not fail on text the built-in font has no letter for', async () => {
+    const pdf = await skrivVerifikationslistaPdf({
+      foretagsnamn: 'Testfirman',
+      rakenskapsar: RAKENSKAPSAR,
+      verifikat: [{ ...verifikat(1, '2026-01-09'), beskrivning: 'Honung 🐝 → burkar' }],
+      konton: KONTON,
+      skapad: datum('2026-09-08'),
+    });
+
+    expect((await PDFDocument.load(pdf)).getPageCount()).toBe(1);
+  });
+
+  it('writes a corrected verifikat and an annulment with their notes', async () => {
+    const original = {
+      ...verifikat(1, '2026-01-09'),
+      rattelser: [
+        {
+          nar: '2026-01-20T09:00:00.000Z',
+          enhet: 'a',
+          falt: 'beskrivning' as const,
+          fran: 'Annons lokaltidning',
+          till: 'Annons Smålandsposten',
+        },
+      ],
+    };
+    const annullering = { ...verifikat(2, '2026-01-10'), annullerar: original.id };
+
+    const pdf = await skrivVerifikationslistaPdf({
+      foretagsnamn: 'Testfirman',
+      rakenskapsar: RAKENSKAPSAR,
+      verifikat: [original, annullering],
+      konton: KONTON,
+      skapad: datum('2026-09-08'),
+    });
+
+    expect((await PDFDocument.load(pdf)).getPageCount()).toBe(1);
+  });
+});
+
+describe('rattelsetext', () => {
+  const grund = { nar: '2026-01-20T09:00:00.000Z', enhet: 'a' };
+
+  it('keeps the old text beside the new one', () => {
+    expect(
+      rattelsetext({ ...grund, falt: 'beskrivning', fran: 'Gammal', till: 'Ny' }),
+    ).toBe('Beskrivning rättad 2026-01-20: "Gammal" blev "Ny"');
+  });
+
+  it('says what a date was and became', () => {
+    expect(
+      rattelsetext({ ...grund, falt: 'datum', fran: '2026-04-15', till: '2026-04-16' }),
+    ).toBe('Datum rättat 2026-01-20: 2026-04-15 blev 2026-04-16');
+  });
+
+  it('says that a project was changed, on which row', () => {
+    expect(rattelsetext({ ...grund, falt: 'projekt', rad: 1, fran: '', till: 'x' })).toBe(
+      'Projekt på rad 2 ändrat 2026-01-20',
+    );
   });
 });

@@ -4,7 +4,7 @@ import { formatKronor } from '../belopp/ore';
 import type { Kontonummer, Konto } from '../konto/konto';
 import type { Rakenskapsar } from '../rakenskapsar/rakenskapsar';
 import type { Datum } from '../tid/datum';
-import { beteckning, type BokfortVerifikat } from '../verifikat/verifikat';
+import { beteckning, type BokfortVerifikat, type Rattelse } from '../verifikat/verifikat';
 
 /**
  * The verifikationslista as a PDF, for the seven-year archive package.
@@ -36,6 +36,25 @@ const RADHOJD = 14;
 const TEXTSTORLEK = 9;
 const RUBRIKSTORLEK = 16;
 
+/**
+ * A correction in words, for the line under the verifikat it concerns.
+ *
+ * Bokföringslagen 5 kap. 5 och 8 §§: a correction has to be possible to find
+ * out about when the books are examined. The SIE file cannot carry it, so
+ * this list - the part of the archive anyone can read - does.
+ */
+export function rattelsetext(rattelse: Rattelse): string {
+  const nar = rattelse.nar.slice(0, 10);
+  switch (rattelse.falt) {
+    case 'beskrivning':
+      return `Beskrivning rättad ${nar}: "${rattelse.fran}" blev "${rattelse.till}"`;
+    case 'datum':
+      return `Datum rättat ${nar}: ${rattelse.fran} blev ${rattelse.till}`;
+    case 'projekt':
+      return `Projekt på rad ${(rattelse.rad ?? 0) + 1} ändrat ${nar}`;
+  }
+}
+
 function efterSerieOchNummer(a: BokfortVerifikat, b: BokfortVerifikat): number {
   return a.serie === b.serie ? a.nummer - b.nummer : a.serie.localeCompare(b.serie);
 }
@@ -62,11 +81,22 @@ export async function skrivVerifikationslistaPdf(
     }
   }
 
+  /*
+   * Text the built-in font has no letter for is written as a question mark.
+   * pdf-lib refuses it outright otherwise, and a description with an emoji
+   * in it stopped the whole archive package.
+   */
+  const kanSkrivas = new Set(font.getCharacterSet());
+  const rensa = (text: string): string =>
+    [...text]
+      .map((tecken) => (kanSkrivas.has(tecken.codePointAt(0)!) ? tecken : '?'))
+      .join('');
+
   function rad(
     text: string,
     installningar: { readonly font?: PDFFont; readonly storlek?: number } = {},
   ): void {
-    sida.drawText(text, {
+    sida.drawText(rensa(text), {
       x: MARGINAL,
       y,
       size: installningar.storlek ?? TEXTSTORLEK,
@@ -90,18 +120,46 @@ export async function skrivVerifikationslistaPdf(
     rad('Inga bokförda verifikat i det här räkenskapsåret.');
   }
 
+  const beteckningPaId = new Map(sorterade.map((v) => [v.id, beteckning(v)]));
+  const annulleradAv = new Map(
+    sorterade.flatMap((v) =>
+      v.annullerar === undefined ? [] : [[v.annullerar, beteckning(v)] as const],
+    ),
+  );
+
   for (const verifikat of sorterade) {
-    // The heading plus every kontering line, so a verifikat is never split
-    // across a page break.
-    nyttUtrymme(RADHOJD * (1 + verifikat.konteringar.length) + 6);
+    const noteringar = [
+      ...(verifikat.rattelser ?? []).map(rattelsetext),
+      ...(verifikat.annullerar === undefined
+        ? []
+        : [
+            `Annullerar ${beteckningPaId.get(verifikat.annullerar) ?? 'ett verifikat från ett annat räkenskapsår'}`,
+          ]),
+      ...(annulleradAv.has(verifikat.id)
+        ? [`Annullerad av ${annulleradAv.get(verifikat.id)}`]
+        : []),
+    ];
+
+    // The heading, the notes and every kontering line, so a verifikat is
+    // never split across a page break.
+    nyttUtrymme(RADHOJD * (1 + noteringar.length + verifikat.konteringar.length) + 6);
 
     rad(`${beteckning(verifikat)}   ${verifikat.datum}   ${verifikat.beskrivning}`, {
       font: fetFont,
     });
+    for (const notering of noteringar) {
+      sida.drawText(rensa(notering), {
+        x: MARGINAL + 16,
+        y,
+        size: TEXTSTORLEK,
+        font,
+      });
+      y -= RADHOJD;
+    }
     for (const kontering of verifikat.konteringar) {
       const konto = uppgifter.konton.get(kontering.konto);
       const namn = konto?.namn ?? '';
-      sida.drawText(`${kontering.konto}  ${namn}`, {
+      sida.drawText(rensa(`${kontering.konto}  ${namn}`), {
         x: MARGINAL + 16,
         y,
         size: TEXTSTORLEK,
