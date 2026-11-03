@@ -284,6 +284,50 @@ describe('datumForAnnullering', () => {
   it('refuses a date the year does not cover', () => {
     expect(datumForAnnullering(ar2026(), datum('2025-02-13'), idag)).toBe('2026-09-05');
   });
+
+  /*
+   * A mistake in 2025 found in 2026, when 2025 is locked or closed: the
+   * correction is booked today, in the year that is open, and points back at
+   * the original. It used to say "there is no open period".
+   */
+  describe('när misstaget hör till ett tidigare år', () => {
+    const ar2027 = (extra: Partial<Parameters<typeof skapaRakenskapsar>[0]> = {}) =>
+      skapaRakenskapsar({
+        id: '019b76da-a800-7000-8000-000000002027' as Uuid,
+        start: datum('2027-01-01'),
+        slut: datum('2027-12-31'),
+        ...extra,
+      });
+    const januari = datum('2027-01-20');
+
+    it('books it today in the open year when the old year is closed', () => {
+      const gammalt = ar2026({ avslutat: true });
+      expect(datumForAnnullering(gammalt, datum('2026-02-13'), januari, [ar2027()])).toBe(
+        '2027-01-20',
+      );
+    });
+
+    it('books it today in the open year when the old year is VAT locked to its end', () => {
+      const gammalt = ar2026({ momslastTom: datum('2026-12-31') });
+      expect(datumForAnnullering(gammalt, datum('2026-02-13'), januari, [ar2027()])).toBe(
+        '2027-01-20',
+      );
+    });
+
+    it('still has nowhere to put it when the year of today is locked as well', () => {
+      const gammalt = ar2026({ avslutat: true });
+      const last = ar2027({ momslastTom: datum('2027-03-31') });
+      expect(
+        datumForAnnullering(gammalt, datum('2026-02-13'), januari, [last]),
+      ).toBeUndefined();
+    });
+
+    it('prefers the original period when that is open', () => {
+      expect(
+        datumForAnnullering(ar2026(), datum('2026-02-13'), januari, [ar2027()]),
+      ).toBe('2026-02-13');
+    });
+  });
 });
 
 describe('rakenskapsarsid', () => {

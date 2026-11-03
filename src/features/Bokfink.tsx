@@ -1810,7 +1810,12 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
               );
               return ar === undefined
                 ? undefined
-                : datumForAnnullering(ar, post.verifikat.datum, idag);
+                : datumForAnnullering(
+                    ar,
+                    post.verifikat.datum,
+                    idag,
+                    laddat.rakenskapsar,
+                  );
             }}
             onAnnullera={async (post) => {
               const ar = laddat.rakenskapsar.find(
@@ -1819,7 +1824,12 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
               const nar =
                 ar === undefined
                   ? undefined
-                  : datumForAnnullering(ar, post.verifikat.datum, idag);
+                  : datumForAnnullering(
+                      ar,
+                      post.verifikat.datum,
+                      idag,
+                      laddat.rakenskapsar,
+                    );
               if (nar === undefined) {
                 return;
               }

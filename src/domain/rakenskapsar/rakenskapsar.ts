@@ -262,16 +262,23 @@ export function kontrolleraInteFramtida(datum: Datum, idag: Datum): void {
  * error concerns while that is possible, otherwise in the one where it was
  * found. Returns undefined when even today cannot be booked, which is a
  * question for the caller rather than something to paper over.
+ *
+ * "Today" may be in a later year than the original's: a mistake in 2025 is
+ * found in 2026. `ovrigaAr` are the other years, and the reversal is then
+ * booked in the one that covers today, in its own series. It still points at
+ * the original by id, which is how the pair is recognised across the two.
  */
 export function datumForAnnullering(
   ar: Rakenskapsar,
   original: Datum,
   idag: Datum,
+  ovrigaAr: readonly Rakenskapsar[] = [],
 ): Datum | undefined {
   if (!arLast(ar, original) && omfattar(ar, original)) {
     return original;
   }
-  if (omfattar(ar, idag) && !arLast(ar, idag)) {
+  const dagensAr = [ar, ...ovrigaAr].find((kandidat) => omfattar(kandidat, idag));
+  if (dagensAr !== undefined && !arLast(dagensAr, idag)) {
     return idag;
   }
   return undefined;

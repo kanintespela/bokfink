@@ -211,3 +211,33 @@ test('reminds about unpaid invoices before the last period of the year is locked
   await page.getByLabel('Period', { exact: true }).selectOption({ label: '2026 kv 4' });
   await expect(page.getByTestId('sista-period-rad')).toContainText('Obetalda fakturor');
 });
+
+/*
+ * A mistake in last year's books found after its last declaration was locked.
+ * The page promised a correction "in an open year", and then said there was
+ * no open period to put it in.
+ */
+test('reverses a verifikat from a locked year in the year that is open', async ({
+  page,
+}) => {
+  await bokforForsaljningIDecember(page);
+
+  await page.goto('/#moms');
+  await page.getByLabel('Period', { exact: true }).selectOption({ label: '2026 kv 4' });
+  await page.getByTestId('las-period').click();
+  await page.getByTestId('las-period-ja').click();
+  await expect(page.getByTestId('redan-last')).toBeVisible();
+
+  await page.goto('/#verifikat');
+  await page.getByLabel('Räkenskapsår').selectOption({ label: '2026' });
+  const lista = page.getByTestId('verifikatlista');
+  await lista.getByRole('button', { name: /A1/ }).click();
+  await page.getByTestId(/^andra-/).click();
+  await expect(page.getByTestId(/^bekrafta-/)).toContainText('2027-01-20');
+  await page.getByTestId(/^annullera-/).click();
+
+  // Booked in 2027's own series, with the original left as it was in 2026.
+  await page.getByLabel('Räkenskapsår').selectOption({ label: '2027' });
+  await expect(page.getByTestId('verifikatlista')).toContainText('annullering');
+  await expect(page.getByTestId('verifikatlista')).toContainText('2027-01-20');
+});
