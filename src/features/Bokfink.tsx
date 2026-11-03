@@ -1103,9 +1103,14 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
             onLasFil={async (fil) => {
               const text = avkodaText(new Uint8Array(await fil.arrayBuffer()));
               const transaktioner = lasKontoutdrag(text);
+              /*
+               * Every year, not the one the clock is in: a December statement
+               * is checked in January, and the lines booked in December would
+               * otherwise show up as missing and be booked a second time.
+               */
               return matchaKontoutdrag(
                 transaktioner,
-                laddat.poster.map((post) => post.verifikat),
+                laddat.allaVerifikat,
                 FORETAGSKONTO,
               );
             }}

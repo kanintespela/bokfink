@@ -164,3 +164,32 @@ test('refuses a förskott of 5 000 kr, which K1 does not take up', async ({ page
   );
   await expect(page.getByTestId('bokfor-bokslutspost')).toBeDisabled();
 });
+
+/*
+ * A December statement is checked in January, when the app has moved on to
+ * the new year. The statement used to be matched against the new year only,
+ * so a line that was booked in December showed up as missing and invited a
+ * second booking.
+ */
+test('matches a December statement against December’s bookings in January', async ({
+  page,
+}) => {
+  await bokforForsaljningIDecember(page);
+
+  await page.goto('/#bank');
+  await page.getByTestId('valj-kontoutdrag').setInputFiles({
+    name: 'kontoutdrag.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from(
+      [
+        'Bokföringsdag;Referens;Beskrivning;Belopp;Bokfört saldo',
+        '2026-12-15;Inbetalning;LAMMFÖRSÄLJNING;12 500,00;12 500,00',
+        '',
+      ].join('\n'),
+      'utf-8',
+    ),
+  });
+
+  await expect(page.getByTestId('bank-sammanfattning')).toContainText('1 finns redan');
+  await expect(page.getByTestId('bank-sammanfattning')).toContainText('0 saknas');
+});
