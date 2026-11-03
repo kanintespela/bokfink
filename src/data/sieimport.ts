@@ -33,7 +33,7 @@ import {
   skrivRakenskapsar,
   type Skrivkontext,
 } from './kommandon';
-import { RAKENSKAPSAR_TABLE, VERIFIKAT_TABLE } from './schema';
+import { META_TABLE, RAKENSKAPSAR_TABLE, VERIFIKAT_TABLE } from './schema';
 
 export interface Importresultat {
   readonly rakenskapsar: number;
@@ -83,6 +83,33 @@ export async function importeraSieFiler(
   kontext: Skrivkontext,
   filer: readonly Uint8Array[],
   installningar: Importinstallningar = {},
+): Promise<Importresultat> {
+  /*
+   * All or nothing. A file whose tenth verifikat cannot be booked used to
+   * leave the nine before it in the books, with an error that did not say so.
+   * Everything below only reads and writes the database, so one transaction
+   * over all of it rolls back cleanly; the writes made by the functions it
+   * calls join it.
+   */
+  return db.transaction('rw', db.tables, async () => {
+    const resultat = await importeraSieFilerOdelat(db, kontext, filer, installningar);
+    /*
+     * One last request before leaving. An import that wrote nothing (every
+     * verifikat already there) ended on a read, and the transaction then
+     * committed before this function's promise had resolved
+     * (PrematureCommitError). A request in flight keeps it open until the
+     * result is handed back.
+     */
+    await db.table(META_TABLE).get('importerad');
+    return resultat;
+  });
+}
+
+async function importeraSieFilerOdelat(
+  db: BokfinkDatabase,
+  kontext: Skrivkontext,
+  filer: readonly Uint8Array[],
+  installningar: Importinstallningar,
 ): Promise<Importresultat> {
   const varningar: string[] = [];
   const dokument = filer.map((bytes) => {
@@ -172,8 +199,16 @@ export async function importeraSieFiler(
         );
       }
 
-      if (await finnsRedan(db, arId, serie, nummer)) {
+      const befintlig = await hittaVerifikat(db, arId, serie, nummer);
+      if (befintlig !== undefined) {
         redanImporterade += 1;
+        if (!samtInnehall(befintlig, ver)) {
+          varningar.push(
+            `Verifikat ${ver.serie}${ver.nummer} finns redan med annat innehåll än i filen ` +
+              '(datum eller konteringar skiljer sig), och filens version lästes inte in. ' +
+              'Två verifikat får inte dela nummer.',
+          );
+        }
         continue;
       }
 
@@ -301,18 +336,32 @@ async function hittaArMedStart(
     .first();
 }
 
-async function finnsRedan(
+async function hittaVerifikat(
   db: BokfinkDatabase,
   rakenskapsarId: Uuid,
   serie: string,
   nummer: number,
-): Promise<boolean> {
-  const rad = await db
+): Promise<VerifikatRad | undefined> {
+  return db
     .table<VerifikatRad, Uuid>(VERIFIKAT_TABLE)
     .where('[rakenskapsarId+serie+nummer]')
     .equals([rakenskapsarId, serie, nummer])
     .first();
-  return rad !== undefined;
+}
+
+/**
+ * Whether a booked verifikat and one from a file say the same: the date and
+ * the same amount on each account, in any order. The text is not compared,
+ * since a rättelse may have changed it, and neither are the lines' own texts.
+ */
+function samtInnehall(rad: VerifikatRad, ver: Siedokument['verifikat'][number]): boolean {
+  if (rad.datum !== ver.datum) {
+    return false;
+  }
+  const nyckel = (konto: string, belopp: number) => `${konto}:${belopp}`;
+  const egna = rad.konteringar.map((k) => nyckel(k.konto, k.belopp)).sort();
+  const filens = ver.transaktioner.map((t) => nyckel(t.konto, t.belopp)).sort();
+  return egna.length === filens.length && egna.every((post, i) => post === filens[i]);
 }
 
 async function avslutaTidigareAr(

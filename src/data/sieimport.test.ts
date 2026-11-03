@@ -287,6 +287,73 @@ describe('importeraSieFiler', () => {
   });
 });
 
+/*
+ * A file whose second verifikat could not be booked left the first one in
+ * the books, with an error message that said nothing about it. The person
+ * fixed the file and imported again, or never knew.
+ */
+describe('en import som misslyckas halvvägs', () => {
+  let db: BokfinkDatabase;
+
+  beforeEach(async () => {
+    db = new BokfinkDatabase(`kontera-sieimport-atomar-${(raknare += 1)}`);
+    skyddaBokfordaVerifikat(db);
+    await db.open();
+  });
+
+  it('leaves the books exactly as they were', async () => {
+    const fil = siefil(2026, {
+      verifikat: [...köp('A', 1, 2026, '0109'), ...köp('A', 2, 2028, '0113')],
+    });
+
+    await expect(importeraSieFiler(db, kontext, [fil])).rejects.toThrow(/2028-01-13/);
+
+    const st = await lasTillstand(db);
+    expect(st.verifikat.size).toBe(0);
+    expect(st.konton.size).toBe(0);
+    expect(st.rakenskapsar.size).toBe(0);
+  });
+});
+
+describe('ett verifikat med samma nummer men annat innehåll', () => {
+  let db: BokfinkDatabase;
+
+  beforeEach(async () => {
+    db = new BokfinkDatabase(`kontera-sieimport-avvikande-${(raknare += 1)}`);
+    skyddaBokfordaVerifikat(db);
+    await db.open();
+  });
+
+  it('is skipped but said out loud, so merging two programs loses nothing silently', async () => {
+    await importeraSieFiler(db, kontext, [
+      siefil(2026, { verifikat: köp('A', 1, 2026, '0109') }),
+    ]);
+
+    const annat = [
+      '#VER "A" 1 20260109 "Något helt annat" 20260109 ""',
+      '{',
+      '#TRANS 2013 {} -999.00',
+      '#TRANS 4010 {} 999.00',
+      '}',
+    ];
+    const res = await importeraSieFiler(db, kontext, [
+      siefil(2026, { verifikat: annat }),
+    ]);
+
+    expect(res.verifikat).toBe(0);
+    expect(res.redanImporterade).toBe(1);
+    expect(res.varningar.join(' ')).toMatch(/A1.*annat innehåll/);
+  });
+
+  it('says nothing when the same verifikat comes again', async () => {
+    const filer = [siefil(2026, { verifikat: köp('A', 1, 2026, '0109') })];
+    await importeraSieFiler(db, kontext, filer);
+    const res = await importeraSieFiler(db, kontext, filer);
+
+    expect(res.varningar).toEqual([]);
+  });
+});
+
 describe('ingående balanser på ett år som redan finns', () => {
   let db: BokfinkDatabase;
 
