@@ -17,6 +17,7 @@ test('reminds of an undeclared quarter until its period is locked', async ({ pag
 
   await kort.click();
   await page.getByTestId('las-period').click();
+  await page.getByTestId('las-period-ja').click();
   await expect(page.getByTestId('las-period')).toBeHidden();
 
   await page.goto('/');

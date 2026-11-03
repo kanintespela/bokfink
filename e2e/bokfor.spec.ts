@@ -697,6 +697,7 @@ test('locks a period and refuses to book into it', async ({ page }) => {
   await page.getByTestId('rakenskapsarlista').getByRole('button').first().click();
   await page.getByLabel('Momslås till och med').fill('2026-03-31');
   await page.getByTestId('momslas-2026').click();
+  await page.getByTestId('momslas-2026-ja').click();
 
   await expect(page.getByTestId('rakenskapsarlista')).toContainText(
     'Momslåst t.o.m. 2026-03-31',
@@ -725,6 +726,7 @@ test('closes a year and stops booking in it entirely', async ({ page }) => {
   await page.getByTestId('skapa-nasta-ar-2026').click();
   await expect(page.getByTestId('checklista-2026')).toContainText('2027');
   await page.getByTestId('avsluta-2026').click();
+  await page.getByTestId('avsluta-2026-ja').click();
   await expect(page.getByTestId('rakenskapsarlista')).toContainText('Avslutat');
 
   await tillBokfor(page);
@@ -981,6 +983,29 @@ test('shows the momsdeklaration box by box', async ({ page }) => {
   await expect(page.getByTestId('momssumma')).toContainText('att betala');
 });
 
+/*
+ * A lock cannot be undone, and one press on a phone is easily the wrong one.
+ */
+test('asks before locking a period, and locks nothing when cancelled', async ({
+  page,
+}) => {
+  await tillBokfor(page);
+  await valjLov(page, 'foder', 'Foder och strö');
+  await page.getByLabel('Att betala').fill('100');
+  await page.getByLabel('Datum').fill('2026-02-13');
+  await bokforKnapp(page).click();
+  await expect(page.getByTestId('senast-bokfort')).toBeVisible();
+
+  await tillMoms(page);
+  await page.getByLabel('Period', { exact: true }).selectOption({ label: '2026 kv 1' });
+  await page.getByTestId('las-period').click();
+  await expect(page.getByTestId('las-period-ja')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Avbryt' }).click();
+  await expect(page.getByTestId('las-period')).toBeVisible();
+  await expect(page.getByTestId('redan-last')).toBeHidden();
+});
+
 test('locks the period from the momsdeklaration', async ({ page }) => {
   await tillBokfor(page);
   await valjLov(page, 'foder', 'Foder och strö');
@@ -992,6 +1017,7 @@ test('locks the period from the momsdeklaration', async ({ page }) => {
   await tillMoms(page);
   await page.getByLabel('Period', { exact: true }).selectOption({ label: '2026 kv 1' });
   await page.getByTestId('las-period').click();
+  await page.getByTestId('las-period-ja').click();
 
   await expect(page.getByTestId('redan-last')).toContainText('2026-03-31');
 

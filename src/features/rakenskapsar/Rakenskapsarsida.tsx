@@ -5,6 +5,7 @@ import type { Konto, Kontonummer } from '../../domain/konto/konto';
 import type { Rakenskapsar } from '../../domain/rakenskapsar/rakenskapsar';
 import type { Datum } from '../../domain/tid/datum';
 import type { Arsavslutschecklista, Balansoverforing } from '../../data/arsavslut';
+import { Bekraftaknapp } from '../../ui/Bekraftaknapp';
 
 interface Props {
   readonly rakenskapsar: readonly Rakenskapsar[];
@@ -205,12 +206,12 @@ export function Rakenskapsarsida({
                         inte att ångra.
                       </p>
 
-                      <button
-                        type="button"
-                        className="knapp"
+                      <Bekraftaknapp
+                        testId={`momslas-${ar.start.slice(0, 4)}`}
                         disabled={arbetar}
-                        data-testid={`momslas-${ar.start.slice(0, 4)}`}
-                        onClick={() => {
+                        fraga={`Allt till och med ${lasTom} låses för gott. Det går inte att ångra.`}
+                        jaText="Ja, momslås"
+                        onBekrafta={() => {
                           setArbetar(true);
                           void onMomslas(ar, lasTom as Datum).finally(() =>
                             setArbetar(false),
@@ -218,29 +219,29 @@ export function Rakenskapsarsida({
                         }}
                       >
                         Momslås
-                      </button>
+                      </Bekraftaknapp>
 
                       <p>
                         Att avsluta året stänger det helt. Inget kan bokföras i det
                         efteråt, och en rättelse får göras i ett öppet år i stället.
                       </p>
 
-                      <button
-                        type="button"
-                        className="knapp"
+                      <Bekraftaknapp
+                        testId={`avsluta-${ar.start.slice(0, 4)}`}
                         // Nästa år måste finnas innan detta stängs, annars har det
                         // ingenstans att ta emot utgående balanser - se Checklistkort.
                         disabled={
                           arbetar || checklistor.get(ar.id)?.nastaAr === undefined
                         }
-                        data-testid={`avsluta-${ar.start.slice(0, 4)}`}
-                        onClick={() => {
+                        fraga={`Räkenskapsåret ${ar.start.slice(0, 4)} stängs helt. Inget kan bokföras i det efteråt, och det går inte att öppna igen.`}
+                        jaText={`Ja, avsluta ${ar.start.slice(0, 4)}`}
+                        onBekrafta={() => {
                           setArbetar(true);
                           void onAvsluta(ar).finally(() => setArbetar(false));
                         }}
                       >
                         Avsluta {ar.start.slice(0, 4)}
-                      </button>
+                      </Bekraftaknapp>
                     </div>
                   )}
                 </div>

@@ -37,6 +37,7 @@ test('declares last year’s fourth quarter after new year', async ({ page }) =>
   await expect(page.getByTestId('momsrutor')).toContainText('10 000,00');
 
   await page.getByTestId('las-period').click();
+  await page.getByTestId('las-period-ja').click();
   await expect(page.getByTestId('redan-last')).toContainText('2026-12-31');
 });
 
@@ -82,6 +83,7 @@ test('books a year-end item after the fourth quarter is locked', async ({ page }
   await page.goto('/#moms');
   await page.getByLabel('Period', { exact: true }).selectOption({ label: '2026 kv 4' });
   await page.getByTestId('las-period').click();
+  await page.getByTestId('las-period-ja').click();
   await expect(page.getByTestId('redan-last')).toContainText('2026-12-31');
 
   // A förskott reaches no box, so the locked declaration lets it through.

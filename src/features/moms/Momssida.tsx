@@ -13,6 +13,7 @@ import type { Rakenskapsar } from '../../domain/rakenskapsar/rakenskapsar';
 import type { Datum } from '../../domain/tid/datum';
 import { beteckning, type BokfortVerifikat } from '../../domain/verifikat/verifikat';
 import { inomIntervall } from '../../domain/tid/datum';
+import { Bekraftaknapp } from '../../ui/Bekraftaknapp';
 import { PERIODNAMN } from './namn';
 
 interface Props {
@@ -287,12 +288,12 @@ export function Momssida({
         </p>
       ) : (
         <p>
-          <button
-            type="button"
-            className="knapp"
+          <Bekraftaknapp
+            testId="las-period"
             disabled={arbetar || aret.avslutat}
-            data-testid="las-period"
-            onClick={() => {
+            fraga={`Perioden till och med ${period.till} låses för gott. Det går inte att ångra.`}
+            jaText="Ja, lås perioden"
+            onBekrafta={() => {
               // Stay on this period once it is locked, rather than follow
               // the default on to whatever is waiting next.
               setValtArId(aret.id);
@@ -301,7 +302,7 @@ export function Momssida({
             }}
           >
             Lås perioden till och med {period.till}
-          </button>
+          </Bekraftaknapp>
         </p>
       )}
     </section>
