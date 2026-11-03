@@ -20,6 +20,7 @@ import {
 } from './arsavslut';
 import { lasTillstand, skyddaBokfordaVerifikat } from './bokforing';
 import { BokfinkDatabase } from './db';
+import { registreraDjurlagerinventering } from './lager';
 import {
   avslutaRakenskapsar,
   bokforUtkast,
@@ -110,6 +111,26 @@ describe('arsavslutschecklista', () => {
     const checklista = await arsavslutschecklista(db, ar, datum('2026-12-31'));
     expect(checklista.momsTackerHelaAret).toBe(false);
     expect(checklista.nastaAr).toBeUndefined();
+    expect(checklista.djurlagerInventeratIAr).toBe(false);
+    // Nothing has ever been counted, so there is nothing to ask about.
+    expect(checklista.harDjurlager).toBe(false);
+  });
+
+  it('frågar efter lagret först när ett djurlager har inventerats någon gång', async () => {
+    await registreraDjurlagerinventering(db, kontext, {
+      datum: datum('2025-12-31'),
+      poster: [
+        {
+          djurslag: 'Tacka',
+          antal: 5,
+          genomsnittligProduktionsutgiftPerDjur: oreFromKronor('1100'),
+          nettoforsaljningsvardePerDjur: oreFromKronor('2000'),
+        },
+      ],
+    });
+
+    const checklista = await arsavslutschecklista(db, ar, datum('2026-12-31'));
+    expect(checklista.harDjurlager).toBe(true);
     expect(checklista.djurlagerInventeratIAr).toBe(false);
   });
 

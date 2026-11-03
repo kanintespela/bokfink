@@ -290,7 +290,9 @@ function Checklistkort({
           ta bort: {checklista.obokfordaUtkast} kvar
         </li>
         <li>{checklista.momsTackerHelaAret ? '✅' : '❌'} Moms inlämnad för hela året</li>
-        <li>{checklista.djurlagerInventeratIAr ? '✅' : '❌'} Lager inventerat i år</li>
+        {checklista.harDjurlager && (
+          <li>{checklista.djurlagerInventeratIAr ? '✅' : '❌'} Lager inventerat i år</li>
+        )}
         <li>
           Dagar sedan senaste säkerhetskopia:{' '}
           {checklista.dagarSedanBackup ?? 'ingen tagen ännu'}

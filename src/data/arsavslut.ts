@@ -62,6 +62,11 @@ export interface Arsavslutschecklista {
   readonly obokfordaUtkast: number;
   readonly momsTackerHelaAret: boolean;
   readonly djurlagerInventeratIAr: boolean;
+  /**
+   * Whether the book has ever had an animal stock counted. A firm with no
+   * animals - honey and wool - is not asked whether it has counted them.
+   */
+  readonly harDjurlager: boolean;
   readonly nastaAr: Rakenskapsar | undefined;
   /** Undefined when no backup has ever been taken on this device. */
   readonly dagarSedanBackup: number | undefined;
@@ -89,6 +94,8 @@ export async function arsavslutschecklista(
     (inventering) => omfattar(ar, inventering.datum),
   );
 
+  const harDjurlager = tillstand.djurlagerinventeringar.size > 0;
+
   const nastaArsStart = nastaRakenskapsarsperiod(ar).start;
   const nastaAr = [...tillstand.rakenskapsar.values()].find(
     (kandidat) => kandidat.start === nastaArsStart,
@@ -98,6 +105,7 @@ export async function arsavslutschecklista(
     obokfordaUtkast,
     momsTackerHelaAret: ar.momslastTom !== undefined && ar.momslastTom >= ar.slut,
     djurlagerInventeratIAr,
+    harDjurlager,
     nastaAr,
     dagarSedanBackup:
       backupSenast === undefined ? undefined : dagarMellan(datum(backupSenast), idag),
