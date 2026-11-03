@@ -871,6 +871,10 @@ test('warns on the start view when no backup has been taken, and clears with a t
     .getByTestId('backup-gammal')
     .getByLabel('Lösenfras för säkerhetskopian')
     .fill('en ganska lång lösenfras');
+  await page
+    .getByTestId('backup-gammal')
+    .getByLabel('Upprepa lösenfrasen')
+    .fill('en ganska lång lösenfras');
   const nedladdning = page.waitForEvent('download');
   await page.getByTestId('snabb-backup').click();
   await nedladdning;
@@ -1105,6 +1109,7 @@ test('locks the backup with a passphrase and opens it again', async ({ page }) =
 
   await tillSakerhetskopia(page);
   await page.getByLabel('Lösenfras för säkerhetskopian').fill('en ganska lång lösenfras');
+  await page.getByLabel('Upprepa lösenfrasen').fill('en ganska lång lösenfras');
 
   const nedladdning = page.waitForEvent('download');
   await page.getByTestId('spara-krypterad').click();
@@ -1151,9 +1156,26 @@ test('locks the backup with a passphrase and opens it again', async ({ page }) =
   await expect(page.getByTestId('verifikatlista')).toContainText('520,31');
 });
 
+test('does not save an encrypted copy until the passphrase is typed twice alike', async ({
+  page,
+}) => {
+  await tillSakerhetskopia(page);
+  await page.getByLabel('Lösenfras för säkerhetskopian').fill('en ganska lång lösenfras');
+  await expect(page.getByTestId('spara-krypterad')).toBeDisabled();
+
+  await page.getByLabel('Upprepa lösenfrasen').fill('en ganska lång lösenfrsa');
+  await expect(page.getByTestId('losenfras-olika')).toBeVisible();
+  await expect(page.getByTestId('spara-krypterad')).toBeDisabled();
+
+  await page.getByLabel('Upprepa lösenfrasen').fill('en ganska lång lösenfras');
+  await expect(page.getByTestId('losenfras-olika')).toBeHidden();
+  await expect(page.getByTestId('spara-krypterad')).toBeEnabled();
+});
+
 test('says so when the passphrase is wrong', async ({ page }) => {
   await tillSakerhetskopia(page);
   await page.getByLabel('Lösenfras för säkerhetskopian').fill('rätt lösenfras');
+  await page.getByLabel('Upprepa lösenfrasen').fill('rätt lösenfras');
 
   const nedladdning = page.waitForEvent('download');
   await page.getByTestId('spara-krypterad').click();

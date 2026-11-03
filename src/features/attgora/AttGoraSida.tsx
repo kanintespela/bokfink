@@ -87,6 +87,8 @@ export function AttGoraSida({
     dagarSedanBackup === undefined || dagarSedanBackup > GAMMAL_BACKUP_GRANS;
 
   const [backupLosenfras, setBackupLosenfras] = useState('');
+  // Typed twice: a passphrase that cannot be recovered must not hide a typo.
+  const [backupUpprepad, setBackupUpprepad] = useState('');
   const [backupArbetar, setBackupArbetar] = useState(false);
   const [backupBesked, setBackupBesked] = useState<string | undefined>();
   const [backupFel, setBackupFel] = useState<string | undefined>();
@@ -98,6 +100,7 @@ export function AttGoraSida({
     try {
       setBackupBesked(await onSnabbBackup(krypterad ? backupLosenfras : undefined));
       setBackupLosenfras('');
+      setBackupUpprepad('');
     } catch (orsak) {
       // Hard rule 11: shown, not swallowed.
       setBackupFel(orsak instanceof Error ? orsak.message : String(orsak));
@@ -185,11 +188,35 @@ export function AttGoraSida({
                 />
               </div>
 
+              <div className="faltgrupp">
+                <label htmlFor="attgora-backup-upprepad">Upprepa lösenfrasen</label>
+                <input
+                  id="attgora-backup-upprepad"
+                  className="falt"
+                  type="password"
+                  autoComplete="off"
+                  value={backupUpprepad}
+                  aria-invalid={
+                    backupUpprepad !== '' && backupUpprepad !== backupLosenfras
+                  }
+                  onChange={(handelse) => setBackupUpprepad(handelse.target.value)}
+                />
+                {backupUpprepad !== '' && backupUpprepad !== backupLosenfras && (
+                  <p role="alert" data-testid="losenfras-olika">
+                    De två lösenfraserna är inte likadana.
+                  </p>
+                )}
+              </div>
+
               <p>
                 <button
                   type="button"
                   className="knapp"
-                  disabled={backupArbetar || backupLosenfras.trim().length === 0}
+                  disabled={
+                    backupArbetar ||
+                    backupLosenfras.trim().length === 0 ||
+                    backupUpprepad !== backupLosenfras
+                  }
                   data-testid="snabb-backup"
                   onClick={() => void taSnabbBackup(true)}
                 >

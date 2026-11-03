@@ -38,6 +38,13 @@ export function Sakerhetskopia({
    * There is nowhere to store it that would not defeat the point of it.
    */
   const [losenfras, setLosenfras] = useState('');
+  /*
+   * Typed twice when a backup is made: the passphrase cannot be recovered, so
+   * a slip of the finger would otherwise lock the only copy for good. Opening
+   * a backup needs only the first.
+   */
+  const [upprepad, setUpprepad] = useState('');
+  const lika = upprepad === losenfras;
   /** A picked file that turned out to be encrypted, waiting for a passphrase. */
   const [laste, setLaste] = useState<string | undefined>();
   const { arbetar, besked, fel, kor } = useUppgift();
@@ -68,11 +75,32 @@ export function Sakerhetskopia({
         </p>
       </div>
 
+      <div className="faltgrupp">
+        <label htmlFor="losenfras-upprepad">Upprepa lösenfrasen</label>
+        <input
+          id="losenfras-upprepad"
+          className="falt"
+          type="password"
+          autoComplete="off"
+          value={upprepad}
+          aria-invalid={upprepad !== '' && !lika}
+          onChange={(handelse) => setUpprepad(handelse.target.value)}
+        />
+        <p className="hjalptext">
+          Behövs när du sparar en krypterad kopia, inte när du läser in en.
+        </p>
+        {upprepad !== '' && !lika && (
+          <p role="alert" data-testid="losenfras-olika">
+            De två lösenfraserna är inte likadana.
+          </p>
+        )}
+      </div>
+
       <p>
         <button
           type="button"
           className="knapp knapp--primar"
-          disabled={arbetar || losenfras.trim().length === 0}
+          disabled={arbetar || losenfras.trim().length === 0 || !lika}
           data-testid="spara-krypterad"
           onClick={() =>
             void kor(async () => {
