@@ -283,11 +283,19 @@ export function Momssida({
       {redanLast ? (
         <p data-testid="redan-last">
           Perioden är låst till och med {aret.momslastTom}. Inget som påverkar
-          momsdeklarationen kan bokföras i den längre, men bokslutets poster går
-          fortfarande.
+          momsdeklarationen kan bokföras i den längre. Avskrivningar och andra
+          bokslutsposter utan moms går fortfarande; obetalda fakturor med moms behövde
+          bokföras före låsningen.
         </p>
       ) : (
-        <p>
+        <div>
+          {period.till === aret.slut && (
+            <p className="hjalptext" data-testid="sista-period-rad">
+              Det här är årets sista period. Obetalda fakturor och andra poster med moms
+              ska bokföras före låsningen (Mer, Obetalda fakturor och periodisering) -
+              efter den går de inte att bokföra.
+            </p>
+          )}
           <Bekraftaknapp
             testId="las-period"
             disabled={arbetar || aret.avslutat}
@@ -303,7 +311,7 @@ export function Momssida({
           >
             Lås perioden till och med {period.till}
           </Bekraftaknapp>
-        </p>
+        </div>
       )}
     </section>
   );

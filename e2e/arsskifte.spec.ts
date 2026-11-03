@@ -193,3 +193,21 @@ test('matches a December statement against December’s bookings in January', as
   await expect(page.getByTestId('bank-sammanfattning')).toContainText('1 finns redan');
   await expect(page.getByTestId('bank-sammanfattning')).toContainText('0 saknas');
 });
+
+/*
+ * After the year's last momsdeklaration is locked, an unpaid invoice with moms
+ * can no longer be booked, although the page said "bokslutets poster går
+ * fortfarande". The order is now said before the lock, not after.
+ */
+test('reminds about unpaid invoices before the last period of the year is locked', async ({
+  page,
+}) => {
+  await bokforForsaljningIDecember(page);
+
+  await page.goto('/#moms');
+  await page.getByLabel('Period', { exact: true }).selectOption({ label: '2026 kv 3' });
+  await expect(page.getByTestId('sista-period-rad')).toBeHidden();
+
+  await page.getByLabel('Period', { exact: true }).selectOption({ label: '2026 kv 4' });
+  await expect(page.getByTestId('sista-period-rad')).toContainText('Obetalda fakturor');
+});
