@@ -19,6 +19,7 @@ import {
   type Friarad,
 } from '../../domain/verifikat/frikontering';
 import type { Kontering } from '../../domain/verifikat/verifikat';
+import { pc8Varning } from '../../domain/sie/pc8';
 import { Tillbaka } from '../../ui/Tillbaka';
 import { tolkaBelopp } from './Beloppsfalt';
 import { Projektval } from './Projektval';
@@ -127,6 +128,10 @@ export function FriKontering({
   const hinder = (() => {
     if (beskrivning.trim() === '') {
       return 'Skriv vad verifikatet avser.';
+    }
+    const tecken = pc8Varning(beskrivning);
+    if (tecken !== undefined) {
+      return tecken;
     }
     const okandaKonton = tolkade.filter(
       (rad) => rad.konto !== undefined && !konton.has(rad.konto),

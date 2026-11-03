@@ -6,6 +6,7 @@ import {
   avkodaSieText,
   kodaPC8,
   medPC8Motsvarigheter,
+  pc8Varning,
   OkodbartTeckenError,
 } from './pc8';
 
@@ -171,5 +172,18 @@ describe('avkodaSieText', () => {
   it('reads an invalid mix as PC8 instead of failing', () => {
     // A lone continuation byte after a lead byte that wants two: not UTF-8.
     expect(avkodaSieText(bytes(0xc3, 0x41)).teckenuppsattning).toBe('PC8');
+  });
+});
+
+describe('pc8Varning', () => {
+  it('says nothing about text the file can carry', () => {
+    expect(pc8Varning('Fårfoder åäö – 22,50 € “citat”')).toBeUndefined();
+    expect(pc8Varning('')).toBeUndefined();
+  });
+
+  it('names the characters that the SIE file cannot carry', () => {
+    expect(pc8Varning('Honung 🐝')).toMatch(/🐝/);
+    expect(pc8Varning('Honung 🐝 och 🍯 och 🐝')).toMatch(/🐝 🍯/);
+    expect(pc8Varning('東京')).toMatch(/東 京/);
   });
 });

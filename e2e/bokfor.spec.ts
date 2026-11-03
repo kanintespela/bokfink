@@ -1283,3 +1283,24 @@ test('says why an amount cannot be booked', async ({ page }) => {
   await belopp.fill('1 234,56');
   await expect(page.getByTestId('beloppshjalp')).toBeHidden();
 });
+
+/*
+ * An emoji in a description was accepted and then stopped the whole SIE
+ * export and the archive package for the year, long after it was booked.
+ */
+test('warns about a character the SIE file cannot carry before it is booked', async ({
+  page,
+}) => {
+  await tillBokfor(page);
+  await valjLov(page, 'foder', 'Foder och strö');
+  await page.getByLabel('Att betala').fill('100');
+  await page.getByLabel('Vad avser det?').fill('Honung 🐝');
+
+  await expect(page.getByTestId('beskrivning-varning')).toContainText('🐝');
+  await expect(bokforKnapp(page)).toBeDisabled();
+
+  // A dash from a pasted invoice has a plain equivalent and is let through.
+  await page.getByLabel('Vad avser det?').fill('Honung – burkar');
+  await expect(page.getByTestId('beskrivning-varning')).toBeHidden();
+  await expect(bokforKnapp(page)).toBeEnabled();
+});

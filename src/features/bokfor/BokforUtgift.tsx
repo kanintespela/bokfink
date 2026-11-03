@@ -40,6 +40,7 @@ import { Projektval } from './Projektval';
 import type { Friforslag } from './FriKontering';
 import { Beskar } from '../underlag/Beskar';
 import { Underlagsvisning } from '../../ui/Underlagsvisning';
+import { pc8Varning } from '../../domain/sie/pc8';
 import type { Forberedelse } from '../../platform/bild';
 
 interface Props {
@@ -284,11 +285,14 @@ export function BokforUtgift({
     }
   })();
 
+  const beskrivningsvarning = pc8Varning(beskrivning);
+
   const kanBokfora =
     konteringar !== undefined &&
     brutto !== 0 &&
     valtDatum !== undefined &&
     beskrivning.trim().length > 0 &&
+    beskrivningsvarning === undefined &&
     !sparar;
 
   function valjLov(nytt: Lov) {
@@ -694,8 +698,14 @@ export function BokforUtgift({
           type="text"
           autoComplete="off"
           value={beskrivning}
+          aria-invalid={beskrivningsvarning !== undefined}
           onChange={(handelse) => setBeskrivning(handelse.target.value)}
         />
+        {beskrivningsvarning !== undefined && (
+          <p role="alert" className="hjalptext" data-testid="beskrivning-varning">
+            {beskrivningsvarning}
+          </p>
+        )}
       </div>
 
       <Projektval

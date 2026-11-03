@@ -287,3 +287,26 @@ export function medPC8Motsvarigheter(text: string): string {
   }
   return ut;
 }
+
+/**
+ * Why a text cannot go into a SIE file, in words, or undefined if it can.
+ *
+ * Asked while the text is typed. The export refuses such a character
+ * ({@link kodaPC8}) years later, at the moment a year is to be archived, and
+ * by then it sits in a booked verifikat.
+ */
+export function pc8Varning(text: string): string | undefined {
+  const felaktiga = new Set<string>();
+  for (const tecken of medPC8Motsvarigheter(text)) {
+    if (tecken.codePointAt(0)! >= 128 && !BYTE_FOR_TECKEN.has(tecken)) {
+      felaktiga.add(tecken);
+    }
+  }
+  if (felaktiga.size === 0) {
+    return undefined;
+  }
+  return (
+    `Tecknet ${[...felaktiga].join(' ')} kan inte skrivas i en SIE-fil, så bokföringen ` +
+    'går inte att exportera. Ta bort det.'
+  );
+}

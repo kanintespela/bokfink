@@ -21,6 +21,7 @@ import type { Forberedelse } from '../../platform/bild';
 import type { Kvittobild } from '../underlag/Kvitton';
 import { LaggTillUnderlag } from './LaggTillUnderlag';
 import { Underlagsvisning, type Visat } from '../../ui/Underlagsvisning';
+import { pc8Varning } from '../../domain/sie/pc8';
 import { useFilprefix } from '../../ui/bok';
 
 interface Props {
@@ -319,8 +320,14 @@ export function Verifikatlista({
                             type="text"
                             autoComplete="off"
                             value={rattadText}
+                            aria-invalid={pc8Varning(rattadText) !== undefined}
                             onChange={(handelse) => setRattadText(handelse.target.value)}
                           />
+                          {pc8Varning(rattadText) !== undefined && (
+                            <p role="alert" data-testid={`rattelse-teckenvarning-${id}`}>
+                              {pc8Varning(rattadText)}
+                            </p>
+                          )}
 
                           <label htmlFor={`rattat-datum-${id}`}>Datum</label>
                           <input
@@ -367,7 +374,7 @@ export function Verifikatlista({
                         <button
                           type="button"
                           className="knapp knapp--primar"
-                          disabled={arbetar}
+                          disabled={arbetar || pc8Varning(rattadText) !== undefined}
                           data-testid={`spara-rattelse-${id}`}
                           onClick={() => {
                             setArbetar(true);
