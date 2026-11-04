@@ -180,6 +180,15 @@ describe('exporteraSie', () => {
     expect(tolkaSie(avkodaPC8(bytes)).konton).toHaveLength(4);
   });
 
+  it('includes the company identity from metadata when no override is supplied', async () => {
+    await db.setMeta('organisationsnummer', '191212121212');
+    await db.setMeta('boknamn', 'Mossgläntans Form & Foto');
+    const ar = [...(await lasTillstand(db)).rakenskapsar.values()][0]!;
+    const text = avkodaPC8(await exporteraSie(db, ar.id));
+    expect(text).toContain('#ORGNR 191212121212');
+    expect(text).toContain('#FNAMN "Mossgläntans Form & Foto"');
+  });
+
   it('exports a date as ÅÅÅÅMMDD', async () => {
     const ar = [...(await lasTillstand(db)).rakenskapsar.values()][0]!;
     const text = avkodaPC8(await exporteraSie(db, ar.id));

@@ -54,9 +54,10 @@ import {
   forUtgaendeBalanserTillNastaAr,
   skapaNastaRakenskapsar,
 } from '../data/arsavslut';
-import { lasBokprofil } from '../data/bokidentitet';
+import { BOK_NAMN_NYCKEL, lasBokprofil } from '../data/bokidentitet';
+import { ledigtBoknamn } from '../data/bokregister';
 import { bokforReservering, foreningskapitalFor } from '../data/foreningskapital';
-import { forberedBokforing } from '../data/uppstart';
+import { arEnbartStartdata, forberedBokforing } from '../data/uppstart';
 import {
   kasseraUtkast,
   kopplaUnderlag,
@@ -1305,16 +1306,16 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
                     : '')
                 );
               }}
-              onExporteraSie={(id) => exporteraSie(db, id)}
+              onExporteraSie={(id) =>
+                exporteraSie(db, id, { foretagsnamn: bokval.aktiv.namn })
+              }
               onArkivpaket={(id) =>
                 byggArkivpaket(
                   db,
                   id,
                   systemklocka().idag(),
                   { hasha: hashaFil },
-                  laddat.organisationsnummer === ''
-                    ? {}
-                    : { orgnr: laddat.organisationsnummer },
+                  { foretagsnamn: bokval.aktiv.namn },
                 )
               }
             />
@@ -1330,11 +1331,13 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
                 await db.setMeta('backup.senast', systemklocka().idag());
                 setLaddat(await hamta());
               }}
-              onSakerhetskopia={async (losenfras) =>
-                losenfras === undefined
+              onSakerhetskopia={async (losenfras) => {
+                // Also covers books created before their name lived in metadata.
+                await db.setMeta(BOK_NAMN_NYCKEL, bokval.aktiv.namn);
+                return losenfras === undefined
                   ? exporteraSomText(db)
-                  : skapaKrypteradKopia(db, losenfras)
-              }
+                  : skapaKrypteradKopia(db, losenfras);
+              }}
               onAterstall={async (rafil, losenfras) => {
                 /*
                  * A wrong passphrase and a damaged file fail the same way, and
@@ -1364,15 +1367,38 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
                 // Every file is checked against its own checksum on the way in.
                 // A restore that quietly accepted a damaged receipt would be
                 // worse than one that refuses.
-                const resultat = await importera(db, las(text), { hasha: hashaFil });
+                const tom = arEnbartStartdata(await lasLogg(db));
+                const kopia = las(text);
+                const resultat = await importera(db, kopia, { hasha: hashaFil });
+                let namnBesked = '';
+                const sparatNamn = kopia.meta.find(
+                  (m) => m.key === BOK_NAMN_NYCKEL,
+                )?.value;
+                // A merge must not undo a later local rename. A fresh book takes
+                // the copy's name; old copies without one keep the chosen name.
+                if (tom && typeof sparatNamn === 'string') {
+                  try {
+                    const namn = ledigtBoknamn(
+                      sparatNamn,
+                      bokval.bocker,
+                      bokval.aktiv.id,
+                    );
+                    await bokval.onBytNamn(namn);
+                    namnBesked = ` Boken heter ${namn}.`;
+                  } catch (orsak) {
+                    // The bookkeeping is already restored. Do not report the
+                    // whole restore as failed if the separate local register fails.
+                    namnBesked = ` Bokföringen är återställd, men boknamnet kunde inte sparas: ${orsak instanceof Error ? orsak.message : String(orsak)}`;
+                  }
+                }
                 setLaddat(await hamta());
                 const filer =
                   resultat.nyaFiler === 0
                     ? ''
                     : ` ${resultat.nyaFiler} underlag återställdes.`;
                 return resultat.nyaHandelser === 0
-                  ? `Kopian innehöll ingenting som saknades.${filer}`
-                  : `${resultat.nyaHandelser} händelser lästes in.${filer}`;
+                  ? `Kopian innehöll ingenting som saknades.${filer}${namnBesked}`
+                  : `${resultat.nyaHandelser} händelser lästes in.${filer}${namnBesked}`;
               }}
             />
           </>

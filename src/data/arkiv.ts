@@ -7,7 +7,7 @@ import type { Sha256, Underlagstyp } from '../domain/underlag/underlag';
 import { lasTillstand } from './bokforing';
 import type { BokfinkDatabase } from './db';
 import type { Exportinstallningar } from './sieexport';
-import { exporteraSie } from './sieexport';
+import { exporteraSie, lasExportinstallningar } from './sieexport';
 import { lasFil } from './underlag';
 
 const ANDELSE: Record<Underlagstyp, string> = {
@@ -78,6 +78,7 @@ export async function byggArkivpaket(
   alternativ: Arkivalternativ,
   installningar: Exportinstallningar = {},
 ): Promise<Uint8Array> {
+  const identitet = await lasExportinstallningar(db, installningar);
   const tillstand = await lasTillstand(db);
   const ar = tillstand.rakenskapsar.get(rakenskapsarId);
   if (ar === undefined) {
@@ -93,9 +94,9 @@ export async function byggArkivpaket(
   );
 
   const [sie, pdf] = await Promise.all([
-    exporteraSie(db, rakenskapsarId, installningar),
+    exporteraSie(db, rakenskapsarId, identitet),
     skrivVerifikationslistaPdf({
-      foretagsnamn: installningar.foretagsnamn ?? '',
+      foretagsnamn: identitet.foretagsnamn ?? '',
       rakenskapsar: ar,
       verifikat: [...tillstand.verifikat.values()].filter((v) => iAret.has(v.id)),
       konton: tillstand.konton,
@@ -132,7 +133,7 @@ export async function byggArkivpaket(
   filer.push({
     namn: 'LASMIG.txt',
     data: new TextEncoder().encode(
-      lasmig(installningar.foretagsnamn ?? '', ar.start, ar.slut, skapad),
+      lasmig(identitet.foretagsnamn ?? '', ar.start, ar.slut, skapad),
     ),
   });
 

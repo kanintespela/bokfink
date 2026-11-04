@@ -19,6 +19,7 @@ import {
   KanInteTasBortError,
   lasBokinnehall,
   lasBocker,
+  ledigtBoknamn,
   LANGSTA_BOKNAMN,
   OgiltigtBoknamnError,
   skapaBok,
@@ -70,6 +71,13 @@ describe('granskaBoknamn', () => {
 
   it('refuses an empty name', () => {
     expect(() => granskaBoknamn('   ', [])).toThrow(OgiltigtBoknamnError);
+  });
+
+  it('keeps restored names unique and within the length limit', () => {
+    const namn = 'x'.repeat(LANGSTA_BOKNAMN);
+    const andra = [bok(namn, 'original'), bok(namn.slice(0, 36) + ' (2)', 'second')];
+    expect(ledigtBoknamn(namn, andra, 'restored')).toBe(namn.slice(0, 36) + ' (3)');
+    expect(ledigtBoknamn(namn, andra, 'original')).toBe(namn);
   });
 
   it('accepts the longest name and refuses one character more', () => {
@@ -224,6 +232,15 @@ describe('bokregistret', () => {
 
     expect(ny).toMatchObject({ id: URSPRUNGLIG_BOK, namn: 'Firman' });
     expect((await lasBocker(register, kontext)).aktiv.namn).toBe('Firman');
+  });
+
+  it('keeps the created and renamed book name in its own backup metadata', async () => {
+    const ny = await skapaBok(register, kontext, 'Mossgläntan', 'enskild_firma');
+    const db = new BokfinkDatabase(ny.databas);
+    expect(await db.getMeta('boknamn')).toBe('Mossgläntan');
+    await bytNamnPaBok(register, kontext, ny.id, 'Mossgläntans Form & Foto');
+    expect(await db.getMeta('boknamn')).toBe('Mossgläntans Form & Foto');
+    db.close();
   });
 
   it('finds a book database the register has lost, and leaves other databases alone', async () => {

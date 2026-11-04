@@ -4,6 +4,9 @@ import type { BokfinkDatabase } from './db';
 /** The metadata key a database's book identity is kept under. */
 export const BOK_ID_NYCKEL = 'bokId';
 
+/** Display name carried by backups; absent in older copies. */
+export const BOK_NAMN_NYCKEL = 'boknamn';
+
 /**
  * The identity of the books every database held before there could be more
  * than one set of them.

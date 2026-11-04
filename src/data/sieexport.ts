@@ -20,6 +20,7 @@ import type { Uuid } from '../domain/id/uuidv7';
 import type { BokfortVerifikat } from '../domain/verifikat/verifikat';
 import { lasTillstand } from './bokforing';
 import type { BokfinkDatabase } from './db';
+import { BOK_NAMN_NYCKEL } from './bokidentitet';
 
 /** Bokfink's five account types folded back into the four SIE has. */
 const TILL_SIE: Record<Kontotyp, 'T' | 'S' | 'K' | 'I'> = {
@@ -35,6 +36,22 @@ export interface Exportinstallningar {
   readonly foretagsnamn?: string;
 }
 
+/** Every way out, including the archive, uses the same company identity. */
+export async function lasExportinstallningar(
+  db: BokfinkDatabase,
+  val: Exportinstallningar = {},
+): Promise<Exportinstallningar> {
+  const [orgnr, namn] = await Promise.all([
+    db.getMeta<unknown>('organisationsnummer'),
+    db.getMeta<unknown>(BOK_NAMN_NYCKEL),
+  ]);
+  return {
+    ...(typeof orgnr === 'string' && orgnr.trim() !== '' ? { orgnr } : {}),
+    ...(typeof namn === 'string' && namn.trim() !== '' ? { foretagsnamn: namn } : {}),
+    ...val,
+  };
+}
+
 /**
  * Builds the SIE document for one fiscal year.
  *
@@ -48,6 +65,7 @@ export async function byggSiedokument(
   rakenskapsarId: Uuid,
   installningar: Exportinstallningar = {},
 ): Promise<Siedokument> {
+  const identitet = await lasExportinstallningar(db, installningar);
   const tillstand = await lasTillstand(db);
 
   const ar = tillstand.rakenskapsar.get(rakenskapsarId);
@@ -71,10 +89,10 @@ export async function byggSiedokument(
   return {
     sietyp: 4,
     format: 'PC8',
-    ...(installningar.orgnr === undefined ? {} : { orgnr: installningar.orgnr }),
-    ...(installningar.foretagsnamn === undefined
+    ...(identitet.orgnr === undefined ? {} : { orgnr: identitet.orgnr }),
+    ...(identitet.foretagsnamn === undefined
       ? {}
-      : { foretagsnamn: installningar.foretagsnamn }),
+      : { foretagsnamn: identitet.foretagsnamn }),
     valuta: 'SEK',
     rakenskapsar: [
       { index: 0, start: ar.start, slut: ar.slut },

@@ -2,7 +2,12 @@ import Dexie, { type Table } from 'dexie';
 
 import { nastaLedigaFarg, type Bokfarg } from '../domain/bok/bokfarg';
 import type { Bokprofil } from '../domain/bok/bokprofil';
-import { BOK_ID_NYCKEL, BOK_PROFIL_NYCKEL, URSPRUNGLIG_BOK } from './bokidentitet';
+import {
+  BOK_ID_NYCKEL,
+  BOK_NAMN_NYCKEL,
+  BOK_PROFIL_NYCKEL,
+  URSPRUNGLIG_BOK,
+} from './bokidentitet';
 import { BokfinkDatabase } from './db';
 import { lasLogg, lasTillstand } from './bokforing';
 import { newIdentifier } from './id';
@@ -106,6 +111,28 @@ export function granskaBoknamn(
   return rent;
 }
 
+/** Keep a restored name recognisable without giving two local books one name. */
+export function ledigtBoknamn(
+  namn: string,
+  bocker: readonly Bok[],
+  egetId: string,
+): string {
+  const rent = granskaBoknamn(namn, []);
+  let valt = rent;
+  let nummer = 2;
+  while (
+    bocker.some(
+      (bok) =>
+        bok.id !== egetId &&
+        bok.namn.toLocaleLowerCase('sv') === valt.toLocaleLowerCase('sv'),
+    )
+  ) {
+    const slut = ` (${nummer++})`;
+    valt = rent.slice(0, LANGSTA_BOKNAMN - slut.length).trimEnd() + slut;
+  }
+  return valt;
+}
+
 /**
  * Every book on the device, the original first and then oldest first, and the
  * one to open.
@@ -197,6 +224,7 @@ export async function skapaBok(
   try {
     await db.setMeta(BOK_ID_NYCKEL, id);
     await db.setMeta(BOK_PROFIL_NYCKEL, profil);
+    await db.setMeta(BOK_NAMN_NYCKEL, bok.namn);
   } finally {
     db.close();
   }
@@ -240,6 +268,12 @@ export async function bytNamnPaBok(
     throw new Error(`Boken ${id} finns inte på den här enheten.`);
   }
   const ny = { ...bok, namn: granskaBoknamn(namn, bocker, id) };
+  const db = new BokfinkDatabase(bok.databas);
+  try {
+    await db.setMeta(BOK_NAMN_NYCKEL, ny.namn);
+  } finally {
+    db.close();
+  }
   await register.bocker.put(ny);
   return ny;
 }
