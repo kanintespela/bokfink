@@ -136,6 +136,12 @@ test('a fresh restore adopts the backup name immediately', async ({
     await expect(fresh.getByLabel('Namn', { exact: true })).toHaveValue(
       'Testfirman Regression',
     );
+    await fresh.goto(`${baseURL}/#sakerhetskopia`);
+    const pending = fresh.waitForEvent('download');
+    await fresh.getByTestId('spara-oskyddad').click();
+    expect((await pending).suggestedFilename()).toMatch(
+      /^bokfink-testfirman-regression-/,
+    );
   } finally {
     await context.close();
   }

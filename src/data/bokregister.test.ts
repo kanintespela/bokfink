@@ -101,8 +101,19 @@ describe('granskaBoknamn', () => {
 });
 
 describe('filprefix', () => {
-  it('keeps the names the original books have always had', () => {
-    expect(filprefix({ ...bok('Firman'), databas: URSPRUNGLIG_DATABAS })).toBe('bokfink');
+  it('keeps the default filename while the original book still has its default name', () => {
+    expect(filprefix({ ...bok('Min bokföring'), databas: URSPRUNGLIG_DATABAS })).toBe(
+      'bokfink',
+    );
+  });
+
+  it('includes a restored or renamed company even in the original book', () => {
+    expect(
+      filprefix({
+        ...bok('Mossgläntans Form & Foto TEST'),
+        databas: URSPRUNGLIG_DATABAS,
+      }),
+    ).toBe('bokfink-mossglantans-form-foto-test');
   });
 
   it("adds another book's name, without accents or spaces", () => {

@@ -282,13 +282,13 @@ export async function bytNamnPaBok(
  * How the files a book exports begin, so that a folder of backups and SIE
  * files says whose books each one holds.
  *
- * The original book gets plain "bokfink" (before the app took that name
- * its files began with "kontera"; those still import, the name is not read).
- * Any other book adds its own name, folded to
+ * The untouched original book keeps plain "bokfink". A restored or renamed
+ * company must identify its exports even in that original database. Earlier
+ * filenames still import; they carry no identity. Other names are folded to
  * what every file system accepts.
  */
 export function filprefix(bok: Bok): string {
-  if (bok.databas === URSPRUNGLIG_DATABAS) {
+  if (bok.databas === URSPRUNGLIG_DATABAS && bok.namn === 'Min bokföring') {
     return 'bokfink';
   }
   const namn = bok.namn
