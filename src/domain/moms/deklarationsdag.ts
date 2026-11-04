@@ -61,16 +61,29 @@ export function vantandeMomsdeklarationer(
   rakenskapsar: readonly Rakenskapsar[],
   momsperiod: Momsperiod,
   idag: Datum,
+  /**
+   * Where the books begin, when the caller knows. A quarter that ended before
+   * the first verifikat is not one this book has anything to declare for:
+   * a new book started in November does not owe the app's reminder about
+   * the spring. `forstaBokforing` undefined inside the object means nothing
+   * has been booked at all, and then nothing is overdue yet.
+   */
+  begransning?: { readonly forstaBokforing: Datum | undefined },
 ): VantandeMomsdeklaration[] {
   if (momsperiod !== 'kvartal') {
     return [];
   }
+  if (begransning !== undefined && begransning.forstaBokforing === undefined) {
+    return [];
+  }
+  const forsta = begransning?.forstaBokforing;
 
   return rakenskapsar
     .filter((ar) => !ar.avslutat)
     .flatMap((ar) =>
       perioder(ar.start, ar.slut, 'kvartal')
         .filter((period) => period.till < idag)
+        .filter((period) => forsta === undefined || period.till >= forsta)
         .filter((period) => ar.momslastTom === undefined || ar.momslastTom < period.till)
         .map((period) => {
           const sistaDag = sistaDeklarationsdagForKvartal(period);

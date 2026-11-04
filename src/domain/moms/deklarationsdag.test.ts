@@ -119,6 +119,30 @@ describe('vantandeMomsdeklarationer', () => {
       ).toEqual([]);
     }
   });
+
+  /*
+   * A new book started in the autumn showed a red "momsen för kv 1 skulle ha
+   * deklarerats" for a spring it holds nothing from.
+   */
+  describe('i en bok som började senare', () => {
+    it('skips quarters that ended before the first verifikat', () => {
+      const vantande = vantandeMomsdeklarationer(
+        [ar('2026-01-01')],
+        'kvartal',
+        datum('2026-11-02'),
+        { forstaBokforing: datum('2026-08-14') },
+      );
+      expect(vantande.map((post) => post.period.till)).toEqual(['2026-09-30']);
+    });
+
+    it('has nothing overdue while nothing is booked', () => {
+      expect(
+        vantandeMomsdeklarationer([ar('2026-01-01')], 'kvartal', datum('2026-11-02'), {
+          forstaBokforing: undefined,
+        }),
+      ).toEqual([]);
+    });
+  });
 });
 
 describe('kommandeMomsdeklarationer', () => {

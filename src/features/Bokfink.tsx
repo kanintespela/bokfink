@@ -960,7 +960,16 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
             dagarSedanBackup={laddat.dagarSedanBackup}
             momsdeklarationer={
               laddat.momsregistrerad
-                ? vantandeMomsdeklarationer(laddat.rakenskapsar, laddat.momsperiod, idag)
+                ? vantandeMomsdeklarationer(
+                    laddat.rakenskapsar,
+                    laddat.momsperiod,
+                    idag,
+                    {
+                      forstaBokforing: laddat.allaVerifikat
+                        .map((verifikat) => verifikat.datum)
+                        .sort()[0],
+                    },
+                  )
                 : []
             }
             visaMoms={laddat.momsregistrerad}
