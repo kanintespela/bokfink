@@ -93,6 +93,8 @@ interface Props {
   readonly halvtPrisbasbelopp?: { readonly ar: number; readonly belopp: Ore };
   /** Opens the free posting, for what no answer fits. */
   readonly onFriKontering?: () => void;
+  /** Paid foreign purchases with reverse charge, deliberately a separate flow. */
+  readonly onUtlandskop?: () => void;
   /** Opens the free posting with this booking's rows filled in. */
   readonly onAndraKontering?: (start: Friforslag) => void;
   /** Goes to the screen a leaf says the thing is done on. */
@@ -153,6 +155,7 @@ export function BokforUtgift({
   halvtPrisbasbelopp,
   onBokfor,
   onFriKontering,
+  onUtlandskop,
   onAndraKontering,
   onHanvisning,
 }: Props) {
@@ -472,12 +475,21 @@ export function BokforUtgift({
         </div>
 
         {sok.trim() !== '' ? (
-          traffar.length === 0 ? (
+          traffar.length === 0 &&
+          !(onUtlandskop !== undefined && /eu|utland|omvänd|import|valuta/i.test(sok)) ? (
             <p className="tomt" data-testid="inga-traffar">
               Inget matchar ”{sok}”. Svara på frågorna i stället, eller kontera fritt.
             </p>
           ) : (
             <ul className="lista" data-testid="sokresultat">
+              {onUtlandskop !== undefined &&
+                /eu|utland|omvänd|import|valuta/i.test(sok) && (
+                  <li>
+                    <button type="button" className="listrad" onClick={onUtlandskop}>
+                      Köp från utlandet med omvänd moms (25 %)
+                    </button>
+                  </li>
+                )}
               {traffar.map((kandidat) => (
                 <li key={kandidat.id}>
                   <Lovknapp
@@ -516,6 +528,13 @@ export function BokforUtgift({
               onClick={onFriKontering}
             >
               Passar inget? Kontera fritt
+            </button>
+          </p>
+        )}
+        {onUtlandskop !== undefined && sok.trim() === '' && (
+          <p>
+            <button type="button" className="knapp knapp--text" onClick={onUtlandskop}>
+              Köp från utlandet med omvänd moms
             </button>
           </p>
         )}
@@ -689,6 +708,20 @@ export function BokforUtgift({
           {visaValuta ? 'Beloppet är i kronor' : 'Beloppet är i annan valuta'}
         </button>
       </p>
+
+      {visaValuta && (
+        <div className="kort" data-testid="valuta-moms-hjalp">
+          <p>
+            Valutaomräkningen ändrar inte momshanteringen. Den här mallen räknar
+            fortfarande med svensk moms enligt valet ovan.
+          </p>
+          {onUtlandskop !== undefined && (
+            <button type="button" className="knapp knapp--text" onClick={onUtlandskop}>
+              Inköp utan fakturerad moms? Köp från utlandet med omvänd moms
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="faltgrupp">
         <label htmlFor="beskrivning">Vad avser det?</label>

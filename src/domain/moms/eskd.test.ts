@@ -146,7 +146,7 @@ describe('skrivEskd', () => {
 
     const fil = skrivEskd({ organisationsnummer: '1212121212', rapport });
 
-    expect(fil).toContain('<InkopTjanstAnnatEg>-1000</InkopTjanstAnnatEg>');
+    expect(fil).toContain('<InkopTjanstAnnatEg>1000</InkopTjanstAnnatEg>');
     expect(fil).toContain('<MomsInkopUtgHog>250</MomsInkopUtgHog>');
     expect(fil).toContain('<MomsIngAvdr>250</MomsIngAvdr>');
     // Owed and deducted cancel, so nothing is paid.

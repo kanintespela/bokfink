@@ -45,7 +45,7 @@ Status: ⬜ ej påbörjad · 🟡 pågår · ✅ klar · ⏸️ nedprioriterad
 | ✅ | Ingående och utgående moms per momskod (25/12/6 %, momsfritt, omvänd skattskyldighet) |
 | ✅ | Momsrapport och underlag för momsdeklarationens samtliga rutor |
 | ✅ | Export av momsdeklaration som eSKD-fil. En fil har laddats upp hos Skatteverket och fungerade |
-| 🟡 | EU-handel klar. Periodisk sammanställning visar beloppen men kräver kundregistret |
+| 🟡 | Utlandsköp med omvänd moms: EU-varor och tjänster enligt huvudregeln, 25 % och full avdragsrätt. Andra fall konteras fritt. Periodisk sammanställning kräver kundregistret |
 | ✅ | Förenklat årsbokslut enligt K1, årets resultat till eget kapital och omföring av 20xx-kontona |
 | 🟡 | Underlag till NE-bilagan med SRU-export för 2024 och 2025 (`INFO.SRU` + `BLANKETTER.SRU`), ännu inte uppladdat hos Skatteverket |
 | ⏸️ | Skattemässiga justeringar: räntefördelning, periodiseringsfond, schablonavdrag för egenavgifter |

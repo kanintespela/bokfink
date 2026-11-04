@@ -14,7 +14,7 @@ import { VYNAMN, type Vy } from '../../ui/vy';
  * and the start view stopped being an answer to "is there anything to do?".
  */
 const GRUPPER: readonly { readonly rubrik: string; readonly vyer: readonly Vy[] }[] = [
-  { rubrik: 'Löpande', vyer: ['moms', 'rapporter', 'bank'] },
+  { rubrik: 'Löpande', vyer: ['moms', 'rapporter', 'bank', 'utland'] },
   {
     rubrik: 'Bokslut',
     vyer: ['periodisering', 'fordelning', 'egetkapital', 'arsbokslut', 'nebilaga'],

@@ -262,7 +262,7 @@ describe('beraknaMomsrapport', () => {
       ],
     });
 
-    expect(ruta(rapport, 21)).toBe(oreFromKronor('-1000.00'));
+    expect(ruta(rapport, 21)).toBe(oreFromKronor('1000.00'));
     expect(ruta(rapport, 30)).toBe(oreFromKronor('250.00'));
     expect(ruta(rapport, 48)).toBe(oreFromKronor('250.00'));
     expect(rapport.attBetala).toBe(0);
@@ -415,4 +415,26 @@ describe('paverkarMomsdeklarationen', () => {
     expect(paverkarMomsdeklarationen(rader('7832', '1229'))).toBe(false);
     expect(paverkarMomsdeklarationen(rader('1650', '2650'))).toBe(false);
   });
+});
+
+describe('tecken på inköps- och importunderlag', () => {
+  it.each([20, 21, 22, 23, 24, 50])(
+    'keeps the debit sign in box %s, and reverses a credit note',
+    (box) => {
+      for (const amount of ['1000.00', '-1000.00']) {
+        const rapport = beraknaMomsrapport({
+          ...kvartal(2025, 1),
+          verifikat: [
+            verifikat('2025-02-12', [
+              ['4535', amount],
+              ['1930', amount.startsWith('-') ? amount.slice(1) : `-${amount}`],
+            ]),
+          ],
+          redovisning: (konto) =>
+            konto === '4535' ? { slag: 'underlag', ruta: box } : undefined,
+        });
+        expect(ruta(rapport, box)).toBe(oreFromKronor(amount));
+      }
+    },
+  );
 });

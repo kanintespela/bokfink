@@ -18,6 +18,7 @@ export const VYER = [
   ...FLIKAR,
   'moms',
   'frikontering',
+  'utland',
   'bank',
   'rapporter',
   /*
@@ -48,6 +49,7 @@ export const VYNAMN: Record<Vy, string> = {
   kvitton: 'Kvitton',
   mer: 'Mer',
   frikontering: 'Fri kontering',
+  utland: 'Köp från utlandet',
   bank: 'Stäm av kontoutdrag',
   bokfor: 'Bokför',
   moms: 'Moms',
@@ -82,6 +84,7 @@ export function doldaVyer(profil: Bokprofil, momsregistrerad: boolean): Readonly
   if (!momsregistrerad) {
     dolda.add('moms');
   }
+  if (!momsregistrerad || profil !== 'enskild_firma') dolda.add('utland');
   if (!harFunktion(profil, 'nebilaga')) {
     dolda.add('nebilaga');
   }

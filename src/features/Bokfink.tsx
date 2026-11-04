@@ -158,6 +158,7 @@ import { klockslag, systemklocka } from '../platform/klocka';
 import { AttGoraSida } from './attgora/AttGoraSida';
 import { Utkastlista } from './utkast/Utkastlista';
 import { FriKontering, type Friforslag } from './bokfor/FriKontering';
+import { Utlandskop } from './bokfor/Utlandskop';
 import { Kontosida } from './konton/Kontosida';
 import { Projektsida } from './projekt/Projektsida';
 import { Fordelningssida } from './projekt/Fordelningssida';
@@ -1533,6 +1534,18 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
             the time. */}
         {vy === 'enhet' && <StartPage db={db} />}
 
+        {vy === 'utland' && (
+          <Utlandskop
+            idag={idag}
+            konton={laddat.konton}
+            onTillbaka={() => setVy('bokfor')}
+            onGranska={(forslag) => {
+              setFriStart(forslag);
+              setVy('frikontering');
+            }}
+          />
+        )}
+
         {vy === 'frikontering' && andrarUtkast !== undefined && (
           <FriKontering
             key={andrarUtkast.id}
@@ -1644,6 +1657,14 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
 
             <BokforUtgift
               profil={laddat.profil}
+              {...(laddat.profil === 'enskild_firma' && laddat.momsregistrerad
+                ? {
+                    onUtlandskop: () => {
+                      setFriStart(undefined);
+                      setVy('utland');
+                    },
+                  }
+                : {})}
               projekt={laddat.projekt}
               // Remounted when a receipt or a bank line starts a new entry,
               // so nothing from the last one is left in the fields - but not

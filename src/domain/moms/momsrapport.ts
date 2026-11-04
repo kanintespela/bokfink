@@ -58,6 +58,11 @@ export interface Momsrapportunderlag {
  */
 const UTGAENDE = [10, 11, 12, 30, 31, 32, 60, 61, 62];
 const INGAENDE = 48;
+// Skatteverket, "Fylla i momsdeklarationen", fields 20-24 and 50:
+// purchases/import bases are debit balances, like deductible input VAT.
+// Sales bases and output VAT are credits and must be sign-reversed instead.
+// https://www.skatteverket.se/foretag/moms/deklareramoms/fyllaimomsdeklarationen.4.3a2a542410ab40a421c80004214.html
+const DEBETRUTOR = new Set([20, 21, 22, 23, 24, INGAENDE, 50]);
 
 /**
  * The VAT return for a period.
@@ -107,7 +112,7 @@ export function beraknaMomsrapport(underlag: Momsrapportunderlag): Momsrapport {
     }
     // Income and output VAT are credits, so they arrive negative; the
     // declaration wants them the way a person would say them out loud.
-    const exakt = nummer === INGAENDE ? saldo : negate(saldo);
+    const exakt = DEBETRUTOR.has(nummer) ? saldo : negate(saldo);
     rader.push({ ruta, belopp: krontal(exakt), exakt });
   }
 
