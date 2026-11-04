@@ -77,7 +77,27 @@ export const BETALSATTSNAMN: ReadonlyMap<Kontonummer, string> = new Map([
   [kontonummer('2013'), 'Mitt privata konto'],
   [kontonummer('1910'), 'Kassan'],
   [kontonummer('2012'), 'Skattekontot'],
+  [kontonummer('1500'), 'Obetald faktura'],
+  [kontonummer('2440'), 'Obetald faktura'],
 ]);
+
+/**
+ * The account an unpaid invoice is booked on, for a leaf where one makes
+ * sense: a sale on the receivable (1500), a purchase on the payable (2440).
+ * Only for income and cost accounts and for machines - a loan or a move
+ * between accounts is not invoiced. Used under faktureringsmetoden.
+ */
+export function fakturakonto(lov: Lov): Kontonummer | undefined {
+  const konto: string = lov.konto;
+  const arResultat = /^[3-7]/.test(konto) || konto.startsWith('12');
+  if (!arResultat) {
+    return undefined;
+  }
+  if (lov.riktning === 'inkomst') {
+    return kontonummer('1500');
+  }
+  return lov.riktning === 'utgift' ? kontonummer('2440') : undefined;
+}
 
 const K = kontonummer;
 

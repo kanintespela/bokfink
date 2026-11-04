@@ -71,7 +71,7 @@ Status: ⬜ ej påbörjad · 🟡 pågår · ✅ klar · ⏸️ nedprioriterad
 |---|---|
 | ⏸️ | Fakturor, offerter och betalningspåminnelser som PDF, skapade lokalt |
 | ⏸️ | Distribution via enhetens delningsmeny (e-post, Meddelanden, Filer) |
-| ⏸️ | Kundreskontra med betalningsmatchning och förfallobevakning |
+| 🟡 | Obetalda fakturor under faktureringsmetoden: bokförs som kundfordran eller leverantörsskuld och betalas (helt eller delvis) under Mer, Fakturor. Inget kundregister, ingen förfallobevakning |
 
 ### Rapporter och export
 | | Funktion |

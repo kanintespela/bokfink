@@ -4,6 +4,7 @@ import { formatKronor, kronorString, subtract, type Ore } from '../../domain/bel
 import {
   allaLov,
   lovMallId,
+  fakturakonto,
   lovTillMall,
   momsForLov,
   stigTill,
@@ -44,6 +45,11 @@ import { pc8Varning } from '../../domain/sie/pc8';
 import type { Forberedelse } from '../../platform/bild';
 
 interface Props {
+  /**
+   * Kept with faktureringsmetoden: a leaf that is invoiced also offers
+   * "Obetald faktura", booked on the receivable or the payable.
+   */
+  readonly faktureringsmetod?: boolean;
   readonly idag: Datum;
   /** How often each leaf has been booked, counted from the event log. */
   readonly anvandning: ReadonlyMap<Uuid, number>;
@@ -138,6 +144,7 @@ const GENVAGAR = 4;
  * suggestion the person approves rather than an automatic booking.
  */
 export function BokforUtgift({
+  faktureringsmetod,
   profil,
   projekt,
   idag,
@@ -246,12 +253,20 @@ export function BokforUtgift({
     moms === undefined ? undefined : moms.valbar ? (momsval ?? moms.sats) : moms.sats;
   const mall =
     vald === undefined || sats === undefined ? undefined : lovTillMall(vald, sats);
+  const fakturakontot =
+    faktureringsmetod === true && vald !== undefined ? fakturakonto(vald) : undefined;
+  const betalsatt =
+    vald === undefined
+      ? []
+      : fakturakontot === undefined
+        ? vald.betalsatt
+        : [...vald.betalsatt, fakturakontot];
   const aktivtBetalkonto =
     vald === undefined
       ? undefined
-      : betalkonto !== undefined && vald.betalsatt.includes(betalkonto)
+      : betalkonto !== undefined && betalsatt.includes(betalkonto)
         ? betalkonto
-        : vald.betalsatt[0];
+        : betalsatt[0];
 
   const vaxling = raknaOm(valuta, valutabelopp, kurstext);
   /*
@@ -817,11 +832,11 @@ export function BokforUtgift({
         </p>
       )}
 
-      {vald.betalsatt.length > 1 ? (
+      {betalsatt.length > 1 ? (
         <div className="faltgrupp">
           <label htmlFor="betalsatt">{ord.konto}</label>
           <div className="segment" id="betalsatt">
-            {vald.betalsatt.map((konto) => (
+            {betalsatt.map((konto) => (
               <button
                 key={konto}
                 type="button"
@@ -835,7 +850,7 @@ export function BokforUtgift({
         </div>
       ) : (
         <p className="hjalptext">
-          {ord.konto}: {betalsattsnamn.get(vald.betalsatt[0]!) ?? vald.betalsatt[0]}
+          {ord.konto}: {betalsattsnamn.get(betalsatt[0]!) ?? betalsatt[0]}
         </p>
       )}
 

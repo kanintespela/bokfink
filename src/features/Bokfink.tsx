@@ -206,6 +206,9 @@ import { Vyval } from '../ui/Vyval';
 import { BokforUtgift } from './bokfor/BokforUtgift';
 import { Kvitton, type Assistentstatus, type Kvittobild } from './underlag/Kvitton';
 import { Bankimport } from './bank/Bankimport';
+import { Fakturasida } from './fakturor/Fakturasida';
+import { registreraBetalning } from '../data/fakturor';
+import { oppnaFakturor } from '../domain/verifikat/reskontra';
 import { lasKontoutdrag, type Banktransaktion } from '../domain/bank/kontoutdrag';
 import { matchaKontoutdrag } from '../domain/bank/matchning';
 import { avkodaText } from '../platform/fil';
@@ -1108,6 +1111,25 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
           </Kvitton>
         )}
 
+        {vy === 'fakturor' && (
+          <Fakturasida
+            metod={laddat.metod}
+            idag={idag}
+            fakturor={oppnaFakturor(laddat.allaVerifikat)}
+            onTillbaka={() => setVy('mer')}
+            onBetala={async (fakturaId, uppgifter) => {
+              const betalning = await registreraBetalning(
+                db,
+                await skrivkontext(db),
+                fakturaId,
+                uppgifter,
+              );
+              setLaddat(await hamta());
+              return `Betalningen bokfördes som ${beteckning(betalning)}.`;
+            }}
+          />
+        )}
+
         {vy === 'bank' && (
           <Bankimport
             onTillbaka={() => setVy('mer')}
@@ -1669,6 +1691,10 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
 
             <BokforUtgift
               profil={laddat.profil}
+              faktureringsmetod={
+                laddat.profil === 'enskild_firma' &&
+                laddat.metod === 'faktureringsmetoden'
+              }
               {...(laddat.profil === 'enskild_firma' && laddat.momsregistrerad
                 ? {
                     onUtlandskop: () => {

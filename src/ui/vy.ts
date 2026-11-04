@@ -20,6 +20,7 @@ export const VYER = [
   'frikontering',
   'utland',
   'bank',
+  'fakturor',
   'rapporter',
   /*
    * Each of these is one short screen under Mer. The settings were one page
@@ -51,6 +52,7 @@ export const VYNAMN: Record<Vy, string> = {
   frikontering: 'Fri kontering',
   utland: 'Köp från utlandet',
   bank: 'Stäm av kontoutdrag',
+  fakturor: 'Fakturor',
   bokfor: 'Bokför',
   moms: 'Moms',
   rapporter: 'Rapporter',
@@ -85,6 +87,8 @@ export function doldaVyer(profil: Bokprofil, momsregistrerad: boolean): Readonly
     dolda.add('moms');
   }
   if (!momsregistrerad || profil !== 'enskild_firma') dolda.add('utland');
+  // Invoices on the receivable and payable are for the firm's chart of accounts.
+  if (profil !== 'enskild_firma') dolda.add('fakturor');
   if (!harFunktion(profil, 'nebilaga')) {
     dolda.add('nebilaga');
   }

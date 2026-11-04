@@ -8,6 +8,7 @@ import {
   allaLov,
   BESLUTSTRAD,
   BETALSATTSNAMN,
+  fakturakonto,
   lovForMallId,
   lovMallId,
   lovTillMall,
@@ -239,4 +240,19 @@ describe('what a leaf books', () => {
       expect(traffar.map((mall) => mall.namn)).toContain('Försäljning av livsmedel');
     },
   );
+
+  describe('fakturakonto', () => {
+    it('puts an unpaid sale on the receivable and an unpaid purchase on the payable', () => {
+      expect(fakturakonto(lovet('salt-varor'))).toBe('1500');
+      expect(fakturakonto(lovet('foder'))).toBe('2440');
+    });
+
+    it('offers nothing for what is not invoiced', () => {
+      const utan = allaLov().filter((lov) => fakturakonto(lov) === undefined);
+      const namn = utan.map((lov) => lov.namn);
+      expect(namn).toContain('Nytt lån');
+      expect(namn).toContain('Eget uttag');
+      expect(namn).toContain('Ränteintäkt');
+    });
+  });
 });
