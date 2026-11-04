@@ -698,6 +698,17 @@ export function BokforUtgift({
         />
       )}
 
+      {brutto !== undefined && brutto < 0 && (
+        <p className="hjalptext" role="status" data-testid="negativt-belopp">
+          Beloppet är negativt, så det bokförs som en återbetalning eller kreditnota:{' '}
+          {mall.riktning === 'utgift'
+            ? 'kostnaden och momsen dras av, och pengarna kommer in.'
+            : 'intäkten och momsen dras av, och pengarna går ut.'}{' '}
+          Är det en vanlig {mall.riktning === 'utgift' ? 'utgift' : 'inkomst'}? Ta bort
+          minustecknet.
+        </p>
+      )}
+
       <p>
         <button
           type="button"

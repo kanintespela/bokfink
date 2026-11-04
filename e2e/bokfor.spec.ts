@@ -1304,3 +1304,17 @@ test('warns about a character the SIE file cannot carry before it is booked', as
   await expect(page.getByTestId('beskrivning-varning')).toBeHidden();
   await expect(bokforKnapp(page)).toBeEnabled();
 });
+
+/*
+ * "-50" was booked as a negative expense without a word. It is legitimate for
+ * a credit note, so it is explained rather than refused.
+ */
+test('explains what a negative amount will do', async ({ page }) => {
+  await tillBokfor(page);
+  await valjLov(page, 'foder', 'Foder och strö');
+  await page.getByLabel('Att betala').fill('100');
+  await expect(page.getByTestId('negativt-belopp')).toBeHidden();
+
+  await page.getByLabel('Att betala').fill('-100');
+  await expect(page.getByTestId('negativt-belopp')).toContainText('kreditnota');
+});
