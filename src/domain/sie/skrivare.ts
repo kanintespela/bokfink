@@ -18,11 +18,18 @@ import type { Siedokument, Siekonto, Siesaldo, Sieverifikat } from './parser';
  * that has a plain equivalent is written as that rather than stopping the file.
  */
 export function skrivSie(dokument: Siedokument): string {
-  const rader: string[] = [
-    '#FLAGGA 0',
-    `#FORMAT ${dokument.format}`,
-    `#SIETYP ${dokument.sietyp}`,
-  ];
+  // The order the format gives: FLAGGA, PROGRAM, FORMAT, GEN, SIETYP.
+  const rader: string[] = ['#FLAGGA 0'];
+  if (dokument.program !== undefined) {
+    rader.push(
+      `#PROGRAM ${citera(dokument.program.namn)} ${citera(dokument.program.version)}`,
+    );
+  }
+  rader.push(`#FORMAT ${dokument.format}`);
+  if (dokument.genererad !== undefined) {
+    rader.push(`#GEN ${sieDatum(dokument.genererad)}`);
+  }
+  rader.push(`#SIETYP ${dokument.sietyp}`);
 
   if (dokument.orgnr !== undefined) {
     rader.push(`#ORGNR ${dokument.orgnr}`);

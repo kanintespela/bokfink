@@ -68,6 +68,10 @@ export interface Siedokument {
   readonly format: string;
   readonly orgnr?: string;
   readonly foretagsnamn?: string;
+  /** #PROGRAM: what wrote the file. Only set when writing. */
+  readonly program?: { readonly namn: string; readonly version: string };
+  /** #GEN: the day the file was written. Only set when writing. */
+  readonly genererad?: Datum;
   readonly valuta?: string;
   readonly rakenskapsar: readonly Sierakenskapsar[];
   readonly konton: readonly Siekonto[];

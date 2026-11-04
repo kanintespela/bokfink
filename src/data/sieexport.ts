@@ -15,7 +15,7 @@ import {
 } from '../domain/rapport/saldon';
 import type { Konto, Kontotyp } from '../domain/konto/konto';
 import { omfattar, type Rakenskapsar } from '../domain/rakenskapsar/rakenskapsar';
-import { jamfor } from '../domain/tid/datum';
+import { jamfor, type Datum } from '../domain/tid/datum';
 import type { Uuid } from '../domain/id/uuidv7';
 import type { BokfortVerifikat } from '../domain/verifikat/verifikat';
 import { lasTillstand } from './bokforing';
@@ -34,6 +34,11 @@ const TILL_SIE: Record<Kontotyp, 'T' | 'S' | 'K' | 'I'> = {
 export interface Exportinstallningar {
   readonly orgnr?: string;
   readonly foretagsnamn?: string;
+  /**
+   * The day the file is made, for #GEN. Passed in because the domain reads no
+   * clock; left out, no #GEN is written.
+   */
+  readonly genererad?: Datum;
 }
 
 /** Every way out, including the archive, uses the same company identity. */
@@ -89,6 +94,10 @@ export async function byggSiedokument(
   return {
     sietyp: 4,
     format: 'PC8',
+    program: { namn: 'Bokfink', version: '1' },
+    ...(installningar.genererad === undefined
+      ? {}
+      : { genererad: installningar.genererad }),
     ...(identitet.orgnr === undefined ? {} : { orgnr: identitet.orgnr }),
     ...(identitet.foretagsnamn === undefined
       ? {}

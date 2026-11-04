@@ -94,7 +94,7 @@ export async function byggArkivpaket(
   );
 
   const [sie, pdf] = await Promise.all([
-    exporteraSie(db, rakenskapsarId, identitet),
+    exporteraSie(db, rakenskapsarId, { ...identitet, genererad: skapad }),
     skrivVerifikationslistaPdf({
       foretagsnamn: identitet.foretagsnamn ?? '',
       rakenskapsar: ar,

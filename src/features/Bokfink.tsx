@@ -1308,7 +1308,10 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
                 );
               }}
               onExporteraSie={(id) =>
-                exporteraSie(db, id, { foretagsnamn: bokval.aktiv.namn })
+                exporteraSie(db, id, {
+                  foretagsnamn: bokval.aktiv.namn,
+                  genererad: systemklocka().idag(),
+                })
               }
               onArkivpaket={(id) =>
                 byggArkivpaket(

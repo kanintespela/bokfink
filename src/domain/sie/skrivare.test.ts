@@ -184,6 +184,40 @@ describe('skrivSie', () => {
   });
 });
 
+/*
+ * The format lists #PROGRAM and #GEN among the required records, and a
+ * program that checks for them refused a file Bokfink wrote without them.
+ */
+describe('rubrikraderna #PROGRAM och #GEN', () => {
+  it('writes them in the order the format gives', () => {
+    const text = skrivSie(
+      med({
+        program: { namn: 'Bokfink', version: '1' },
+        genererad: datum('2027-01-12'),
+      }),
+    );
+
+    expect(text.split('\n').slice(0, 5)).toEqual([
+      '#FLAGGA 0',
+      '#PROGRAM "Bokfink" "1"',
+      '#FORMAT PC8',
+      '#GEN 20270112',
+      '#SIETYP 4',
+    ]);
+  });
+
+  it('leaves them out when they are not given', () => {
+    expect(skrivSie(tomt)).not.toMatch(/#PROGRAM|#GEN/);
+  });
+
+  it('is read back without complaint', () => {
+    const text = skrivSie(
+      med({ program: { namn: 'Bokfink', version: '1' }, genererad: datum('2027-01-12') }),
+    );
+    expect(tolkaSie(text).okandaEtiketter).toEqual([]);
+  });
+});
+
 describe('the round trip', () => {
   /*
    * The property the plan asks for: a SIE export followed by an import gives
