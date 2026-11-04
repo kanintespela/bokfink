@@ -33,6 +33,7 @@ import {
 import { lasLogg, lasTillstand, tillampa, type VerifikatRad } from './bokforing';
 import type { BokfinkDatabase } from './db';
 import { newIdentifier } from './id';
+import { systemklocka } from '../platform/klocka';
 import { PROJEKT_TABLE, RAKENSKAPSAR_TABLE, VERIFIKAT_TABLE } from './schema';
 
 /**
@@ -405,14 +406,18 @@ export async function bokforUtkast(
     utkast.annullerar !== undefined,
   );
 
+  const handelsehuvud = huvud(kontext);
   const verifikat = bokfor(utkast, {
     serie,
     nummer: nastaVerifikationsnummer(await hogstaNummer(db, ar.id, serie)),
-    bokfortDatum: utkast.datum,
+    // The business date may be months old. Registration is today, with
+    // the same injected instant as the event log and Stockholm's time zone.
+    bokfortDatum:
+      kontext.idag?.() ?? systemklocka(() => new Date(handelsehuvud.tidpunkt)).idag(),
     kalla,
   });
 
-  await tillampa(db, { ...huvud(kontext), typ: 'verifikat.bokfort', verifikat });
+  await tillampa(db, { ...handelsehuvud, typ: 'verifikat.bokfort', verifikat });
   return verifikat;
 }
 

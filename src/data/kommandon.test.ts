@@ -81,6 +81,24 @@ describe('kommandon', () => {
     await skrivKonto(db, kontext, skapaKonto({ nummer: '2013', namn: 'Eget uttag' }));
   });
 
+  it.each([
+    ['2026-09-05T08:00:00.000Z', '2026-09-05', true],
+    ['2026-01-01T23:30:00.000Z', '2026-01-02', false],
+    ['2026-06-30T22:30:00.000Z', '2026-07-01', false],
+  ] as const)(
+    'keeps the business date separate from the Stockholm registration day (%s)',
+    async (instant, expected, explicitClock) => {
+      const clock: Skrivkontext = {
+        ...kontext,
+        nu: () => instant,
+        ...(explicitClock ? { idag: () => datum(expected) } : {}),
+      };
+      const v = await bokforUtkast(db, clock, utkast('2026-01-01'), verifikatserie('A'));
+      expect(v.datum).toBe('2026-01-01');
+      expect(v.bokfortDatum).toBe(expected);
+    },
+  );
+
   it('hands out an unbroken run of numbers', async () => {
     const A = verifikatserie('A');
     const ett = await bokforUtkast(db, kontext, utkast('2026-01-09'), A);
