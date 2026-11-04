@@ -1,0 +1,397 @@
+[
+  {
+    "kod": "7011",
+    "typ": "Datum_D",
+    "tecken": ""
+  },
+  {
+    "kod": "7012",
+    "typ": "Datum_D",
+    "tecken": ""
+  },
+  {
+    "kod": "7020",
+    "typ": "Str_80",
+    "tecken": ""
+  },
+  {
+    "kod": "7021",
+    "typ": "Str_X",
+    "tecken": ""
+  },
+  {
+    "kod": "7024",
+    "typ": "Str_X",
+    "tecken": ""
+  },
+  {
+    "kod": "7023",
+    "typ": "Str_X",
+    "tecken": ""
+  },
+  {
+    "kod": "7025",
+    "typ": "Orgnr_Id_PD",
+    "tecken": ""
+  },
+  {
+    "kod": "7200",
+    "typ": "Numeriskt_A",
+    "tecken": "*"
+  },
+  {
+    "kod": "7210",
+    "typ": "Numeriskt_A",
+    "tecken": "*"
+  },
+  {
+    "kod": "7211",
+    "typ": "Numeriskt_A",
+    "tecken": "*"
+  },
+  {
+    "kod": "7212",
+    "typ": "Numeriskt_A",
+    "tecken": "*"
+  },
+  {
+    "kod": "7213",
+    "typ": "Numeriskt_A",
+    "tecken": "*"
+  },
+  {
+    "kod": "7240",
+    "typ": "Numeriskt_A",
+    "tecken": "*"
+  },
+  {
+    "kod": "7250",
+    "typ": "Numeriskt_A",
+    "tecken": "*"
+  },
+  {
+    "kod": "7260",
+    "typ": "Numeriskt_A",
+    "tecken": "*"
+  },
+  {
+    "kod": "7280",
+    "typ": "Numeriskt_A",
+    "tecken": "*"
+  },
+  {
+    "kod": "7300",
+    "typ": "Numeriskt_A",
+    "tecken": "*"
+  },
+  {
+    "kod": "7320",
+    "typ": "Numeriskt_A",
+    "tecken": "*"
+  },
+  {
+    "kod": "7330",
+    "typ": "Numeriskt_A",
+    "tecken": "*"
+  },
+  {
+    "kod": "7380",
+    "typ": "Numeriskt_A",
+    "tecken": "*"
+  },
+  {
+    "kod": "7381",
+    "typ": "Numeriskt_A",
+    "tecken": "*"
+  },
+  {
+    "kod": "7382",
+    "typ": "Numeriskt_A",
+    "tecken": "*"
+  },
+  {
+    "kod": "7383",
+    "typ": "Numeriskt_A",
+    "tecken": "*"
+  },
+  {
+    "kod": "7400",
+    "typ": "Numeriskt_A",
+    "tecken": "+"
+  },
+  {
+    "kod": "7401",
+    "typ": "Numeriskt_A",
+    "tecken": "+"
+  },
+  {
+    "kod": "7402",
+    "typ": "Numeriskt_A",
+    "tecken": "+"
+  },
+  {
+    "kod": "7403",
+    "typ": "Numeriskt_A",
+    "tecken": "+"
+  },
+  {
+    "kod": "7500",
+    "typ": "Numeriskt_A",
+    "tecken": "-"
+  },
+  {
+    "kod": "7501",
+    "typ": "Numeriskt_A",
+    "tecken": "-"
+  },
+  {
+    "kod": "7502",
+    "typ": "Numeriskt_A",
+    "tecken": "-"
+  },
+  {
+    "kod": "7503",
+    "typ": "Numeriskt_A",
+    "tecken": "-"
+  },
+  {
+    "kod": "7504",
+    "typ": "Numeriskt_A",
+    "tecken": "-"
+  },
+  {
+    "kod": "7505",
+    "typ": "Numeriskt_A",
+    "tecken": "-"
+  },
+  {
+    "kod": "7440",
+    "typ": "Numeriskt_A",
+    "tecken": "*"
+  },
+  {
+    "kod": "8046",
+    "typ": "Str_X",
+    "tecken": ""
+  },
+  {
+    "kod": "8047",
+    "typ": "Str_X",
+    "tecken": ""
+  },
+  {
+    "kod": "7600",
+    "typ": "Numeriskt_A",
+    "tecken": "*"
+  },
+  {
+    "kod": "7601",
+    "typ": "Numeriskt_B",
+    "tecken": "+"
+  },
+  {
+    "kod": "7700",
+    "typ": "Numeriskt_B",
+    "tecken": "-"
+  },
+  {
+    "kod": "7602",
+    "typ": "Numeriskt_B",
+    "tecken": "+"
+  },
+  {
+    "kod": "7701",
+    "typ": "Numeriskt_B",
+    "tecken": "-"
+  },
+  {
+    "kod": "7702",
+    "typ": "Numeriskt_B",
+    "tecken": "-"
+  },
+  {
+    "kod": "7603",
+    "typ": "Numeriskt_B",
+    "tecken": "+"
+  },
+  {
+    "kod": "7614",
+    "typ": "Numeriskt_B",
+    "tecken": "+"
+  },
+  {
+    "kod": "7703",
+    "typ": "Numeriskt_B",
+    "tecken": "-"
+  },
+  {
+    "kod": "7704",
+    "typ": "Numeriskt_B",
+    "tecken": "-"
+  },
+  {
+    "kod": "7604",
+    "typ": "Numeriskt_B",
+    "tecken": "+"
+  },
+  {
+    "kod": "7705",
+    "typ": "Numeriskt_B",
+    "tecken": "-"
+  },
+  {
+    "kod": "7706",
+    "typ": "Numeriskt_B",
+    "tecken": "-"
+  },
+  {
+    "kod": "7605",
+    "typ": "Numeriskt_B",
+    "tecken": "+"
+  },
+  {
+    "kod": "7606",
+    "typ": "Numeriskt_B",
+    "tecken": "+"
+  },
+  {
+    "kod": "7707",
+    "typ": "Numeriskt_B",
+    "tecken": "-"
+  },
+  {
+    "kod": "7708",
+    "typ": "Numeriskt_B",
+    "tecken": "-"
+  },
+  {
+    "kod": "7607",
+    "typ": "Numeriskt_B",
+    "tecken": "+"
+  },
+  {
+    "kod": "7608",
+    "typ": "Numeriskt_B",
+    "tecken": "+"
+  },
+  {
+    "kod": "7709",
+    "typ": "Numeriskt_B",
+    "tecken": "-"
+  },
+  {
+    "kod": "7710",
+    "typ": "Numeriskt_B",
+    "tecken": "-"
+  },
+  {
+    "kod": "7609",
+    "typ": "Numeriskt_B",
+    "tecken": "+"
+  },
+  {
+    "kod": "7711",
+    "typ": "Numeriskt_B",
+    "tecken": "-"
+  },
+  {
+    "kod": "7712",
+    "typ": "Numeriskt_A",
+    "tecken": "-"
+  },
+  {
+    "kod": "7610",
+    "typ": "Numeriskt_B",
+    "tecken": "+"
+  },
+  {
+    "kod": "7713",
+    "typ": "Numeriskt_A",
+    "tecken": "-"
+  },
+  {
+    "kod": "7714",
+    "typ": "Numeriskt_B",
+    "tecken": "-"
+  },
+  {
+    "kod": "7611",
+    "typ": "Numeriskt_B",
+    "tecken": "+"
+  },
+  {
+    "kod": "7612",
+    "typ": "Numeriskt_B",
+    "tecken": "+"
+  },
+  {
+    "kod": "7613",
+    "typ": "Numeriskt_B",
+    "tecken": "+"
+  },
+  {
+    "kod": "7630",
+    "typ": "Numeriskt_B",
+    "tecken": "+"
+  },
+  {
+    "kod": "7730",
+    "typ": "Numeriskt_B",
+    "tecken": "-"
+  },
+  {
+    "kod": "8000",
+    "typ": "Str_X",
+    "tecken": ""
+  },
+  {
+    "kod": "8002",
+    "typ": "Numeriskt_B",
+    "tecken": "*"
+  },
+  {
+    "kod": "8003",
+    "typ": "Numeriskt_B",
+    "tecken": "*"
+  },
+  {
+    "kod": "8004",
+    "typ": "Numeriskt_B",
+    "tecken": "*"
+  },
+  {
+    "kod": "8006",
+    "typ": "Numeriskt_B",
+    "tecken": "*"
+  },
+  {
+    "kod": "8007",
+    "typ": "Numeriskt_B",
+    "tecken": "*"
+  },
+  {
+    "kod": "8008",
+    "typ": "Numeriskt_B",
+    "tecken": "*"
+  },
+  {
+    "kod": "8009",
+    "typ": "Numeriskt_B",
+    "tecken": "*"
+  },
+  {
+    "kod": "8010",
+    "typ": "Numeriskt_B",
+    "tecken": "*"
+  },
+  {
+    "kod": "8011",
+    "typ": "Numeriskt_B",
+    "tecken": "*"
+  },
+  {
+    "kod": "8012",
+    "typ": "Numeriskt_B",
+    "tecken": "*"
+  }
+]

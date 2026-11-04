@@ -102,6 +102,30 @@ describe('skrivNeSru', () => {
     expect(blanketter).toMatch(/#UPPGIFT 7381 -\d+\r\n/);
   });
 
+  it('writes 2024 against its own checked field table and golden files', () => {
+    const filer = skrivNeSru({
+      ...UPPGIFTER,
+      rakenskapsar: { start: datum('2024-01-01'), slut: datum('2024-12-31') },
+    });
+    for (const [name, content] of [
+      ['INFO.SRU', filer.info],
+      ['BLANKETTER.SRU', filer.blanketter],
+    ] as const) {
+      expect(Buffer.from(kodaLatin1(content))).toEqual(
+        readFileSync(new URL(`./__fixtures__/ne-2024p4/${name}`, import.meta.url)),
+      );
+    }
+    const fields = JSON.parse(
+      readFileSync(
+        new URL('./__fixtures__/ne-2024p4/faltkoder.json', import.meta.url),
+        'utf8',
+      ),
+    ) as { kod: string }[];
+    const known = new Set(fields.map((f) => f.kod));
+    for (const match of filer.blanketter.matchAll(/#UPPGIFT (\d{4}) /g))
+      expect(known.has(match[1]!)).toBe(true);
+  });
+
   it('vägrar skriva en bilaga med hinder', () => {
     const ofardig = beraknaNebilaga(
       beraknaForenkladArsbokslut(bokfor([['1930', '3740', kr('1')]])),

@@ -47,7 +47,7 @@ Status: ⬜ ej påbörjad · 🟡 pågår · ✅ klar · ⏸️ nedprioriterad
 | ✅ | Export av momsdeklaration som eSKD-fil. En fil har laddats upp hos Skatteverket och fungerade |
 | 🟡 | EU-handel klar. Periodisk sammanställning visar beloppen men kräver kundregistret |
 | ✅ | Förenklat årsbokslut enligt K1, årets resultat till eget kapital och omföring av 20xx-kontona |
-| 🟡 | Underlag till NE-bilagan med SRU-export (`INFO.SRU` + `BLANKETTER.SRU`), ännu inte uppladdat hos Skatteverket |
+| 🟡 | Underlag till NE-bilagan med SRU-export för 2024 och 2025 (`INFO.SRU` + `BLANKETTER.SRU`), ännu inte uppladdat hos Skatteverket |
 | ⏸️ | Skattemässiga justeringar: räntefördelning, periodiseringsfond, schablonavdrag för egenavgifter |
 
 ### Kvitton och registrering

@@ -123,8 +123,9 @@ test('works out the NE-bilaga and keeps what was entered', async ({ page }) => {
   await expect(page.getByLabel(/^R24 /)).toHaveValue('8000');
   await expect(page.getByLabel('Postort')).toHaveValue('Åseda');
 
-  await page.getByTestId('ne-BLANKETTER.SRU').click();
-  await expect(page.getByTestId('ne-fel')).toContainText('2026P4');
+  await expect(page.getByTestId('ne-BLANKETTER.SRU')).toBeDisabled();
+  await expect(page.getByTestId('ne-sru-hinder')).toContainText('2026P4');
+  await expect(page.getByTestId('ne-sru-stod')).toContainText('2024P4, 2025P4');
 });
 
 /*

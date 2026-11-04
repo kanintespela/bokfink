@@ -25,9 +25,15 @@ import { delar, type Datum } from '../tid/datum';
  * one that does not upload at all.
  */
 const KANDA_NE_BLOCK: Readonly<Record<string, string>> = {
+  // NE_SKV2161-12-02-23-02 in Skatteverket's 2024P4 package. All 79 field
+  // codes, types, signs and rules match the checked 2025 table. Source:
+  // https://www.skatteverket.se/foretag/inkomstdeklaration/forredovisningsbyraer/tekniskinformationomfiloverforing.4.13948c0e18e810bfa0cca8.html
+  '2024P4': 'NE-2024P4',
   // NE_SKV2161-13-02-25-02, _Nyheter_from_beskattningsperiod_2025P4.zip
   '2025P4': 'NE-2025P4',
 };
+
+export const STODDA_NE_PERIODER = Object.keys(KANDA_NE_BLOCK).sort();
 
 export interface Deklarant {
   /** Twelve digits, ÅÅÅÅMMDDNNNK - the owner's personnummer. */
@@ -74,20 +80,29 @@ export function beskattningsperiod(slut: Datum): string {
   return `${ar}P4`;
 }
 
+/** The same limitation is shown before export and enforced by the writer. */
+export function neSruHinder(slut: Datum): string | undefined {
+  let period: string;
+  try {
+    period = beskattningsperiod(slut);
+  } catch (orsak) {
+    if (orsak instanceof SruError) return orsak.message;
+    throw orsak;
+  }
+  return KANDA_NE_BLOCK[period] === undefined
+    ? `NE/SRU-export för ${period} stöds inte i den här versionen. Stöd finns för ${STODDA_NE_PERIODER.join(', ')}. NE-underlaget kan fortfarande läsas på skärmen.`
+    : undefined;
+}
+
 export function skrivNeSru(uppgifter: Sruuppgifter): Srufiler {
   const { ne, deklarant } = uppgifter;
   if (ne.hinder.length > 0) {
     throw new SruError(`NE-bilagan kan inte lämnas ännu: ${ne.hinder.join(' ')}`);
   }
 
-  const period = beskattningsperiod(uppgifter.rakenskapsar.slut);
-  const block = KANDA_NE_BLOCK[period];
-  if (block === undefined) {
-    throw new SruError(
-      `Bokfink känner inte till NE-blanketten för ${period} ännu. Skatteverket ` +
-        'publicerar fältkoderna inför varje deklarationsperiod.',
-    );
-  }
+  const begransning = neSruHinder(uppgifter.rakenskapsar.slut);
+  if (begransning !== undefined) throw new SruError(begransning);
+  const block = KANDA_NE_BLOCK[beskattningsperiod(uppgifter.rakenskapsar.slut)]!;
 
   const personnummer = kontrolleratPersonnummer(deklarant.personnummer);
   const namn = text(deklarant.namn, 'Namn');

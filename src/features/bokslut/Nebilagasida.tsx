@@ -27,7 +27,7 @@ import type { Datum } from '../../domain/tid/datum';
 import type { BokfortVerifikat } from '../../domain/verifikat/verifikat';
 import type { Deklarantuppgifter } from '../../data/nebilaga';
 import { kodaLatin1 } from '../../domain/export/latin1';
-import { skrivNeSru } from '../../domain/sru/sru';
+import { neSruHinder, skrivNeSru, STODDA_NE_PERIODER } from '../../domain/sru/sru';
 import { Tillbaka } from '../../ui/Tillbaka';
 
 interface Props {
@@ -285,6 +285,7 @@ export function Nebilagasida({
     });
 
   const hinder = [...ne.hinder, ...olasliga.map((rad) => `${rad} är inget belopp.`)];
+  const sruHinder = neSruHinder(aret.slut);
 
   return (
     <section aria-label="NE-bilaga">
@@ -444,6 +445,14 @@ export function Nebilagasida({
       </button>
 
       <h3>Filer till Skatteverket</h3>
+      <p className="hjalptext" data-testid="ne-sru-stod">
+        SRU-export stöds för {STODDA_NE_PERIODER.join(', ')}.
+      </p>
+      {sruHinder !== undefined && (
+        <p className="kort" role="status" data-testid="ne-sru-hinder">
+          {sruHinder}
+        </p>
+      )}
       <p>
         Ladda upp båda filerna i Skatteverkets filöverföring. De sparas var för sig, en
         per tryck.
@@ -453,7 +462,9 @@ export function Nebilagasida({
           <button
             key={vilken}
             type="button"
-            disabled={deklarant === undefined || hinder.length > 0}
+            disabled={
+              deklarant === undefined || hinder.length > 0 || sruHinder !== undefined
+            }
             data-testid={`ne-${vilken}`}
             onClick={() => void exportera(vilken)}
           >
