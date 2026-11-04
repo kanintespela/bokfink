@@ -27,5 +27,8 @@ export const METODBESKRIVNING: Record<Redovisningsmetod, string> = {
     'skedde. Obetalda fakturor bokförs vid bokslutet.',
   faktureringsmetoden:
     'Bokför när fakturan skrivs. Momsen redovisas i den period fakturan är ' +
-    'daterad, även om betalningen kommer senare.',
+    'daterad, även om betalningen kommer senare. Obs: Bokför-flödet har ännu ' +
+    'inget val för en obetald faktura. En faktura bokförs som betald på ' +
+    'fakturadagen; en som ännu inte är betald läggs i stället in under ' +
+    'Obetalda fakturor och periodisering vid årets slut.',
 };
