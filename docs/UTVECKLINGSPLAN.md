@@ -564,3 +564,7 @@ Tjugofyra frågor är besvarade och har arbetats in i planen. De kvarstående ka
 - [Skatteverket — lämna momsdeklaration via fil (eSKD)](https://skatteverket.se/foretag/moms/deklareramoms/skapaochskickainmomsdeklarationviafil.4.2fb39afe18dabf1e4d223cc.html)
 - [WebKit — Updates to Storage Policy](https://webkit.org/blog/14403/updates-to-storage-policy/)
 - [Yubico — Developers Guide to the WebAuthn PRF extension](https://developers.yubico.com/WebAuthn/Concepts/PRF_Extension/Developers_Guide_to_PRF.html)
+
+### Åtgärder efter tvåårstestet 2026-11-03
+
+- ✅ **B01–B02, återställning utan delvis inläst bokföring.** Alla underlagsbytes kontrolleras före skrivning. Bokidentitet, metadata, filer, startdata och hela händelseloggen läses sedan in i en gemensam IndexedDB-transaktion; ett sent fel rullar tillbaka allt. Bokförda verifikat valideras i domänen även när de kommer från en logg: minst två rader, heltal öre, konton, datum, nummer och historik. Äldre säkerhetskopior och giltiga historiska nollrader behålls. Regressionstester täcker skadad sista fil och fel i sista verifikatet, samt tomma och felaktiga konteringar.

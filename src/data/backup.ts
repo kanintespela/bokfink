@@ -1,10 +1,14 @@
 import { z } from 'zod';
 
-import { add, formatKronor, isZero, ZERO, type Ore } from '../domain/belopp/ore';
+import { formatKronor, type Ore } from '../domain/belopp/ore';
 import type { Handelse } from '../domain/handelse/handelse';
 import type { Uuid } from '../domain/id/uuidv7';
-import { sha256, type Sha256 } from '../domain/underlag/underlag';
-import { beteckning } from '../domain/verifikat/verifikat';
+import { arUnderlagstyp, sha256, type Sha256 } from '../domain/underlag/underlag';
+import {
+  beteckning,
+  granskaBokfortVerifikat,
+  ObalanseratVerifikatError as DomanObalanseratVerifikatError,
+} from '../domain/verifikat/verifikat';
 import { franBase64, tillBase64 } from './base64';
 import { lasLogg, tillampaAlla } from './bokforing';
 import {
@@ -237,79 +241,107 @@ export async function importera(
     if (handelse.typ !== 'verifikat.bokfort') {
       continue;
     }
-    const skillnad = handelse.verifikat.konteringar.reduce(
-      (summa, rad) => add(summa, rad.belopp),
-      ZERO,
-    );
-    if (!isZero(skillnad)) {
-      throw new ObalanseratVerifikatError(beteckning(handelse.verifikat), skillnad);
+    try {
+      granskaBokfortVerifikat(handelse.verifikat);
+    } catch (orsak) {
+      if (orsak instanceof DomanObalanseratVerifikatError) {
+        throw new ObalanseratVerifikatError(
+          beteckning(handelse.verifikat),
+          orsak.differens,
+        );
+      }
+      const v = handelse.verifikat;
+      const namn =
+        typeof v?.serie === 'string' && typeof v.nummer === 'number'
+          ? beteckning(v)
+          : '(utan beteckning)';
+      throw new OlasbarSakerhetskopiaError(
+        `verifikat ${namn} är ogiltigt: ${orsak instanceof Error ? orsak.message : String(orsak)} Ingenting lästes in.`,
+      );
     }
   }
 
-  const kopiansBok = bokIdIMeta(kopia.meta);
-  if (kopiansBok !== (await lasBokId(db))) {
-    const tom =
-      (await lasLogg(db)).length === 0 || (await harEnbartOskickadStartdata(db));
-    if (!tom) {
-      throw new AnnanBokError();
-    }
-    await db.setMeta(BOK_ID_NYCKEL, kopiansBok);
-    /*
-     * The profile goes with the identity, also when the copy records none: an
-     * empty association book that took an old firm's identity and kept its
-     * own profile would be a firm's books under an association's screens.
-     */
-    await db.setMeta(BOK_PROFIL_NYCKEL, bokprofilIMeta(kopia.meta));
-  }
-
-  for (const rad of kopia.meta) {
-    // The device identity is per installation and must not be overwritten by
-    // a backup taken on another one.
-    if (rad.key === 'deviceId') {
-      continue;
-    }
-    await db.table<MetaRow, string>(META_TABLE).put(rad);
-  }
-
-  /*
-   * Files first, then the log. An entry whose file has not arrived yet points
-   * at nothing, and a restore that failed halfway should leave the evidence
-   * ahead of the bookkeeping rather than behind it.
-   */
-  let nyaFiler = 0;
-  const tabell = db.table<FilRad, Sha256>(FIL_TABLE);
+  // Web Crypto is not an IndexedDB request. Finish it before opening the
+  // transaction, or the browser can commit the transaction while it awaits a
+  // digest. Validate even files already present: corruption is never skipped.
+  const filer: FilRad[] = [];
   for (const fil of kopia.filer) {
     const adress = sha256(fil.sha256);
-    if ((await tabell.get(adress)) !== undefined) {
-      continue;
-    }
-
     const data = franBase64(fil.data);
-    if (alternativ.hasha !== undefined && (await alternativ.hasha(data)) !== adress) {
+    if (
+      data.byteLength !== fil.storlek ||
+      !arUnderlagstyp(fil.mime) ||
+      (alternativ.hasha !== undefined && (await alternativ.hasha(data)) !== adress)
+    ) {
       throw new SkadadFilError(fil.sha256);
     }
-
-    await tabell.put({
+    filer.push({
       sha256: adress,
       mime: fil.mime as FilRad['mime'],
       storlek: fil.storlek,
       data,
     });
-    nyaFiler += 1;
   }
 
-  /*
-   * A new device has made itself ready to book before anyone reaches the
-   * restore screen. Folded into the backup, that starter set gave every
-   * template twice; a device holding nothing else takes the books as they
-   * were instead. Work done on the device is never dropped - see uppstart.ts.
-   */
-  if (kopia.handelser.length > 0 && (await harEnbartOskickadStartdata(db))) {
-    await slappStartdata(db);
-  }
+  // A failure in the last replayed event must roll back identity, metadata,
+  // files, starter data and every earlier event, not only the failing event.
+  return db.transaction('rw', db.tables, async () => {
+    const kopiansBok = bokIdIMeta(kopia.meta);
+    if (kopiansBok !== (await lasBokId(db))) {
+      const tom =
+        (await lasLogg(db)).length === 0 || (await harEnbartOskickadStartdata(db));
+      if (!tom) {
+        throw new AnnanBokError();
+      }
+      await db.setMeta(BOK_ID_NYCKEL, kopiansBok);
+      /*
+       * The profile goes with the identity, also when the copy records none: an
+       * empty association book that took an old firm's identity and kept its
+       * own profile would be a firm's books under an association's screens.
+       */
+      await db.setMeta(BOK_PROFIL_NYCKEL, bokprofilIMeta(kopia.meta));
+    }
 
-  const nyaHandelser = await tillampaAlla(db, kopia.handelser);
-  return { nyaHandelser, nyaFiler };
+    for (const rad of kopia.meta) {
+      // The device identity is per installation and must not be overwritten by
+      // a backup taken on another one.
+      if (rad.key === 'deviceId') {
+        continue;
+      }
+      await db.table<MetaRow, string>(META_TABLE).put(rad);
+    }
+
+    /*
+     * Files first, then the log. An entry whose file has not arrived yet points
+     * at nothing, and a restore that failed halfway should leave the evidence
+     * ahead of the bookkeeping rather than behind it.
+     */
+    let nyaFiler = 0;
+    const tabell = db.table<FilRad, Sha256>(FIL_TABLE);
+    for (const fil of filer) {
+      if ((await tabell.get(fil.sha256)) !== undefined) {
+        continue;
+      }
+      await tabell.put(fil);
+      nyaFiler += 1;
+    }
+
+    /*
+     * A new device has made itself ready to book before anyone reaches the
+     * restore screen. Folded into the backup, that starter set gave every
+     * template twice; a device holding nothing else takes the books as they
+     * were instead. Work done on the device is never dropped - see uppstart.ts.
+     */
+    if (kopia.handelser.length > 0 && (await harEnbartOskickadStartdata(db))) {
+      await slappStartdata(db);
+    }
+
+    const nyaHandelser = await tillampaAlla(db, kopia.handelser);
+    // Keep an idempotent restore alive until the transaction callback resolves,
+    // including the case where tillampaAlla ended on a read of an existing id.
+    await db.table(META_TABLE).get(BOK_ID_NYCKEL);
+    return { nyaHandelser, nyaFiler };
+  });
 }
 
 /** How many entries a backup holds, without applying any of them. */

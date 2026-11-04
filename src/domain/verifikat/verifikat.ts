@@ -1,8 +1,8 @@
-import { formatKronor, isZero, negate, sum, type Ore } from '../belopp/ore';
-import type { Datum } from '../tid/datum';
-import type { Kontonummer } from '../konto/konto';
+import { formatKronor, isZero, negate, ore, sum, type Ore } from '../belopp/ore';
+import { datum, type Datum } from '../tid/datum';
+import { kontonummer, type Kontonummer } from '../konto/konto';
 import type { Uuid } from '../id/uuidv7';
-import type { Verifikatserie } from './serie';
+import { verifikatserie, type Verifikatserie } from './serie';
 
 /**
  * One line of a verifikat: an account and what it moved.
@@ -139,6 +139,90 @@ export interface Rattelse {
 /** How a verifikat is referred to in a list or a report: "A42". */
 export function beteckning(verifikat: BokfortVerifikat): string {
   return `${verifikat.serie}${verifikat.nummer}`;
+}
+
+/**
+ * A replayed log is input, not a constructed domain object. Check it without
+ * rebuilding it: historical text, registrations and corrections must survive
+ * exactly as they were, while the same invariants as new bookings still hold.
+ */
+export function granskaBokfortVerifikat(
+  value: unknown,
+): asserts value is BokfortVerifikat {
+  if (value === null || typeof value !== 'object') {
+    throw new TypeError('Ett bokfört verifikat saknas eller har fel format.');
+  }
+  const v = value as Partial<BokfortVerifikat>;
+  if (
+    v.status !== 'bokfort' ||
+    typeof v.id !== 'string' ||
+    v.id.length === 0 ||
+    typeof v.serie !== 'string' ||
+    !Number.isSafeInteger(v.nummer) ||
+    v.nummer! < 1 ||
+    typeof v.datum !== 'string' ||
+    typeof v.bokfortDatum !== 'string' ||
+    typeof v.beskrivning !== 'string' ||
+    !['manuell', 'mall', 'sie-import'].includes(v.kalla ?? '') ||
+    !Array.isArray(v.konteringar)
+  ) {
+    throw new TypeError('Det bokförda verifikatet har ogiltiga eller saknade fält.');
+  }
+  datum(v.datum);
+  datum(v.bokfortDatum);
+  if (verifikatserie(v.serie) !== v.serie) {
+    throw new TypeError('Verifikatets serie har fel format.');
+  }
+  for (const rad of v.konteringar) {
+    if (
+      rad === null ||
+      typeof rad !== 'object' ||
+      typeof rad.konto !== 'string' ||
+      kontonummer(rad.konto) !== rad.konto ||
+      (rad.text !== undefined && typeof rad.text !== 'string') ||
+      (rad.projekt !== undefined &&
+        (typeof rad.projekt !== 'string' || rad.projekt === ''))
+    ) {
+      throw new TypeError('Verifikatet innehåller en ogiltig konteringsrad.');
+    }
+    ore(rad.belopp);
+  }
+  for (const id of [v.annullerar, v.mall]) {
+    if (id !== undefined && (typeof id !== 'string' || id.length === 0)) {
+      throw new TypeError('Verifikatets hänvisning har fel format.');
+    }
+  }
+  if (v.rattelser !== undefined) {
+    if (!Array.isArray(v.rattelser))
+      throw new TypeError('Verifikatets rättelser har fel format.');
+    for (const r of v.rattelser) {
+      if (
+        r === null ||
+        typeof r !== 'object' ||
+        typeof r.nar !== 'string' ||
+        typeof r.enhet !== 'string' ||
+        typeof r.fran !== 'string' ||
+        typeof r.till !== 'string' ||
+        !['beskrivning', 'datum', 'projekt'].includes(r.falt) ||
+        (r.falt === 'projekt' &&
+          (!Number.isInteger(r.rad) || r.rad! < 0 || r.rad! >= v.konteringar.length))
+      ) {
+        throw new TypeError('Verifikatet innehåller en ogiltig rättelse.');
+      }
+      if (r.falt === 'datum') {
+        datum(r.fran);
+        datum(r.till);
+      }
+    }
+  }
+  // Hard rules 1 and 4, including at least two rows. Zero-valued historical
+  // rows and empty historical descriptions remain valid (see skapaUtkast).
+  skapaUtkast({
+    id: v.id,
+    datum: v.datum,
+    beskrivning: v.beskrivning,
+    konteringar: v.konteringar,
+  });
 }
 
 export interface Bokforingsuppgifter {

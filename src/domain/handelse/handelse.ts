@@ -27,6 +27,7 @@ import {
   type Underlag,
 } from '../underlag/underlag';
 import {
+  granskaBokfortVerifikat,
   ratta,
   type Projektrattelse,
   type BokfortVerifikat,
@@ -527,6 +528,7 @@ export function effekter(
     }
 
     case 'verifikat.bokfort': {
+      granskaBokfortVerifikat(handelse.verifikat);
       const id = handelse.verifikat.id;
       if (uppslag.verifikat(id) !== undefined) {
         /*

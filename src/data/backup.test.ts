@@ -591,3 +591,106 @@ describe('en säkerhetskopia från en annan bok', () => {
     datorn.close();
   });
 });
+
+/** Regressions from the two-year user test. */
+describe('återställning som en helhet', () => {
+  it('leaves identity, metadata, files and log unchanged when the last file is corrupt', async () => {
+    const source = await nyDb();
+    await fyll(source);
+    await source.setMeta(BOK_ID_NYCKEL, 'restored-book');
+    await source.setMeta('momsperiod', 'manad');
+    const first = new TextEncoder().encode('first receipt');
+    const last = new TextEncoder().encode('last receipt');
+    const kopia = {
+      ...(await exportera(source)),
+      filer: [
+        {
+          sha256: await hashaFil(first),
+          mime: 'application/pdf',
+          storlek: first.length,
+          data: tillBase64(first),
+        },
+        {
+          sha256: await hashaFil(last),
+          mime: 'application/pdf',
+          storlek: last.length,
+          data: tillBase64(first),
+        },
+      ],
+    };
+    const target = await nyDb();
+    await target.setMeta('momsperiod', 'kvartal');
+    const before = await exportera(target, () => 'fixed');
+    await expect(importera(target, kopia, { hasha: hashaFil })).rejects.toThrow();
+    expect(await exportera(target, () => 'fixed')).toEqual(before);
+    source.close();
+    target.close();
+  });
+
+  it('rolls back the first entry and metadata if a later entry cannot be replayed', async () => {
+    const source = await nyDb();
+    await fyll(source);
+    await source.setMeta('momsperiod', 'manad');
+    const kopia = await exportera(source);
+    const broken = {
+      ...kopia,
+      handelser: kopia.handelser.map((h) =>
+        h.typ === 'verifikat.bokfort' && h.verifikat.nummer === 2
+          ? { ...h, verifikat: { ...h.verifikat, datum: datum('2030-01-01') } }
+          : h,
+      ),
+    };
+    const target = await nyDb();
+    await target.setMeta('momsperiod', 'kvartal');
+    const before = await exportera(target, () => 'fixed');
+    await expect(importera(target, broken)).rejects.toThrow();
+    expect(await exportera(target, () => 'fixed')).toEqual(before);
+    source.close();
+    target.close();
+  });
+
+  it.each(['empty', 'one-row', 'fractional', 'date', 'number', 'account'] as const)(
+    'refuses a malformed booked verification (%s) before changing the target',
+    async (kind) => {
+      const source = await nyDb();
+      await fyll(source);
+      const kopia = await exportera(source);
+      const broken = {
+        ...kopia,
+        handelser: kopia.handelser.map((h) => {
+          if (h.typ !== 'verifikat.bokfort' || h.verifikat.nummer !== 2) return h;
+          const v = h.verifikat;
+          const changes =
+            kind === 'empty'
+              ? { konteringar: [] }
+              : kind === 'one-row'
+                ? { konteringar: [{ ...v.konteringar[0]!, belopp: oreFromKronor('0') }] }
+                : kind === 'fractional'
+                  ? {
+                      konteringar: v.konteringar.map((r, i) => ({
+                        ...r,
+                        belopp: (i === 0 ? 0.5 : -0.5) as typeof r.belopp,
+                      })),
+                    }
+                  : kind === 'date'
+                    ? { datum: '2026-02-30' as typeof v.datum }
+                    : kind === 'number'
+                      ? { nummer: 0 }
+                      : {
+                          konteringar: v.konteringar.map((r) => ({
+                            ...r,
+                            konto: 'bad' as typeof r.konto,
+                          })),
+                        };
+          return { ...h, verifikat: { ...v, ...changes } };
+        }),
+      };
+      const target = await nyDb();
+      const before = await exportera(target, () => 'fixed');
+      await expect(importera(target, broken)).rejects.toThrow();
+      expect(await exportera(target, () => 'fixed')).toEqual(before);
+      source.close();
+      target.close();
+    },
+  );
+});
