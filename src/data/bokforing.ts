@@ -119,6 +119,7 @@ function barRattelse(fore: VerifikatRad, efter: VerifikatRad): boolean {
     fore.bokfortDatum === efter.bokfortDatum &&
     fore.rakenskapsarId === efter.rakenskapsarId &&
     fore.annullerar === efter.annullerar &&
+    fore.betalar === efter.betalar &&
     sammaPengarOchKonton(fore.konteringar, efter.konteringar) &&
     arTillagg(fore.rattelser ?? [], efter.rattelser ?? []) &&
     projektenArRattade(fore, efter)
@@ -379,6 +380,7 @@ function utanIndexnyckel(rad: VerifikatRad): BokfortVerifikat {
     konteringar: Object.freeze(rad.konteringar.map((post) => Object.freeze({ ...post }))),
     kalla: rad.kalla,
     ...(rad.annullerar === undefined ? {} : { annullerar: rad.annullerar }),
+    ...(rad.betalar === undefined ? {} : { betalar: rad.betalar }),
     ...(rad.mall === undefined ? {} : { mall: rad.mall }),
     ...(rad.rattelser === undefined
       ? {}

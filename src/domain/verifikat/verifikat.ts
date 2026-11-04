@@ -39,6 +39,13 @@ export interface Verifikatutkast {
   /** Set when this reverses an earlier verifikat. See {@link annullera}. */
   readonly annullerar?: Uuid;
   /**
+   * Set when this pays an invoice booked earlier (faktureringsmetoden): the
+   * id of the verifikat that holds the receivable or the payable. It is how
+   * the open invoices are found, since a booked verifikat cannot be told later
+   * that it was paid.
+   */
+  readonly betalar?: Uuid;
+  /**
    * The template this came from, when one did.
    *
    * Kept so the suggestion ranking can count how often each template is
@@ -79,6 +86,8 @@ export interface BokfortVerifikat {
   readonly konteringar: readonly Kontering[];
   readonly kalla: Verifikatkalla;
   readonly annullerar?: Uuid;
+  /** The invoice this pays, when it does. See {@link Verifikatutkast.betalar}. */
+  readonly betalar?: Uuid;
   readonly mall?: Uuid;
   /**
    * Corrections made after booking, oldest first.
@@ -187,7 +196,7 @@ export function granskaBokfortVerifikat(
     }
     ore(rad.belopp);
   }
-  for (const id of [v.annullerar, v.mall]) {
+  for (const id of [v.annullerar, v.betalar, v.mall]) {
     if (id !== undefined && (typeof id !== 'string' || id.length === 0)) {
       throw new TypeError('Verifikatets hänvisning har fel format.');
     }
@@ -268,6 +277,7 @@ export function bokfor(
     konteringar: utkast.konteringar.map((rad) => Object.freeze({ ...rad })),
     kalla: uppgifter.kalla,
     ...(utkast.annullerar === undefined ? {} : { annullerar: utkast.annullerar }),
+    ...(utkast.betalar === undefined ? {} : { betalar: utkast.betalar }),
     ...(utkast.mall === undefined ? {} : { mall: utkast.mall }),
   };
 
@@ -532,6 +542,7 @@ export interface Utkastuppgifter {
   readonly beskrivning: string;
   readonly konteringar: readonly Kontering[];
   readonly mall?: Uuid;
+  readonly betalar?: Uuid;
   readonly motivering?: string;
 }
 
@@ -574,6 +585,7 @@ export function skapaUtkast(uppgifter: Utkastuppgifter): Verifikatutkast {
     beskrivning: uppgifter.beskrivning.trim(),
     konteringar: konteringar.map((rad) => ({ ...rad })),
     ...(uppgifter.mall === undefined ? {} : { mall: uppgifter.mall }),
+    ...(uppgifter.betalar === undefined ? {} : { betalar: uppgifter.betalar }),
     ...(uppgifter.motivering === undefined || uppgifter.motivering.trim() === ''
       ? {}
       : { motivering: uppgifter.motivering.trim() }),
