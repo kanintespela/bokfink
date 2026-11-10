@@ -4,9 +4,52 @@
 
 Bokföring för enskild firma, i telefonen — utan prenumeration och utan att din bokföring lämnar din enhet.
 
-Bokfink är en **local-first PWA**. Interna namn i filformat och databas är äldre och ändras inte, så att tidigare säkerhetskopior och böcker går att öppna. All data ligger på dina egna enheter, appen fungerar offline, och det finns ingen molntjänst som kan höja priset, lägga ner eller läsa dina siffror. Projektet är öppen källkod och byggs för att ersätta kommersiella bokföringsappar för enskild firma.
+<p align="center">
+  <img src="docs/skarmbilder/oversikt.png" alt="Översikten: resultat, pengar i kassa och bank, moms att betala och det senast bokförda" width="200">
+  <img src="docs/skarmbilder/bokfor.png" alt="Ett inköp bokförs: belopp, beskrivning, datum och betalsätt, med momsen uträknad" width="200">
+  <img src="docs/skarmbilder/moms.png" alt="Momsdeklarationen ruta för ruta" width="200">
+  <img src="docs/skarmbilder/rapporter.png" alt="Nyckeltal och resultat per månad som diagram" width="200">
+</p>
 
-> **Status: i bruk för den löpande bokföringen.** Etapp 1 och 2 är färdiga: en utgift bokförs på några sekunder genom att svara på vad som hänt, en bokförd kontering rättas med annullering medan beskrivning och datum kan rättas direkt, en befintlig bokföring importeras från SIE-fil och exporteras tillbaka utan förlust, och momsdeklarationen räknas fram ruta för ruta. Kvitton med OCR, rapporter, krypterad säkerhetskopia, synk mellan telefon och dator (byggd, inte driftsatt), anläggningsregister och årsbokslut är i stort sett klara. Kvar är främst att bekräfta eSKD-, NE- och SRU-filerna mot Skatteverket, konfliktvyn för synken, samt fakturering och körjournal — se [utvecklingsplanen](docs/UTVECKLINGSPLAN.md).
+<p align="center"><sub>Bilderna visar en påhittad firma.</sub></p>
+
+Bokfink är en app för den som har enskild firma och vill sköta bokföringen själv. Du svarar på vad som har hänt, till exempel "köpt förbrukningsmaterial" eller "fått betalt för ett arbete", och appen väljer konton och räknar ut momsen. Allt sparas på din egen telefon eller dator. Det finns inget konto att skapa och ingen tjänst som kan läsa dina siffror, höja priset eller läggas ner.
+
+## Det här gör appen
+
+- **Bokför på några sekunder.** Sök eller svara på ett par frågor, skriv beloppet, klart. Kvittot fotograferar du direkt, och appen föreslår belopp, moms och datum ur bilden.
+- **Räknar fram momsdeklarationen** ruta för ruta, och sparar den som en fil du laddar upp hos Skatteverket.
+- **Gör bokslutet:** avskrivningar, obetalda fakturor vid årsskiftet, förenklat årsbokslut och underlaget till NE-bilagan.
+- **Visar läget:** resultat, pengar på kontot och moms att betala, med rapporter och diagram.
+- **Låser inte in dig.** Bokföringen går att läsa in från och spara till SIE-filer, som andra bokföringsprogram och redovisningsbyråer använder. Säkerhetskopian är en fil du själv bestämmer över.
+- **Fungerar utan nät.** Appen läggs på hemskärmen och behöver ingen uppkoppling.
+
+## Passar den dig?
+
+Bokfink passar dig som
+
+- har **enskild firma** och är **momsregistrerad**,
+- gör ett **förenklat årsbokslut** (det vanliga för enskild firma),
+- vill bokföra själv, främst från telefonen.
+
+Det här finns **inte** ännu:
+
+- **Firma utan moms.** Appen räknar alltid med moms, så den som är momsbefriad får fel bokföring.
+- **Fakturor.** Appen bokför fakturor men skapar dem inte.
+- **Att börja med ett tidigare år** utan en SIE-fil från ett annat program.
+- **Löner och anställda.** Aktiebolag och handelsbolag ligger utanför det appen är tänkt för.
+
+Frågorna appen ställer är i dag formade efter en gård med djur. Andra verksamheter går bra att bokföra, men du hittar oftare rätt genom att söka än genom att följa frågorna, och en del vanliga kostnader som lokalhyra och representation saknar färdiga svar.
+
+## Prova
+
+Det finns ännu ingen publik adress att öppna appen på; den är på väg. Tills dess körs appen från källkoden, se [Kom igång](#kom-igång). Hittar du fel eller saknar något: [skriv ett ärende](https://github.com/kanintespela/bokfink/issues).
+
+## Status
+
+Bokfink är i bruk för den löpande bokföringen i en riktig firma. Löpande bokföring, moms, kvitton, rapporter, säkerhetskopia, anläggningsregister och årsbokslut är klara. En eSKD-fil med momsdeklaration har laddats upp hos Skatteverket och fungerade; filerna till NE-bilagan är ännu inte prövade där. Detaljerna står i tabellerna under [Funktioner](#funktioner) och i [utvecklingsplanen](docs/UTVECKLINGSPLAN.md).
+
+Appen är en **local-first PWA**. Interna namn i filformat och databas är äldre (`kontera`) och ändras inte, så att tidigare säkerhetskopior och böcker går att öppna.
 
 ## Varför
 
@@ -55,7 +98,7 @@ Status: ⬜ ej påbörjad · 🟡 pågår · ✅ klar · ⏸️ nedprioriterad
 |---|---|
 | ✅ | Fotografering, beskärning och lagring av kvitton kopplade till verifikationen, och massimport av underlag |
 | 🟡 | On-device OCR som föreslår belopp, moms, datum och leverantör; PDF-fakturor läses som text |
-| ✅ | Kvittoassistent via Claude som skickar konteringsförslag som utkast att granska |
+| ✅ | Kvittoassistent via Claude som skickar konteringsförslag som utkast att granska. Kräver en egen server, se [server/kvittovakt](server/kvittovakt) |
 | ⏸️ | Bankimport från kontoutdrag (CSV) med avstämning |
 | ⬜ | Körjournal och milersättning |
 
