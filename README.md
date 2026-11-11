@@ -46,7 +46,13 @@ I en firmabok är frågorna i dag formade efter en gård med djur. Andra verksam
 
 ## Prova
 
-Det finns ännu ingen publik adress att öppna appen på; den är på väg. Tills dess körs appen från källkoden, se [Kom igång](#kom-igång). Hittar du fel eller saknar något: [skriv ett ärende](https://github.com/kanintespela/bokfink/issues).
+Öppna **https://bokfinken-app.github.io** i telefonen eller datorn. Det finns inget konto att skapa. På telefonen lägger du appen på hemskärmen (Safari: Dela, Lägg till på hemskärmen) så sparas den ordentligt och fungerar utan nät.
+
+Vill du bara titta runt: skapa en egen bok under Mer, Böcker och bokför fritt. Det går att ta bort boken igen därifrån.
+
+Bokföringen sparas i webbläsaren på just den enhet du använder, inte hos någon annan. Det betyder att den inte följer med till en annan telefon eller webbläsare, och att den försvinner om du rensar webbplatsdata. Ta därför en säkerhetskopia under Mer, Säkerhetskopia när du bokfört något du vill behålla.
+
+Hittar du fel eller saknar något: [skriv ett ärende](https://github.com/kanintespela/bokfink/issues). Appen publiceras automatiskt från den här källkoden varje gång en ändring har klarat testerna.
 
 ## Status
 
