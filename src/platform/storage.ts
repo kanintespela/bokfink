@@ -22,6 +22,20 @@ export async function requestPersistentStorage(): Promise<PersistenceState> {
   return (await navigator.storage.persist()) ? 'persisted' : 'denied';
 }
 
+/**
+ * Whether the browser has promised to keep the data, without asking it to.
+ *
+ * Asking can put a permission prompt in front of the user (Firefox does), so
+ * the app only reads the answer when it starts and asks when someone presses
+ * a button that says what is being asked.
+ */
+export async function readPersistence(): Promise<PersistenceState> {
+  if (!navigator.storage?.persisted) {
+    return 'unsupported';
+  }
+  return (await navigator.storage.persisted()) ? 'persisted' : 'denied';
+}
+
 export interface StorageEstimate {
   usedBytes: number;
   quotaBytes: number;

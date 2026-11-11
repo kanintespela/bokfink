@@ -179,6 +179,11 @@ import { paminnelser } from '../domain/kalender/paminnelser';
 import type { Momsperiod } from '../domain/moms/period';
 import type { Redovisningsmetod } from '../domain/moms/redovisningsmetod';
 import { delaEllerSpara } from '../platform/fil';
+import {
+  readPersistence,
+  requestPersistentStorage,
+  type PersistenceState,
+} from '../platform/storage';
 import { hashaFil } from '../platform/hash';
 import { forberedUnderlag } from '../platform/bild';
 import {
@@ -377,6 +382,10 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
       : doldaVyer(laddat.profil, laddat.momsregistrerad);
   const vy: Vy = dolda.has(begardVy) ? 'attgora' : begardVy;
   const [fel, setFel] = useState<string | undefined>();
+  const [lagring, setLagring] = useState<PersistenceState | undefined>();
+  useEffect(() => {
+    void readPersistence().then(setLagring);
+  }, []);
   const [senast, setSenast] = useState<string | undefined>();
   const [bilder, setBilder] = useState<readonly Kvittobild[]>([]);
   /** Object URLs for the files attached to verifikat, by content address. */
@@ -977,6 +986,12 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
             }
             visaMoms={laddat.momsregistrerad}
             fakturor={vantandeFakturor(laddat.kvitton, idag)}
+            lagring={lagring}
+            onBeLagring={async () => {
+              const svar = await requestPersistentStorage();
+              setLagring(svar);
+              return svar;
+            }}
             onSnabbBackup={async (losenfras) => {
               // Same names and wording as the Säkerhetskopia screen, so a
               // folder of copies reads the same whichever button made them.

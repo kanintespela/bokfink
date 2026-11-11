@@ -12,6 +12,7 @@ import {
 } from '../../domain/verifikat/verifikat';
 import type { Verifikatpost } from '../../data/bokforing';
 import type { Rakenskapsar } from '../../domain/rakenskapsar/rakenskapsar';
+import type { PersistenceState } from '../../platform/storage';
 import { Lagesbild } from './Lagesbild';
 
 /**
@@ -48,6 +49,13 @@ interface Props {
    * decides where the copy goes, and so whether it needs a lock.
    */
   readonly onSnabbBackup: (losenfras?: string) => Promise<string>;
+  /**
+   * Whether the browser has promised to keep the data on this device.
+   * Undefined until it has been asked, so no warning flashes up on start.
+   */
+  readonly lagring: PersistenceState | undefined;
+  /** Asks the browser to keep the data, and says what it answered. */
+  readonly onBeLagring: () => Promise<PersistenceState>;
   readonly onMoms: () => void;
   readonly onKvitton: () => void;
   readonly onUtkast: () => void;
@@ -77,6 +85,8 @@ export function AttGoraSida({
   visaMoms,
   fakturor,
   onSnabbBackup,
+  lagring,
+  onBeLagring,
   onMoms,
   onKvitton,
   onUtkast,
@@ -162,6 +172,14 @@ export function AttGoraSida({
 
       {fakturor[0] !== undefined && (
         <Fakturakort idag={idag} vantande={fakturor} onKvitton={onKvitton} />
+      )}
+
+      {/*
+       * Only once there is something to lose: a book nobody has booked in has
+       * nothing a lost device would cost.
+       */}
+      {senaste.length > 0 && lagring !== undefined && lagring !== 'persisted' && (
+        <Lagringskort lagring={lagring} onBeLagring={onBeLagring} />
       )}
 
       {(backupGammal || backupBesked !== undefined) && (
@@ -303,6 +321,64 @@ export function AttGoraSida({
         </ul>
       )}
     </section>
+  );
+}
+
+/**
+ * Tells the user the browser has not promised to keep the bookkeeping.
+ *
+ * The data lives in the browser, and a browser that has not promised may clear
+ * it when the disk fills up. Nothing here can make it promise: asking is all
+ * that can be done, and the answer is said either way, because a button that
+ * did nothing visible would read as a broken one.
+ */
+function Lagringskort({
+  lagring,
+  onBeLagring,
+}: {
+  readonly lagring: PersistenceState;
+  readonly onBeLagring: () => Promise<PersistenceState>;
+}) {
+  const [arbetar, setArbetar] = useState(false);
+  const [nej, setNej] = useState(false);
+
+  async function be() {
+    setArbetar(true);
+    try {
+      setNej((await onBeLagring()) !== 'persisted');
+    } finally {
+      setArbetar(false);
+    }
+  }
+
+  return (
+    <div className="kort" data-testid="lagring-ej-sparad">
+      <strong>Webbläsaren har inte lovat att behålla bokföringen.</strong>
+      <p className="hjalptext">
+        Bokföringen finns bara i webbläsaren på den här enheten, och en webbläsare som
+        inte har lovat kan rensa den när lagringsutrymmet tar slut. Lägg appen på
+        hemskärmen och ta säkerhetskopior med jämna mellanrum.
+      </p>
+      {lagring === 'denied' && (
+        <p>
+          <button
+            type="button"
+            className="knapp"
+            disabled={arbetar}
+            data-testid="be-om-lagring"
+            onClick={() => void be()}
+          >
+            Be webbläsaren spara bokföringen
+          </button>
+        </p>
+      )}
+      {nej && (
+        <p role="status" className="hjalptext" data-testid="lagring-nej">
+          Webbläsaren sa nej. Det är vanligt om appen inte ligger på hemskärmen. Då är
+          säkerhetskopian det som skyddar bokföringen.
+        </p>
+      )}
+    </div>
   );
 }
 
