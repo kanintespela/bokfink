@@ -80,3 +80,23 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+  # Puts the build on https://bokfinken-app.github.io. It waits for every other
+  # job, so a red build is never published, and it does nothing until the
+  # PAGES_DEPLOY_KEY secret exists - see scripts/publicera-pages.sh.
+  publicera:
+    name: Publish
+    needs: [docs, verify, e2e]
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: kontera-dist
+          path: dist/
+
+      - run: scripts/publicera-pages.sh dist
+        env:
+          DEPLOY_KEY: ${{ secrets.PAGES_DEPLOY_KEY }}
