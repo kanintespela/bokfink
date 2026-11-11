@@ -93,8 +93,14 @@ export function AttGoraSida({
   onVisaVerifikat,
   onRapporter,
 }: Props) {
+  /*
+   * Not for a book nobody has booked in: a lost device costs it nothing, and a
+   * first screen that opens on a form for a passphrase says "this is hard"
+   * before the app has shown what it does.
+   */
   const backupGammal =
-    dagarSedanBackup === undefined || dagarSedanBackup > GAMMAL_BACKUP_GRANS;
+    verifikat.length > 0 &&
+    (dagarSedanBackup === undefined || dagarSedanBackup > GAMMAL_BACKUP_GRANS);
 
   const [backupLosenfras, setBackupLosenfras] = useState('');
   // Typed twice: a passphrase that cannot be recovered must not hide a typo.
@@ -191,6 +197,14 @@ export function AttGoraSida({
                   ? 'Ingen säkerhetskopia är tagen än.'
                   : `Senaste säkerhetskopian är ${dagarSedanBackup} dagar gammal.`}
               </strong>
+
+              <p className="hjalptext">
+                Bokföringen finns bara på den här enheten. Går telefonen sönder, tappas
+                bort eller rensas webbläsarens data är den borta. En säkerhetskopia är en
+                fil som du själv sparar, till exempel i molnet eller mejlad till dig
+                själv. Välj en lösenfras du kommer ihåg: utan den går kopian inte att
+                öppna.
+              </p>
 
               <div className="faltgrupp">
                 <label htmlFor="attgora-backup-losenfras">

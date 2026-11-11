@@ -851,6 +851,27 @@ test('takes a backup and reads it back', async ({ page }) => {
   );
 });
 
+/** Books one purchase and returns to the overview, so there is something to lose. */
+async function bokforEtEnkeltVerifikat(page: Page): Promise<void> {
+  await tillBokfor(page);
+  await valjLov(page, 'kontorsmaterial', 'Kontorsmaterial');
+  await page.getByLabel('Att betala').fill('250');
+  await bokforKnapp(page).click();
+  await expect(page.getByText(/Bokfört som/)).toBeVisible();
+  await vyval(page).getByRole('button', { name: 'Översikt' }).click();
+}
+
+/*
+ * A book nobody has booked in has nothing to lose, so the first screen does not
+ * open on a form for a passphrase.
+ */
+test('does not ask for a backup before anything is booked', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByTestId('inget-bokfort')).toBeVisible();
+  await expect(page.getByTestId('backup-gammal')).toHaveCount(0);
+  await expect(page.getByTestId('inget-att-gora')).toBeVisible();
+});
+
 /*
  * A backup nobody remembered to take is worse than a slow one: the warning
  * on the start view is the only thing standing between a lost phone and a
@@ -860,7 +881,7 @@ test('takes a backup and reads it back', async ({ page }) => {
 test('warns on the start view when no backup has been taken, and clears with a tap', async ({
   page,
 }) => {
-  await page.goto('/');
+  await bokforEtEnkeltVerifikat(page);
   await expect(page.getByTestId('backup-gammal')).toContainText(
     'Ingen säkerhetskopia är tagen än',
   );
@@ -895,7 +916,7 @@ test('warns on the start view when no backup has been taken, and clears with a t
 test('takes a quick backup without a passphrase when asked for a plain copy', async ({
   page,
 }) => {
-  await page.goto('/');
+  await bokforEtEnkeltVerifikat(page);
   const nedladdning = page.waitForEvent('download');
   await page.getByTestId('snabb-backup-oskyddad').click();
   expect((await nedladdning).suggestedFilename()).toMatch(/^bokfink-oskyddad-kopia-/);
