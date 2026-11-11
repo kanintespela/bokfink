@@ -58,6 +58,8 @@ import { BOK_NAMN_NYCKEL, lasBokprofil } from '../data/bokidentitet';
 import { ledigtBoknamn } from '../data/bokregister';
 import { bokforReservering, foreningskapitalFor } from '../data/foreningskapital';
 import { arEnbartStartdata, forberedBokforing } from '../data/uppstart';
+import { genomforValkomst, hoppaOverValkomst, skaVisaValkomst } from '../data/valkomst';
+import { Valkomst } from './start/Valkomst';
 import {
   kasseraUtkast,
   kopplaUnderlag,
@@ -247,6 +249,8 @@ interface Laddat {
   readonly profil: Bokprofil;
   /** Whether there is moms to declare; always so for a firm. */
   readonly momsregistrerad: boolean;
+  /** Whether the first-run questions are still to be answered. */
+  readonly valkomst: boolean;
   readonly organisationsnummer: string;
   readonly metod: Redovisningsmetod;
   readonly kvitton: readonly Underlag[];
@@ -477,6 +481,7 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
         profil,
         await db.getMeta<boolean>('momsregistrerad'),
       ),
+      valkomst: await skaVisaValkomst(db),
       organisationsnummer: (await db.getMeta<string>('organisationsnummer')) ?? '',
       metod:
         (await db.getMeta<Redovisningsmetod>('redovisningsmetod')) ?? 'kontantmetoden',
@@ -960,7 +965,25 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
             <Varumarke />
           </div>
         )}
-        {vy === 'attgora' && (
+        {vy === 'attgora' && laddat.valkomst && (
+          <Valkomst
+            onKlar={async ({ namn, ...svar }) => {
+              await genomforValkomst(db, await skrivkontext(db), systemklocka(), svar);
+              if (namn !== undefined) {
+                await bokval.onBytNamn(namn);
+              }
+              // Asked here, on the press, because some browsers put a prompt up.
+              setLagring(await requestPersistentStorage());
+              setLaddat(await hamta());
+            }}
+            onAterstall={async () => {
+              await hoppaOverValkomst(db);
+              setLaddat(await hamta());
+              setVy('sakerhetskopia');
+            }}
+          />
+        )}
+        {vy === 'attgora' && !laddat.valkomst && (
           <AttGoraSida
             idag={idag}
             senaste={laddat.senaste}

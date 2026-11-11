@@ -32,6 +32,16 @@ function bokforKnapp(page: Page) {
   return page.locator('main').getByRole('button', { name: 'Bokför', exact: true });
 }
 
+/**
+ * Answers the first-run questions with their defaults, which is what a test
+ * that is about something else wants out of the way. The welcome screen is
+ * covered in valkomst.spec.ts.
+ */
+async function klaraValkomsten(page: Page): Promise<void> {
+  await page.getByTestId('valkomst-borja').click();
+  await expect(page.getByTestId('valkomst')).toHaveCount(0);
+}
+
 /** The start view is the overview; booking is a tab away from it. */
 async function tillBokfor(page: Page): Promise<void> {
   await page.goto('/');
@@ -265,6 +275,7 @@ test('will not book with an empty date', async ({ page }) => {
 
 test('lists what has been booked, newest first', async ({ page }) => {
   await page.goto('/');
+  await klaraValkomsten(page);
   await expect(page.getByTestId('inget-bokfort')).toBeVisible();
 
   await tillBokfor(page);
@@ -336,6 +347,7 @@ test('finds a verifikat by number or by what it says', async ({ page }) => {
  */
 test('starts on the overview and reaches booking in one tap', async ({ page }) => {
   await page.goto('/');
+  await klaraValkomsten(page);
   await expect(page.getByRole('heading', { name: 'Att göra' })).toBeVisible();
   await expect(page.getByTestId('tradfraga')).toBeHidden();
 
@@ -346,6 +358,7 @@ test('starts on the overview and reaches booking in one tap', async ({ page }) =
 /* On a phone, back has to go back rather than leave the app. */
 test('goes back a view with the browser back button', async ({ page }) => {
   await page.goto('/');
+  await klaraValkomsten(page);
   await vyval(page).getByRole('button', { name: 'Bokför', exact: true }).click();
   await expect(page.getByTestId('tradfraga')).toBeVisible();
 
@@ -867,6 +880,7 @@ async function bokforEtEnkeltVerifikat(page: Page): Promise<void> {
  */
 test('does not ask for a backup before anything is booked', async ({ page }) => {
   await page.goto('/');
+  await klaraValkomsten(page);
   await expect(page.getByTestId('inget-bokfort')).toBeVisible();
   await expect(page.getByTestId('backup-gammal')).toHaveCount(0);
   await expect(page.getByTestId('inget-att-gora')).toBeVisible();

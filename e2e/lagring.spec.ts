@@ -37,6 +37,7 @@ async function bokforEtt(page: Page): Promise<void> {
 test('says nothing about storage while there is nothing to lose', async ({ page }) => {
   await lagringSvarar(page, { persisted: false, persist: false });
   await page.goto('/');
+  await page.getByTestId('valkomst-borja').click();
   await expect(page.getByTestId('inget-bokfort')).toBeVisible();
   await expect(page.getByTestId('lagring-ej-sparad')).toHaveCount(0);
 });

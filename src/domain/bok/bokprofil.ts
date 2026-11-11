@@ -8,6 +8,10 @@
  * book has. It is chosen when the book is created and never changed: a book
  * turned from one into the other would have verifikat booked under rules it
  * was not kept by, and hard rule 5 leaves no way to correct that afterwards.
+ *
+ * The one exception is the first book while nothing but its starter set has
+ * been written to it: the welcome screen lets its owner say what it is
+ * (src/data/valkomst.ts), and refuses once anything else is in it.
  */
 export const BOKPROFILER = ['enskild_firma', 'forening'] as const;
 
