@@ -13,33 +13,36 @@ Bokföring för enskild firma, i telefonen — utan prenumeration och utan att d
 
 <p align="center"><sub>Bilderna visar en påhittad firma.</sub></p>
 
-Bokfink är en app för den som har enskild firma och vill sköta bokföringen själv. Du svarar på vad som har hänt, till exempel "köpt förbrukningsmaterial" eller "fått betalt för ett arbete", och appen väljer konton och räknar ut momsen. Allt sparas på din egen telefon eller dator. Det finns inget konto att skapa och ingen tjänst som kan läsa dina siffror, höja priset eller läggas ner.
+Bokfink är en app för den som har enskild firma, eller är kassör i en ideell förening, och vill sköta bokföringen själv. Du svarar på vad som har hänt, till exempel "köpt förbrukningsmaterial" eller "fått betalt för ett arbete", och appen väljer konton och räknar ut momsen. Allt sparas på din egen telefon eller dator. Det finns inget konto att skapa och ingen tjänst som kan läsa dina siffror, höja priset eller läggas ner.
 
 ## Det här gör appen
 
 - **Bokför på några sekunder.** Sök eller svara på ett par frågor, skriv beloppet, klart. Kvittot fotograferar du direkt, och appen föreslår belopp, moms och datum ur bilden.
 - **Räknar fram momsdeklarationen** ruta för ruta, och sparar den som en fil du laddar upp hos Skatteverket.
-- **Gör bokslutet:** avskrivningar, obetalda fakturor vid årsskiftet, förenklat årsbokslut och underlaget till NE-bilagan.
+- **Gör bokslutet:** avskrivningar, obetalda fakturor och bidrag vid årsskiftet och förenklat årsbokslut. För firman också underlaget till NE-bilagan, för föreningen bokslutet enligt BFNAR 2010:1.
 - **Visar läget:** resultat, pengar på kontot och moms att betala, med rapporter och diagram.
 - **Låser inte in dig.** Bokföringen går att läsa in från och spara till SIE-filer, som andra bokföringsprogram och redovisningsbyråer använder. Säkerhetskopian är en fil du själv bestämmer över.
 - **Fungerar utan nät.** Appen läggs på hemskärmen och behöver ingen uppkoppling.
 
 ## Passar den dig?
 
-Bokfink passar dig som
+Bokfink passar dig som vill bokföra själv, främst från telefonen, och som är
 
-- har **enskild firma** och är **momsregistrerad**,
-- gör ett **förenklat årsbokslut** (det vanliga för enskild firma),
-- vill bokföra själv, främst från telefonen.
+- **enskild firma** och momsregistrerad, med förenklat årsbokslut (K1), eller
+- **kassör i en ideell förening**, till exempel en bygdegårdsförening, som gör förenklat årsbokslut.
+
+Firman och föreningen är två helt åtskilda böcker i samma app, med egna konton, frågor och bokslut. Du väljer vilken sort när du skapar boken under Mer, Böcker, och kan inte ändra det efteråt. Den som är kassör i en förening bredvid sin egen firma kan alltså ha båda på samma telefon.
+
+För en förening finns: föreningens egen kontoplan, frågor anpassade för medlemsavgifter, bidrag och uthyrning av lokal, val av om föreningen är momsregistrerad, eget kapital med ändamålsbestämda medel, projekt på varje konteringsrad med utdrag per projekt, och ett bokslut med jämförelsetal och underskrift av styrelsen. Föreningens budget görs inte i appen; resultatet går att exportera för att jämföra mot budgeten i Excel. Appen avgör inte om föreningen är bokföringsskyldig eller får göra förenklat årsbokslut. Det gör du, och revisorn.
 
 Det här finns **inte** ännu:
 
-- **Firma utan moms.** Appen räknar alltid med moms, så den som är momsbefriad får fel bokföring.
+- **Firma utan moms.** En enskild firma räknas alltid som momsregistrerad, så den som är momsbefriad får fel bokföring. (En förening kan välja.)
 - **Fakturor.** Appen bokför fakturor men skapar dem inte.
 - **Att börja med ett tidigare år** utan en SIE-fil från ett annat program.
-- **Löner och anställda.** Aktiebolag och handelsbolag ligger utanför det appen är tänkt för.
+- **Löner och anställda.** Aktiebolag, handelsbolag, föreningar som måste upprätta årsredovisning och flera användare på samma bok ligger utanför det appen är tänkt för.
 
-Frågorna appen ställer är i dag formade efter en gård med djur. Andra verksamheter går bra att bokföra, men du hittar oftare rätt genom att söka än genom att följa frågorna, och en del vanliga kostnader som lokalhyra och representation saknar färdiga svar.
+I en firmabok är frågorna i dag formade efter en gård med djur. Andra verksamheter går bra att bokföra, men du hittar oftare rätt genom att söka än genom att följa frågorna, och en del vanliga kostnader som lokalhyra och representation saknar färdiga svar.
 
 ## Prova
 
@@ -63,7 +66,7 @@ Bokfink bygger på tre val:
 
 ## Målgrupp och avgränsning
 
-Bokfink riktar sig till **enskild firma** som upprättar **förenklat årsbokslut enligt K1** (BFNAR 2006:1). Aktiebolag, handelsbolag, koncernredovisning, löneadministration och flera samtidiga användare ligger utanför projektets mål. Stöd för en ideell förening, som en egen bok bredvid firmans, byggs i Etapp 10.
+Bokfink riktar sig till **enskild firma** som upprättar **förenklat årsbokslut enligt K1** (BFNAR 2006:1) och till **ideell förening** som upprättar förenklat årsbokslut enligt BFNAR 2010:1. Föreningen är en egen bok bredvid firmans (Etapp 10). Aktiebolag, handelsbolag, koncernredovisning, löneadministration och flera samtidiga användare ligger utanför projektets mål.
 
 ## Funktioner
 
@@ -80,7 +83,7 @@ Status: ⬜ ej påbörjad · 🟡 pågår · ✅ klar · ⏸️ nedprioriterad
 | ✅ | Periodlåsning efter inlämnad momsdeklaration, och årsavslut |
 | ✅ | Flera räkenskapsår med ingående balanser |
 | ✅ | Flera böcker på samma enhet, till exempel firman och en förening, helt åtskilda |
-| ⬜ | Föreningsprofil: ingen moms, föreningens kontoplan, projekt per konteringsrad, budget mot utfall |
+| ✅ | Föreningsprofil: föreningens kontoplan och frågor, val av momsregistrering, projekt per konteringsrad och bokslut enligt BFNAR 2010:1. Budget görs utanför appen, se [utvecklingsplanen](docs/UTVECKLINGSPLAN.md) |
 
 ### Moms och skatt
 | | Funktion |
