@@ -47,7 +47,7 @@ jobs:
       # job went green, so this is uploaded here and judged there - see
       # server/app/.
       - uses: actions/upload-artifact@v4
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        if: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
         with:
           name: kontera-dist
           path: dist/
@@ -87,7 +87,7 @@ jobs:
   publicera:
     name: Publish
     needs: [docs, verify, e2e]
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    if: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
