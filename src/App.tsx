@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import {
+  anslutBok,
   bytFargPaBok,
   bytNamnPaBok,
   filprefix,
@@ -119,6 +120,31 @@ export function App() {
                 systemklocka(),
               );
               await valj(exempel.id);
+            },
+            onAnslut: async (id, beskrivning, synk, hamta) => {
+              const ny = await anslutBok(
+                register,
+                registerkontext,
+                id,
+                beskrivning,
+                synk,
+              );
+              let hinder: string | undefined;
+              try {
+                await hamta(databasFor(ny));
+              } catch (orsak) {
+                // Hard rule 11: said below, where it stays on screen.
+                hinder = orsak instanceof Error ? orsak.message : String(orsak);
+              }
+              await valj(ny.id);
+              // Said here for the same reason as a removal: the list the book
+              // was fetched from is gone once the new book has opened.
+              setBorttagen(
+                hinder === undefined
+                  ? `${ny.namn} är hämtad från servern och öppnad.`
+                  : `${ny.namn} finns nu på den här enheten, men bokföringen kunde inte ` +
+                      `hämtas: ${hinder} Den hämtas vid nästa synk.`,
+              );
             },
             onBytFarg: async (farg) => {
               await bytFargPaBok(register, registerkontext, aktiv.id, farg);
