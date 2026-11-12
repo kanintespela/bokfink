@@ -69,6 +69,8 @@ function fejkserver(): Synktransport {
         }
       }
     },
+    bokbeskrivning: async () => undefined,
+    beskrivBok: async () => undefined,
     filadresser: async () => [...filer.keys()],
     skickaFil: async (adress, chiffer) => {
       filer.set(adress, chiffer);

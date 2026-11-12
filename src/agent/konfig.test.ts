@@ -16,8 +16,26 @@ describe('tolkaKonfig', () => {
       epost: 'agare@example.se',
       losenord: 'hemligt',
       losenfras: 'en lång lösenfras',
+      bok: 'kontera',
       enhet: 'claude-pi',
     });
+  });
+
+  /*
+   * A server can hold several books, and the assistant works in one. A file
+   * from before that says nothing, and means the first book - the only one
+   * there was.
+   */
+  it('works in the first book unless the file names another', () => {
+    const annan = JSON.stringify({
+      ...(JSON.parse(TEXT) as object),
+      bok: '019b76da-a800-7000-8000-00000000b00c',
+    });
+
+    expect(tolkaKonfig('/k.json', { lage: 0o600, text: TEXT }).bok).toBe('kontera');
+    expect(tolkaKonfig('/k.json', { lage: 0o600, text: annan }).bok).toBe(
+      '019b76da-a800-7000-8000-00000000b00c',
+    );
   });
 
   /*

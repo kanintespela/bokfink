@@ -56,7 +56,7 @@ async function main(): Promise<void> {
 
   const inloggning = await loggaIn(konfig.url, konfig.epost, konfig.losenord);
   const utdata = await korAgent(new BokfinkDatabase('kontera-agent'), kommando, {
-    transport: pocketbaseTransport(inloggning),
+    transport: pocketbaseTransport(inloggning, konfig.bok),
     krypto: await synkkrypto(konfig.losenfras),
     enhet: konfig.enhet,
     nu: () => new Date().toISOString(),

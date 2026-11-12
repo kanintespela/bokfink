@@ -57,9 +57,11 @@ import {
 import {
   BOK_BRANSCH_NYCKEL,
   BOK_NAMN_NYCKEL,
+  lasBokId,
   lasBokprofil,
   lasBransch,
 } from '../data/bokidentitet';
+import { lasBokbeskrivning } from '../data/bokbeskrivning';
 import type { Bransch } from '../domain/bok/bransch';
 import { ledigtBoknamn } from '../data/bokregister';
 import { bokforReservering, foreningskapitalFor } from '../data/foreningskapital';
@@ -688,10 +690,13 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
 
     const resultat = await synka(
       db,
-      pocketbaseTransport(inloggning),
+      pocketbaseTransport(inloggning, await lasBokId(db)),
       await synkkrypto(fras),
       laddat.synk.enhet,
-      { hasha: hashaFil },
+      {
+        hasha: hashaFil,
+        beskrivning: await lasBokbeskrivning(db, bokval.aktiv.namn),
+      },
     );
     await db.setMeta('synk.senast', new Date().toISOString());
     setLaddat(await hamta());
@@ -729,7 +734,7 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
       filer +
       avvisade
     );
-  }, [db, laddat, hamta]);
+  }, [db, laddat, hamta, bokval.aktiv.namn]);
 
   const [autosynkfel, setAutosynkfel] = useState<string | undefined>();
 

@@ -1,7 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { AvvisadError } from '../data/synk';
-import { avvisning, fornyaInloggning, pocketbaseTransport } from './pocketbase';
+import {
+  avvisning,
+  bockerPaServern,
+  fornyaInloggning,
+  pocketbaseTransport,
+} from './pocketbase';
 
 const inloggning = { url: 'https://synk.example', token: 't', epost: 'a@example.se' };
 
@@ -25,7 +30,7 @@ describe('pocketbaseTransport', () => {
    */
   it('names the collection a server is missing', async () => {
     svararMed(404);
-    const transport = pocketbaseTransport(inloggning);
+    const transport = pocketbaseTransport(inloggning, 'kontera');
 
     await expect(transport.filadresser()).rejects.toThrow('saknar samlingen "filer"');
     await expect(transport.hamta(undefined)).rejects.toThrow(
@@ -35,7 +40,7 @@ describe('pocketbaseTransport', () => {
 
   it('says what was being fetched when the server fails otherwise', async () => {
     svararMed(500);
-    const transport = pocketbaseTransport(inloggning);
+    const transport = pocketbaseTransport(inloggning, 'kontera');
 
     await expect(transport.filadresser()).rejects.toThrow(
       'Servern svarade 500 när listan över underlag skulle hämtas.',
@@ -64,7 +69,7 @@ describe('pocketbaseTransport', () => {
           ),
       ),
     );
-    const skickat = pocketbaseTransport(inloggning).skicka([
+    const skickat = pocketbaseTransport(inloggning, 'kontera').skicka([
       { op_id: 'x' as never, device: 'd', payload: 'p', created: '' },
     ]);
 
@@ -84,7 +89,7 @@ describe('pocketbaseTransport', () => {
     );
 
     await expect(
-      pocketbaseTransport(inloggning).skicka([
+      pocketbaseTransport(inloggning, 'kontera').skicka([
         { op_id: 'x' as never, device: 'd', payload: 'p', created: '' },
       ]),
     ).resolves.toBeUndefined();
@@ -93,9 +98,168 @@ describe('pocketbaseTransport', () => {
   it('asks for a new login when the token is no longer accepted', async () => {
     svararMed(401);
 
-    await expect(pocketbaseTransport(inloggning).hamta(undefined)).rejects.toThrow(
-      'Logga in igen',
+    await expect(
+      pocketbaseTransport(inloggning, 'kontera').hamta(undefined),
+    ).rejects.toThrow('Logga in igen');
+  });
+});
+
+/*
+ * One server, several books. Every request names the book it is about, and
+ * the server hands out only that book's rows - so what is checked here is
+ * that no request goes out without the name, and that the one place another
+ * book's entries could come in does not take them.
+ */
+describe('keeping books apart', () => {
+  const BOK = '019b76da-a800-7000-8000-00000000b00c';
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    FalskXhr.reset();
+  });
+
+  /** A server that answers every request with the same body, and remembers them. */
+  function svararAlltid(kropp: string, status = 200) {
+    const anrop = vi.fn<typeof fetch>(async () => new Response(kropp, { status }));
+    vi.stubGlobal('fetch', anrop);
+    return anrop;
+  }
+
+  const adress = (anrop: ReturnType<typeof svararAlltid>, nummer = 0) =>
+    new URL(String(anrop.mock.calls[nummer]?.[0]));
+
+  it('names the book when it fetches entries', async () => {
+    const anrop = svararAlltid('{"items":[]}');
+
+    await pocketbaseTransport(inloggning, BOK).hamta(undefined);
+
+    expect(adress(anrop).searchParams.get('bok')).toBe(BOK);
+  });
+
+  it('names the book on every entry it sends', async () => {
+    const anrop = svararAlltid('{}');
+
+    await pocketbaseTransport(inloggning, BOK).skicka([
+      { op_id: 'x' as never, device: 'd', payload: 'p', created: '' },
+    ]);
+
+    expect(JSON.parse(String(anrop.mock.calls[0]?.[1]?.body))).toEqual({
+      op_id: 'x',
+      device: 'd',
+      payload: 'p',
+      bok: BOK,
+    });
+  });
+
+  it('names the book when it lists, fetches and sends files', async () => {
+    const anrop = svararAlltid('{"items":[]}');
+    vi.stubGlobal('XMLHttpRequest', FalskXhr);
+    const transport = pocketbaseTransport(inloggning, BOK);
+
+    await transport.filadresser();
+    await transport.hamtaFil('a'.repeat(64));
+    const skickat = transport.skickaFil('a'.repeat(64), new Uint8Array([1]));
+    FalskXhr.senaste!.status = 200;
+    FalskXhr.senaste!.onload?.();
+    await skickat;
+
+    expect(adress(anrop, 0).searchParams.get('bok')).toBe(BOK);
+    expect(adress(anrop, 1).searchParams.get('bok')).toBe(BOK);
+    expect(FalskXhr.senaste?.kropp?.get('bok')).toBe(BOK);
+  });
+
+  it('hands the entries on without the server’s own book field', async () => {
+    svararAlltid(
+      `{"items":[{"id":"r1","op_id":"x","device":"d","payload":"p","created":"1","bok":"${BOK}"}]}`,
     );
+
+    expect(await pocketbaseTransport(inloggning, BOK).hamta(undefined)).toEqual([
+      { id: 'r1', op_id: 'x', device: 'd', payload: 'p', created: '1' },
+    ]);
+  });
+
+  /*
+   * What a server from before the change does: it ignores the name and
+   * answers with everything it has. Folded into the book, those entries
+   * could never be taken out again.
+   */
+  it.each([
+    ['another book', '"bok":"kontera"'],
+    ['no book at all', '"x":1'],
+  ])('takes nothing when the server hands out entries of %s', async (_vad, falt) => {
+    svararAlltid(
+      `{"items":[{"id":"r1","op_id":"x","device":"d","payload":"p","created":"1",${falt}}]}`,
+    );
+
+    await expect(pocketbaseTransport(inloggning, BOK).hamta(undefined)).rejects.toThrow(
+      'hör till en annan bok',
+    );
+  });
+
+  it('refuses an identity that could not be a book’s', () => {
+    expect(() => pocketbaseTransport(inloggning, 'a" || bok != "')).toThrow(
+      'inte en bok som går att synka',
+    );
+    expect(() => pocketbaseTransport(inloggning, '')).toThrow(
+      'inte en bok som går att synka',
+    );
+  });
+
+  it('says a server has not heard of the book when it holds no row for it', async () => {
+    const anrop = svararAlltid('{"items":[]}');
+
+    expect(await pocketbaseTransport(inloggning, BOK).bokbeskrivning()).toBeUndefined();
+    expect(adress(anrop).searchParams.get('filter')).toBe(`bok="${BOK}"`);
+  });
+
+  it('reads what the server has been told about the book', async () => {
+    svararAlltid('{"items":[{"id":"r1","beskrivning":"{\\"namn\\":\\"Firman\\"}"}]}');
+
+    expect(await pocketbaseTransport(inloggning, BOK).bokbeskrivning()).toBe(
+      '{"namn":"Firman"}',
+    );
+  });
+
+  /*
+   * This is the call a round begins with, and the one a server without the
+   * book collection cannot answer - which is what stops the round there.
+   */
+  it('names the missing collection on a server that does not keep books apart', async () => {
+    svararAlltid('{}', 404);
+
+    await expect(pocketbaseTransport(inloggning, BOK).bokbeskrivning()).rejects.toThrow(
+      'saknar samlingen "bocker"',
+    );
+  });
+
+  it('creates the book’s row the first time, and replaces it after that', async () => {
+    const forsta = svararAlltid('{"items":[]}');
+    await pocketbaseTransport(inloggning, BOK).beskrivBok('ny');
+
+    expect(forsta.mock.calls[1]?.[1]?.method).toBe('POST');
+    expect(adress(forsta, 1).pathname).toBe('/api/collections/bocker/records');
+    expect(JSON.parse(String(forsta.mock.calls[1]?.[1]?.body))).toEqual({
+      bok: BOK,
+      beskrivning: 'ny',
+    });
+
+    const andra = svararAlltid('{"items":[{"id":"r1","beskrivning":"gammal"}]}');
+    await pocketbaseTransport(inloggning, BOK).beskrivBok('ny');
+
+    expect(andra.mock.calls[1]?.[1]?.method).toBe('PATCH');
+    expect(adress(andra, 1).pathname).toBe('/api/collections/bocker/records/r1');
+  });
+
+  it('lists the books a server holds, skipping what could not be one', async () => {
+    svararAlltid(
+      `{"items":[{"bok":"kontera","beskrivning":"a"},{"bok":"${BOK}","beskrivning":"b"},` +
+        '{"bok":"../../etc","beskrivning":"c"},{"bok":"utan-beskrivning"}]}',
+    );
+
+    expect(await bockerPaServern(inloggning)).toEqual([
+      { bok: 'kontera', beskrivning: 'a' },
+      { bok: BOK, beskrivning: 'b' },
+    ]);
   });
 });
 
@@ -159,6 +323,7 @@ class FalskXhr {
   huvuden: Record<string, string> = {};
   metod = '';
   url = '';
+  kropp: FormData | undefined;
 
   open(metod: string, url: string) {
     this.metod = metod;
@@ -169,7 +334,8 @@ class FalskXhr {
     this.huvuden[namn] = varde;
   }
 
-  send() {
+  send(kropp?: FormData) {
+    this.kropp = kropp;
     FalskXhr.senaste = this;
     FalskXhr.skickade.push(this);
   }
@@ -202,7 +368,7 @@ describe('skickaFil', () => {
       }),
     );
 
-    const klart = pocketbaseTransport(inloggning).skickaFil(
+    const klart = pocketbaseTransport(inloggning, 'kontera').skickaFil(
       'a'.repeat(64),
       new Uint8Array([1, 2, 3]),
     );
@@ -219,7 +385,7 @@ describe('skickaFil', () => {
   it('treats a file already on the server as success, not an error', async () => {
     vi.stubGlobal('XMLHttpRequest', FalskXhr);
 
-    const klart = pocketbaseTransport(inloggning).skickaFil(
+    const klart = pocketbaseTransport(inloggning, 'kontera').skickaFil(
       'a'.repeat(64),
       new Uint8Array([1]),
     );
@@ -234,7 +400,7 @@ describe('skickaFil', () => {
   it('reports a refusal that is not the duplicate case', async () => {
     vi.stubGlobal('XMLHttpRequest', FalskXhr);
 
-    const klart = pocketbaseTransport(inloggning).skickaFil(
+    const klart = pocketbaseTransport(inloggning, 'kontera').skickaFil(
       'a'.repeat(64),
       new Uint8Array([1]),
     );
@@ -250,7 +416,7 @@ describe('skickaFil', () => {
   it('says the network is unreachable rather than throwing the raw error', async () => {
     vi.stubGlobal('XMLHttpRequest', FalskXhr);
 
-    const klart = pocketbaseTransport(inloggning).skickaFil(
+    const klart = pocketbaseTransport(inloggning, 'kontera').skickaFil(
       'a'.repeat(64),
       new Uint8Array([1]),
     );
