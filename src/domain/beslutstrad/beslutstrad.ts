@@ -338,7 +338,7 @@ const PENGAR_UT: Fraga = {
                     moms: fast(25),
                     betalsatt: INKOP,
                     ledtext:
-                      'Lägg också in den under Anläggningar, så att den skrivs av.',
+                      'När den är bokförd föreslår appen att lägga in den under Anläggningar, så att den skrivs av.',
                     kalla:
                       'BFNAR 2006:1 punkt 6.30 och 6.31: bara en inventarie över ett halvt prisbasbelopp med längre nyttjandeperiod än tre år tas upp som tillgång. ' +
                       MOMS_25,
@@ -489,18 +489,57 @@ const PENGAR_UT: Fraga = {
     },
     {
       text: 'Byggnader, el och mark',
-      till: lov({
+      till: {
+        typ: 'fraga',
         id: 'fastighet',
-        namn: 'Byggnader, el och mark',
-        sokord: ['el', 'elräkning', 'ladugård', 'byggnad', 'vatten', 'sophämtning'],
-        riktning: 'utgift',
-        konto: '5100',
-        moms: fast(25),
-        betalsatt: INKOP,
-        ledtext:
-          'Reparation, el och drift av det firman använder, till exempel ekonomibyggnader.',
-        kalla: MOMS_25,
-      }),
+        fraga: 'Vad gäller det?',
+        svar: [
+          {
+            text: 'Reparation, el eller drift',
+            till: lov({
+              id: 'fastighet',
+              namn: 'Byggnader, el och mark',
+              sokord: ['el', 'elräkning', 'ladugård', 'byggnad', 'vatten', 'sophämtning'],
+              riktning: 'utgift',
+              konto: '5100',
+              moms: fast(25),
+              betalsatt: INKOP,
+              ledtext:
+                'Reparation, el och drift av det firman använder, till exempel ekonomibyggnader.',
+              kalla: MOMS_25,
+            }),
+          },
+          {
+            text: 'Anlagt något nytt i marken: brunn, väg eller plan',
+            till: lov({
+              id: 'markanlaggning',
+              namn: 'Markanläggning',
+              sokord: [
+                'markanläggning',
+                'brunn',
+                'borrning',
+                'väg',
+                'plan',
+                'parkering',
+                'täckdike',
+                'dränering',
+              ],
+              riktning: 'utgift',
+              konto: '1150',
+              moms: fast(25),
+              betalsatt: INKOP,
+              ledtext:
+                'En anläggning som firman använder och som varken är en byggnad eller en maskin. ' +
+                'Den blir en tillgång som skrivs av över flera år, och läggs in under Anläggningar när den är bokförd. ' +
+                'Stängsel och ledningar hör inte hit: de räknas som inventarier.',
+              kalla:
+                'Inkomstskattelagen (1999:1229) 20 kap. 2 §: markanläggningar är anordningar som inte är byggnader eller inventarier och som används i fastighetsägarens näringsverksamhet, till exempel vägar, parkeringsplatser och planteringar; brunnar räknas dit till den del de inte är byggnad. ' +
+                '20 kap. 15 §: ledningar, stängsel och liknande avspärrningar är markinventarier, och för dem gäller reglerna för inventarier. ' +
+                MOMS_25,
+            }),
+          },
+        ],
+      },
     },
     {
       text: 'Telefon, internet, program och kontor',

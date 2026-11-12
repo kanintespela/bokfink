@@ -30,6 +30,7 @@ import {
  * kronutjämning lands, and 2650 is the momsredovisning's own account.
  */
 export const GRUNDKONTON: readonly Kontoutkast[] = [
+  { nummer: '1150', namn: 'Markanläggningar' },
   { nummer: '1220', namn: 'Maskiner och inventarier' },
   { nummer: '1221', namn: 'Årets nyanskaffning av maskiner och inventarier' },
   { nummer: '1222', namn: 'Årets ersättning för maskiner och inventarier' },
