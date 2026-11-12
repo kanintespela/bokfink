@@ -18,7 +18,9 @@ import { delar, type Datum } from '../../domain/tid/datum';
 import { halvtPrisbasbelopp as halvtPrisbasbeloppFor } from '../../domain/skatt/skattetabell';
 import type { Uuid } from '../../domain/id/uuidv7';
 import { Tillbaka } from '../../ui/Tillbaka';
+import type { Anlaggningskop } from '../../domain/anlaggning/anlaggningskop';
 import { Fastighetssektion } from './Fastighetssektion';
+import { kopt, Oregistreradekop } from './Oregistreradekop';
 import { Linjaravskrivningssektion } from './Linjaravskrivningssektion';
 import { Prisbasbeloppssektion } from './Prisbasbeloppssektion';
 
@@ -34,11 +36,19 @@ interface Props {
   readonly egnaPrisbasbelopp: ReadonlyMap<number, Ore>;
   readonly onHamtaPrisbasbelopp: (ar: number) => Promise<Ore>;
   readonly onSparaPrisbasbelopp: (ar: number, belopp: Ore) => Promise<void>;
+  /** Booked purchases of this year that the register does not hold. */
+  readonly kop: readonly Anlaggningskop[];
+  /** The purchase whose form is open on arrival, when the screen was reached from one. */
+  readonly oppnaKop?: Uuid | undefined;
+  readonly onInteAnlaggning: (verifikatId: Uuid) => Promise<void>;
+  /** What each linked verifikat is called, "A14", for saying what an asset was bought with. */
+  readonly verifikatnamn: ReadonlyMap<Uuid, string>;
   readonly onRegistrera: (uppgifter: {
     readonly benamning: string;
     readonly anskaffningsdatum: Datum;
     readonly anskaffningsvarde: Ore;
     readonly nyttjandeperiod: number;
+    readonly verifikatId?: Uuid;
   }) => Promise<string>;
   readonly onAvyttra: (
     id: Uuid,
@@ -63,6 +73,7 @@ interface Props {
     readonly anskaffningsdatum: Datum;
     readonly anskaffningsvarde: Ore;
     readonly kategori: Fastighetskategori;
+    readonly verifikatId?: Uuid;
   }) => Promise<string>;
   readonly onAvyttraFastighet: (
     id: Uuid,
@@ -91,6 +102,10 @@ interface Props {
 export function Anlaggningssida({
   onTillbaka,
   profil,
+  kop,
+  oppnaKop,
+  onInteAnlaggning,
+  verifikatnamn,
   rakenskapsar,
   anlaggningar,
   fastigheter,
@@ -190,6 +205,14 @@ export function Anlaggningssida({
           : 'Maskiner och inventarier skrivs av kollektivt, som en klumpsumma för allt som ägs - inte per tillgång. Registret nedan är till för spårbarhet och för kompletteringsregeln, som behöver varje tillgångs eget anskaffningsvärde och ålder.'}
       </p>
 
+      <Oregistreradekop
+        kop={kop}
+        oppnaFor={oppnaKop}
+        onRegistrera={onRegistrera}
+        onRegistreraFastighet={onRegistreraFastighet}
+        onInteAnlaggning={onInteAnlaggning}
+      />
+
       {anlaggningar.length === 0 ? (
         <p className="tomt" data-testid="inga-anlaggningar">
           Inget är registrerat ännu.
@@ -210,6 +233,7 @@ export function Anlaggningssida({
                     <span>{tillgang.benamning}</span>
                     <span className="listrad__sekundar">
                       {tillgang.anskaffningsdatum}
+                      {kopt(tillgang.verifikatId, verifikatnamn)}
                       {tillgang.avyttring !== undefined &&
                         ` · ${tillgang.avyttring.typ === 'forsaljning' ? 'Såld' : 'Utrangerad'} ${tillgang.avyttring.datum}`}
                     </span>
@@ -575,6 +599,7 @@ export function Anlaggningssida({
           forening ? { kostnad: '7820', ack: '1118' } : { kostnad: '7820', ack: '1129' }
         }
         fastigheter={fastigheter}
+        verifikatnamn={verifikatnamn}
         idag={idag}
         onRegistrera={onRegistreraFastighet}
         onAvyttra={onAvyttraFastighet}

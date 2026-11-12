@@ -106,6 +106,12 @@ import {
   type Inloggning,
 } from '../platform/pocketbase';
 import { Synk } from './synk/Synk';
+import type { Anlaggningskop } from '../domain/anlaggning/anlaggningskop';
+import {
+  avfardaAnlaggningskop,
+  lasOregistreradeAnlaggningskop,
+} from '../data/anlaggningskop';
+import { Anlaggningsforslag } from './anlaggning/Anlaggningsforslag';
 import { lasUppServerbok, tolkaServerbocker } from './synk/serverbocker';
 import { Serverbocker } from './bocker/Serverbocker';
 import { useAutosynk } from './synk/autosynk';
@@ -285,6 +291,8 @@ interface Laddat {
   readonly dagarSedanBackup: number | undefined;
   readonly projekt: readonly Projekt[];
   readonly anlaggningar: readonly Anlaggningstillgang[];
+  /** Purchases booked on asset accounts this year that the register does not hold. */
+  readonly anlaggningskop: readonly Anlaggningskop[];
   readonly fastigheter: readonly Fastighetstillgang[];
   readonly djurlagerinventeringar: readonly Djurlagerinventering[];
   readonly rutval: ReadonlyMap<Kontonummer, Resultatrad>;
@@ -308,6 +316,14 @@ interface Laddat {
  * and the year being worked in is left open. Anything ending before this
  * January belongs to the first group.
  */
+/** The views a purchase is booked from, where the suggestion to register it is shown. */
+const ANLAGGNINGSFORSLAG_VISAS: ReadonlySet<Vy> = new Set([
+  'bokfor',
+  'frikontering',
+  'kvitton',
+  'utland',
+]);
+
 function forraArsslutet(idag: Datum): Datum {
   return datumAv(delar(idag).ar - 1, 12, 31);
 }
@@ -357,6 +373,8 @@ const ASSISTENT_BESKED_MS = 60 * 60 * 1000;
 
 export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval }) {
   const [begardVy, setVy] = useVy();
+  /** The purchase the asset screen opens its form for, when reached from one. */
+  const [oppnaKop, setOppnaKop] = useState<Uuid | undefined>();
   const filprefix = useFilprefix();
   // The open book's colour goes on the root, where the bars read it.
   const bokfarg = bokval.aktiv.farg;
@@ -515,6 +533,10 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
         backupSenast === undefined ? undefined : dagarMellan(datum(backupSenast), idag),
       projekt: [...tillstand.projekt.values()],
       anlaggningar: [...tillstand.anlaggningar.values()],
+      // Asked about the year that is open, so that books imported with their
+      // history do not come with a question for every machine ever bought.
+      anlaggningskop:
+        ar === undefined ? [] : await lasOregistreradeAnlaggningskop(db, ar),
       fastigheter: [...tillstand.fastigheter.values()],
       djurlagerinventeringar: [...tillstand.djurlagerinventeringar.values()].sort(
         (a, b) => b.datum.localeCompare(a.datum),
@@ -993,6 +1015,27 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
           : {})}
       />
       <main>
+        {/*
+         * Right after an asset has been booked, wherever it was booked from:
+         * the questions, a draft from the receipt assistant, or by hand. Only
+         * what was booked today is said here, so that it is an answer to what
+         * was just done and not a standing reminder - that is the row on the
+         * first screen.
+         */}
+        {laddat !== undefined &&
+          ANLAGGNINGSFORSLAG_VISAS.has(vy) &&
+          laddat.anlaggningskop
+            .filter((kop) => kop.verifikat.bokfortDatum === idag)
+            .map((kop) => (
+              <Anlaggningsforslag
+                key={kop.verifikat.id}
+                kop={kop}
+                onLaggIn={() => {
+                  setOppnaKop(kop.verifikat.id);
+                  setVy('anlaggning');
+                }}
+              />
+            ))}
         {vy === 'attgora' && (
           <div className="rubrikrad">
             <Varumarke />
@@ -1047,6 +1090,8 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
             }
             visaMoms={laddat.momsregistrerad}
             fakturor={vantandeFakturor(laddat.kvitton, idag)}
+            anlaggningskop={laddat.anlaggningskop.length}
+            onAnlaggningar={() => setVy('anlaggning')}
             lagring={lagring}
             onBeLagring={async () => {
               const svar = await requestPersistentStorage();
@@ -2057,6 +2102,15 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
             rakenskapsar={laddat.rakenskapsar}
             anlaggningar={laddat.anlaggningar}
             fastigheter={laddat.fastigheter}
+            kop={laddat.anlaggningskop}
+            oppnaKop={oppnaKop}
+            onInteAnlaggning={async (verifikatId) => {
+              await avfardaAnlaggningskop(db, verifikatId);
+              setLaddat(await hamta());
+            }}
+            verifikatnamn={
+              new Map(laddat.allaVerifikat.map((post) => [post.id, beteckning(post)]))
+            }
             idag={idag}
             egnaPrisbasbelopp={laddat.egnaPrisbasbelopp}
             onHamtaPrisbasbelopp={hamtaPrisbasbelopp}

@@ -17,6 +17,7 @@ import { formatKronor, oreFromKronor, type Ore } from '../../domain/belopp/ore';
 import { kontonummer } from '../../domain/konto/konto';
 import type { Datum } from '../../domain/tid/datum';
 import type { Uuid } from '../../domain/id/uuidv7';
+import { kopt } from './Oregistreradekop';
 
 interface Props {
   readonly fastigheter: readonly Fastighetstillgang[];
@@ -43,6 +44,7 @@ interface Props {
   ) => Promise<string>;
   /** The accounts offered to start with, which depend on what kind of book this is. */
   readonly standardkonton: { readonly kostnad: string; readonly ack: string };
+  readonly verifikatnamn: ReadonlyMap<Uuid, string>;
   /** An association has no collective pool above this section to be told apart from. */
   readonly forening: boolean;
 }
@@ -58,6 +60,7 @@ type Kategorival = 'byggnad' | 'markanlaggning' | 'mark' | 'skog';
  */
 export function Fastighetssektion({
   standardkonton,
+  verifikatnamn,
   forening,
   fastigheter,
   idag,
@@ -148,6 +151,7 @@ export function Fastighetssektion({
                     <span className="listrad__sekundar">
                       {arligAvskrivningsprocent(tillgang.kategori)} % · Bokfört värde{' '}
                       {formatKronor(vardeNu)}
+                      {kopt(tillgang.verifikatId, verifikatnamn)}
                       {tillgang.avyttring !== undefined &&
                         ` · ${tillgang.avyttring.typ === 'forsaljning' ? 'Sålt' : 'Utrangerat'} ${tillgang.avyttring.datum}`}
                     </span>
