@@ -45,6 +45,9 @@ interface Props {
   readonly visaMoms: boolean;
   /** Waiting invoices with a due date, the one due first at the top. */
   readonly fakturor: readonly VantandeFaktura[];
+  /** Purchases booked as assets this year that are not in the register. */
+  readonly anlaggningskop: number;
+  readonly onAnlaggningar: () => void;
   /**
    * Saves or shares a backup and records it - right where the warning is.
    * Encrypted with a passphrase, or in plain text without one: the owner
@@ -87,6 +90,8 @@ export function AttGoraSida({
   momsdeklarationer,
   visaMoms,
   fakturor,
+  anlaggningskop,
+  onAnlaggningar,
   onSnabbBackup,
   lagring,
   onBeLagring,
@@ -182,6 +187,27 @@ export function AttGoraSida({
 
       {fakturor[0] !== undefined && (
         <Fakturakort idag={idag} vantande={fakturor} onKvitton={onKvitton} />
+      )}
+
+      {anlaggningskop > 0 && (
+        <button
+          type="button"
+          className="kort listrad"
+          data-testid="anlaggningskop-vantar"
+          onClick={onAnlaggningar}
+        >
+          <span className="listrad__text">
+            <strong>
+              {anlaggningskop === 1
+                ? 'Ett köp ska in i anläggningsregistret'
+                : `${anlaggningskop} köp ska in i anläggningsregistret`}
+            </strong>
+            <span className="listrad__sekundar">
+              Bokfört som anläggningstillgång, men saknas i registret som avskrivningarna
+              räknas på.
+            </span>
+          </span>
+        </button>
       )}
 
       {/*

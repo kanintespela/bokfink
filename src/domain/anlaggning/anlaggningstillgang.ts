@@ -25,6 +25,16 @@ export interface Anlaggningstillgang {
   readonly anskaffningsvarde: Ore;
   /** Whole years, the basis for the ≤3-year direktavdrag test (punkt 6.31). */
   readonly nyttjandeperiod: number;
+  /**
+   * The verifikat the purchase was booked with, when the register entry was
+   * made from one.
+   *
+   * Lets the register and the ledger point at each other: from the asset to
+   * what was paid for it, and from a booked purchase to whether it has been
+   * taken up in the register. Absent on everything entered by hand, which
+   * includes whatever was bought before the books were kept here.
+   */
+  readonly verifikatId?: Uuid;
   readonly avyttring?: Anlaggningsavyttring;
 }
 
@@ -34,6 +44,7 @@ export interface Anlaggningstillgangsuppgifter {
   readonly anskaffningsdatum: Datum;
   readonly anskaffningsvarde: Ore;
   readonly nyttjandeperiod: number;
+  readonly verifikatId?: Uuid;
 }
 
 export function skapaAnlaggningstillgang(
@@ -60,6 +71,9 @@ export function skapaAnlaggningstillgang(
     anskaffningsdatum: uppgifter.anskaffningsdatum,
     anskaffningsvarde: uppgifter.anskaffningsvarde,
     nyttjandeperiod: uppgifter.nyttjandeperiod,
+    ...(uppgifter.verifikatId === undefined
+      ? {}
+      : { verifikatId: uppgifter.verifikatId }),
   };
 }
 

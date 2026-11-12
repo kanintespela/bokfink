@@ -302,6 +302,20 @@ describe('what a leaf books', () => {
       expect(traffar(ord)).toContain(namn);
     });
 
+    /*
+     * A drilled well is not a repair and not a machine. It is taken up as a
+     * markanläggning (inkomstskattelagen 20 kap. 2 §) on 1150, while the
+     * fence around the pasture stays where it was: a markinventarium
+     * (20 kap. 15 §), which is not booked there.
+     */
+    it('books a well as a markanläggning, and keeps a fence out of it', () => {
+      expect(traffar('brunn')).toContain('Markanläggning');
+      expect(lovet('markanlaggning').konto).toBe('1150');
+      expect(traffar('stängsel')).not.toContain('Markanläggning');
+      // What it replaced as a direct answer is still found the same way.
+      expect(traffar('elräkning')).toContain('Byggnader, el och mark');
+    });
+
     it('does not find a company insurance when someone types tåg', () => {
       const traffade = traffar('tåg');
       expect(traffade).toContain('Resa');

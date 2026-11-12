@@ -17,6 +17,7 @@ import { formatKronor, oreFromKronor, type Ore } from '../../domain/belopp/ore';
 import { kontonummer } from '../../domain/konto/konto';
 import type { Datum } from '../../domain/tid/datum';
 import type { Uuid } from '../../domain/id/uuidv7';
+import { kopt } from './Oregistreradekop';
 
 interface Props {
   readonly fastigheter: readonly Fastighetstillgang[];
@@ -26,6 +27,7 @@ interface Props {
     readonly anskaffningsdatum: Datum;
     readonly anskaffningsvarde: Ore;
     readonly kategori: Fastighetskategori;
+    readonly ackumuleradAvskrivning?: Ore;
   }) => Promise<string>;
   readonly onAvyttra: (
     id: Uuid,
@@ -43,6 +45,7 @@ interface Props {
   ) => Promise<string>;
   /** The accounts offered to start with, which depend on what kind of book this is. */
   readonly standardkonton: { readonly kostnad: string; readonly ack: string };
+  readonly verifikatnamn: ReadonlyMap<Uuid, string>;
   /** An association has no collective pool above this section to be told apart from. */
   readonly forening: boolean;
 }
@@ -58,6 +61,7 @@ type Kategorival = 'byggnad' | 'markanlaggning' | 'mark' | 'skog';
  */
 export function Fastighetssektion({
   standardkonton,
+  verifikatnamn,
   forening,
   fastigheter,
   idag,
@@ -68,6 +72,7 @@ export function Fastighetssektion({
   const [benamning, setBenamning] = useState('');
   const [anskaffningsdatum, setAnskaffningsdatum] = useState(idag);
   const [belopp, setBelopp] = useState('');
+  const [redanAvskrivet, setRedanAvskrivet] = useState('');
   const [kategorival, setKategorival] = useState<Kategorival>('byggnad');
   const [byggnadstyp, setByggnadstyp] = useState<Byggnadstyp>('ekonomibyggnad_ovrig');
   const [markanlaggningstyp, setMarkanlaggningstyp] =
@@ -148,6 +153,7 @@ export function Fastighetssektion({
                     <span className="listrad__sekundar">
                       {arligAvskrivningsprocent(tillgang.kategori)} % · Bokfört värde{' '}
                       {formatKronor(vardeNu)}
+                      {kopt(tillgang.verifikatId, verifikatnamn)}
                       {tillgang.avyttring !== undefined &&
                         ` · ${tillgang.avyttring.typ === 'forsaljning' ? 'Sålt' : 'Utrangerat'} ${tillgang.avyttring.datum}`}
                     </span>
@@ -330,6 +336,27 @@ export function Fastighetssektion({
         />
       </div>
 
+      {/*
+       * For something owned before the register was set up here. Without it
+       * the register would start an old building at its full cost, and the
+       * bokfört värde would differ from the ledger's by everything written
+       * off so far. Left blank for something just bought.
+       */}
+      <div className="faltgrupp">
+        <label htmlFor="fastighet-redan-avskrivet">Redan avskrivet (valfritt)</label>
+        <input
+          id="fastighet-redan-avskrivet"
+          className="falt"
+          inputMode="decimal"
+          value={redanAvskrivet}
+          onChange={(handelse) => setRedanAvskrivet(handelse.target.value)}
+        />
+        <p className="hjalptext">
+          Fyll i för en tillgång som har skrivits av tidigare år: summan av de
+          avskrivningar som redan är bokförda på den. Lämna tomt för något nyköpt.
+        </p>
+      </div>
+
       <div className="faltgrupp">
         <label htmlFor="fastighet-kategori">Typ</label>
         <select
@@ -395,9 +422,13 @@ export function Fastighetssektion({
               anskaffningsdatum,
               anskaffningsvarde: beloppOre!,
               kategori,
+              ...(redanAvskrivet.trim() === ''
+                ? {}
+                : { ackumuleradAvskrivning: oreFromKronor(redanAvskrivet) }),
             });
             setBenamning('');
             setBelopp('');
+            setRedanAvskrivet('');
             return resultat;
           })
         }
