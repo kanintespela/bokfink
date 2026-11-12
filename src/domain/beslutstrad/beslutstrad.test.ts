@@ -241,6 +241,74 @@ describe('what a leaf books', () => {
     },
   );
 
+  describe('what a firm that is not a farm books', () => {
+    it('books goods bought to be sold on 4000 with the input moms', () => {
+      expect(bokfor('varor', '1250', '1930')).toEqual([
+        [kontonummer('4000'), kr('1000')],
+        [kontonummer('2641'), kr('250')],
+        [kontonummer('1930'), kr('-1250')],
+      ]);
+    });
+
+    it('proposes rent for a premises without moms, as a landlord normally charges none', () => {
+      const lov = lovet('lokalhyra');
+      expect(lov.konto).toBe('5000');
+      expect(momsForLov(lov, datum('2026-11-12')).sats).toBe(0);
+      expect(bokfor('lokalhyra', '8000', '1930')).toEqual([
+        [kontonummer('5000'), kr('8000')],
+        [kontonummer('1930'), kr('-8000')],
+      ]);
+    });
+
+    it('lets the rent carry 25 % when the landlord has charged it', () => {
+      const lov = lovet('lokalhyra');
+      expect(momsForLov(lov, datum('2026-11-12')).valbar).toBe(true);
+      const rader = tillampaMall(lovTillMall(lov, 25), {
+        brutto: kr('10000'),
+        betalkonto: kontonummer('1930'),
+      }).map((rad) => [rad.konto, rad.belopp]);
+      expect(rader).toEqual([
+        [kontonummer('5000'), kr('8000')],
+        [kontonummer('2641'), kr('2000')],
+        [kontonummer('1930'), kr('-10000')],
+      ]);
+    });
+
+    it('books hired equipment on 5200 with 25 % moms', () => {
+      expect(bokfor('maskinhyra', '2500', '1930')).toEqual([
+        [kontonummer('5200'), kr('2000')],
+        [kontonummer('2641'), kr('500')],
+        [kontonummer('1930'), kr('-2500')],
+      ]);
+    });
+  });
+
+  describe('searching with everyday words', () => {
+    const mallar = allaLov().map((lov) =>
+      lovTillMall(lov, momsForLov(lov, datum('2026-11-12')).sats),
+    );
+    const traffar = (ord: string) => sokMallar(mallar, ord).map((mall) => mall.namn);
+
+    it.each([
+      ['hyra', 'Lokalhyra'],
+      ['lokalhyra', 'Lokalhyra'],
+      ['dator', 'Verktyg och mindre inventarier'],
+      ['webbhotell', 'Program och abonnemang'],
+      ['inköp', 'Varor och material till det du säljer'],
+      ['visitkort', 'Kontorsmaterial och trycksaker'],
+      ['revisor', 'Köpt tjänst'],
+      ['taxi', 'Resa'],
+    ])('finds %s', (ord, namn) => {
+      expect(traffar(ord)).toContain(namn);
+    });
+
+    it('does not find a company insurance when someone types tåg', () => {
+      const traffade = traffar('tåg');
+      expect(traffade).toContain('Resa');
+      expect(traffade).not.toContain('Företagsförsäkring');
+    });
+  });
+
   describe('fakturakonto', () => {
     it('puts an unpaid sale on the receivable and an unpaid purchase on the payable', () => {
       expect(fakturakonto(lovet('salt-varor'))).toBe('1500');

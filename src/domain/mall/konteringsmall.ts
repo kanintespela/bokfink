@@ -300,16 +300,32 @@ function poangsatt(mall: Konteringsmall, sokt: string): number {
   const namn = normalisera(mall.namn);
   if (namn === sokt) return 100;
   if (namn.startsWith(sokt)) return 80;
-  if (namn.includes(sokt)) return 60;
+  if (inuti(namn, sokt)) return 60;
 
   let basta = 0;
   for (const ord of mall.sokord) {
     const normaliserat = normalisera(ord);
     if (normaliserat === sokt) basta = Math.max(basta, 50);
     else if (normaliserat.startsWith(sokt)) basta = Math.max(basta, 40);
-    else if (normaliserat.includes(sokt)) basta = Math.max(basta, 20);
+    else if (inuti(normaliserat, sokt)) basta = Math.max(basta, 20);
   }
   return basta;
+}
+
+/**
+ * Whether the query is inside the text, where a short query only counts at the
+ * start of a word.
+ *
+ * Swedish compounds put the telling word last, so "hotell" should find
+ * "webbhotell". But with the accents folded away a three-letter query is inside
+ * a great many words by chance: "tåg" became "tag" and found
+ * "Företagsförsäkring". Short queries are matched at the start of a word only.
+ */
+function inuti(text: string, sokt: string): boolean {
+  if (sokt.length > 3) {
+    return text.includes(sokt);
+  }
+  return text.split(/[^a-z0-9]+/).some((ord) => ord.startsWith(sokt));
 }
 
 /**

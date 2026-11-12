@@ -349,11 +349,20 @@ const PENGAR_UT: Fraga = {
                   till: lov({
                     id: 'smainventarie',
                     namn: 'Verktyg och mindre inventarier',
-                    sokord: ['verktyg', 'redskap', 'inventarie'],
+                    sokord: [
+                      'verktyg',
+                      'redskap',
+                      'inventarie',
+                      'dator',
+                      'skärm',
+                      'kamera',
+                    ],
                     riktning: 'utgift',
                     konto: '5400',
                     moms: fast(25),
                     betalsatt: INKOP,
+                    ledtext:
+                      'Kostar det mer än ett halvt prisbasbelopp och håller längre än tre år ska det i stället bokföras som maskin eller inventarie: gå då tillbaka och svara Ja.',
                     kalla:
                       'BFNAR 2006:1 punkt 6.30 och 6.31: en inventarie av mindre värde eller med kort nyttjandeperiod blir en kostnad direkt. ' +
                       MOMS_25,
@@ -380,6 +389,23 @@ const PENGAR_UT: Fraga = {
               moms: fast(25),
               betalsatt: INKOP,
               kalla: MOMS_25,
+            }),
+          },
+          {
+            text: 'Hyra av maskin eller utrustning',
+            till: lov({
+              id: 'maskinhyra',
+              namn: 'Hyra av maskin eller utrustning',
+              sokord: ['hyra', 'hyrd', 'maskinhyra', 'byggställning', 'container'],
+              riktning: 'utgift',
+              konto: '5200',
+              moms: fast(25),
+              betalsatt: INKOP,
+              ledtext:
+                'För det du hyr en tid. Leasing av personbil hör inte hit: kontera den fritt.',
+              kalla:
+                'BAS K1 2018: konto 5200 Hyra av anläggningstillgångar (ruta R6). ' +
+                MOMS_25,
             }),
           },
           {
@@ -424,7 +450,7 @@ const PENGAR_UT: Fraga = {
             till: lov({
               id: 'bil-drivmedel',
               namn: 'Drivmedel till bilen',
-              sokord: ['bensin', 'diesel', 'tankning', 'laddning'],
+              sokord: ['bensin', 'diesel', 'tankning', 'laddning', 'elbil', 'drivmedel'],
               riktning: 'utgift',
               konto: '5611',
               moms: fast(25),
@@ -488,7 +514,15 @@ const PENGAR_UT: Fraga = {
             till: lov({
               id: 'tele',
               namn: 'Telefon, internet och porto',
-              sokord: ['telefon', 'mobil', 'internet', 'bredband', 'porto', 'frimärke'],
+              sokord: [
+                'telefon',
+                'mobil',
+                'abonnemang',
+                'internet',
+                'bredband',
+                'porto',
+                'frimärke',
+              ],
               riktning: 'utgift',
               konto: '6200',
               moms: fast(25),
@@ -501,7 +535,16 @@ const PENGAR_UT: Fraga = {
             till: lov({
               id: 'programvara',
               namn: 'Program och abonnemang',
-              sokord: ['program', 'app', 'abonnemang', 'licens', 'molntjänst'],
+              sokord: [
+                'program',
+                'app',
+                'abonnemang',
+                'licens',
+                'molntjänst',
+                'webbhotell',
+                'domän',
+                'hosting',
+              ],
               riktning: 'utgift',
               konto: '5400',
               moms: fast(25),
@@ -514,7 +557,15 @@ const PENGAR_UT: Fraga = {
             till: lov({
               id: 'kontorsmaterial',
               namn: 'Kontorsmaterial och trycksaker',
-              sokord: ['papper', 'skrivare', 'toner', 'pärm', 'trycksak'],
+              sokord: [
+                'papper',
+                'skrivare',
+                'toner',
+                'pärm',
+                'trycksak',
+                'visitkort',
+                'pennor',
+              ],
               riktning: 'utgift',
               konto: '6100',
               moms: fast(25),
@@ -537,7 +588,16 @@ const PENGAR_UT: Fraga = {
             till: lov({
               id: 'tjanst',
               namn: 'Köpt tjänst',
-              sokord: ['tjänst', 'konsult', 'rådgivning', 'redovisning', 'arvode'],
+              sokord: [
+                'tjänst',
+                'konsult',
+                'rådgivning',
+                'redovisning',
+                'revisor',
+                'jurist',
+                'städning',
+                'arvode',
+              ],
               riktning: 'utgift',
               konto: '6500',
               moms: fast(25),
@@ -599,7 +659,14 @@ const PENGAR_UT: Fraga = {
             till: lov({
               id: 'bankavgift',
               namn: 'Bankavgift',
-              sokord: ['bankavgift', 'kontoavgift', 'kortavgift', 'swish'],
+              sokord: [
+                'bankavgift',
+                'kontoavgift',
+                'kortavgift',
+                'swish',
+                'kortterminal',
+                'zettle',
+              ],
               riktning: 'utgift',
               konto: '6500',
               moms: fast(0),
@@ -646,7 +713,17 @@ const PENGAR_UT: Fraga = {
       till: lov({
         id: 'resa',
         namn: 'Resa',
-        sokord: ['tåg', 'buss', 'flyg', 'hotell', 'resa', 'biljett', 'parkering'],
+        sokord: [
+          'tåg',
+          'buss',
+          'flyg',
+          'hotell',
+          'övernattning',
+          'taxi',
+          'resa',
+          'biljett',
+          'parkering',
+        ],
         riktning: 'utgift',
         konto: '5800',
         moms: {
@@ -660,6 +737,63 @@ const PENGAR_UT: Fraga = {
       }),
     },
     { text: 'Amortering på ett lån', till: AMORTERING },
+    {
+      text: 'Varor och material som du säljer vidare eller bygger in',
+      till: lov({
+        id: 'varor',
+        namn: 'Varor och material till det du säljer',
+        sokord: [
+          'varor',
+          'varuinköp',
+          'inköp',
+          'handelsvaror',
+          'virke',
+          'byggmaterial',
+          'råvaror',
+          'grossist',
+        ],
+        riktning: 'utgift',
+        konto: '4000',
+        moms: {
+          typ: 'fraga',
+          forval: 25,
+          hjalp:
+            'De flesta varor har 25 % moms. Livsmedel har lägre moms: välj den sats som står på kvittot.',
+        },
+        betalsatt: INKOP,
+        ledtext:
+          'Det du köper för att sälja vidare eller bygga in i det du gör åt kunder. Verktyg och sådant som förbrukas hör till Maskiner, verktyg och material.',
+        kalla:
+          'BAS K1 2018: konto 4000 Varor (ruta R5). Mervärdesskattelagen (2023:200) 9 kap.: 25 % är normalskattesatsen och livsmedel har reducerad skattesats.',
+      }),
+    },
+    {
+      text: 'Hyra av lokal',
+      till: lov({
+        id: 'lokalhyra',
+        namn: 'Lokalhyra',
+        sokord: [
+          'hyra',
+          'lokal',
+          'lokalhyra',
+          'kontorshyra',
+          'butikshyra',
+          'förråd',
+          'garage',
+        ],
+        riktning: 'utgift',
+        konto: '5000',
+        moms: {
+          typ: 'fraga',
+          forval: 0,
+          hjalp:
+            'Hyra av lokal är oftast momsfri. Har hyresvärden ändå tagit ut moms står den på fakturan: välj då 25 %.',
+        },
+        betalsatt: INKOP,
+        kalla:
+          'BAS K1 2018: konto 5000 Lokalkostnader (ruta R6). Skatteverket, "Uthyrning av fastighet och frivillig beskattning": uthyrning av lokal är i regel undantagen från moms, och hyresvärden kan ha valt att ta ut moms. Har hyran moms är den 25 %.',
+      }),
+    },
     {
       text: 'Något annat',
       till: lov({
