@@ -1,5 +1,6 @@
 import { arEnbartStartdata, forberedBokforing, slappStartdata } from './uppstart';
 import {
+  BOK_BRANSCH_NYCKEL,
   BOK_PROFIL_NYCKEL,
   lasBokId,
   lasBokprofil,
@@ -9,6 +10,7 @@ import { lasLogg } from './bokforing';
 import type { BokfinkDatabase } from './db';
 import type { Skrivkontext } from './kommandon';
 import type { Bokprofil } from '../domain/bok/bokprofil';
+import type { Bransch } from '../domain/bok/bransch';
 import type { Momsperiod } from '../domain/moms/period';
 import type { Klocka } from '../domain/tid/klocka';
 
@@ -42,6 +44,8 @@ export interface Valkomstsvar {
   /** For an association: whether it is registered for moms. A firm always is. */
   readonly momsregistrerad: boolean;
   readonly momsperiod: Momsperiod;
+  /** What a firm does; an association has none. */
+  readonly bransch?: Bransch;
 }
 
 export class ValkomstEjMojligError extends Error {
@@ -83,6 +87,9 @@ export async function genomforValkomst(
     await forberedBokforing(db, kontext, klocka);
   }
   await db.setMeta('momsperiod', svar.momsperiod);
+  if (svar.profil === 'enskild_firma' && svar.bransch !== undefined) {
+    await db.setMeta(BOK_BRANSCH_NYCKEL, svar.bransch);
+  }
   if (svar.profil === 'forening') {
     await db.setMeta('momsregistrerad', svar.momsregistrerad);
   }

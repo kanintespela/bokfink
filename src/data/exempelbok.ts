@@ -13,6 +13,7 @@ import {
   type Bokregister,
   type Registerkontext,
 } from './bokregister';
+import { BOK_BRANSCH_NYCKEL } from './bokidentitet';
 import { BokfinkDatabase } from './db';
 import { getOrCreateDeviceId } from './device';
 import { newIdentifier } from './id';
@@ -43,7 +44,7 @@ const POSTER: readonly { lov: string; text: string; kronor: string }[] = [
   { lov: 'tele', text: 'Mobilabonnemang', kronor: '349' },
   { lov: 'salt-tjanst', text: 'Bokhylla på mått, kund Lund', kronor: '27500' },
   { lov: 'programvara', text: 'Ritprogram, årslicens', kronor: '2388' },
-  { lov: 'material', text: 'Ek och björk, Virkeshuset', kronor: '6875' },
+  { lov: 'varor', text: 'Ek och björk, Virkeshuset', kronor: '6875' },
   { lov: 'bankavgift', text: 'Bankavgift', kronor: '99' },
   { lov: 'salt-tjanst', text: 'Fönsterbänkar, kund Holm', kronor: '9800' },
   { lov: 'kontorsmaterial', text: 'Visitkort', kronor: '595' },
@@ -72,6 +73,7 @@ export async function fyllExempelbok(
   await sattSerieForEnhet(db, verifikatserie('A'));
   await db.setMeta('momsperiod', 'kvartal');
   await db.setMeta(EXEMPEL_NYCKEL, true);
+  await db.setMeta(BOK_BRANSCH_NYCKEL, 'hantverk');
 
   const idag = klocka.idag();
   const lov = new Map(allaLov().map((kandidat) => [kandidat.id, kandidat]));

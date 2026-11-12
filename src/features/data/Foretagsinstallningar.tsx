@@ -6,10 +6,14 @@ import {
   METODNAMN,
   type Redovisningsmetod,
 } from '../../domain/moms/redovisningsmetod';
+import { BRANSCHER, BRANSCHNAMN, type Bransch } from '../../domain/bok/bransch';
 import { PERIODNAMN } from '../moms/namn';
 
 interface Props {
   readonly profil: Bokprofil;
+  /** What the firm does; it orders the booking questions and nothing else. */
+  readonly bransch: Bransch;
+  readonly onBransch: (bransch: Bransch) => Promise<void>;
   /** Whether the book has moms to declare; for a firm it always does. */
   readonly momsregistrerad: boolean;
   readonly onMomsregistrerad: (registrerad: boolean) => Promise<void>;
@@ -31,6 +35,8 @@ interface Props {
  */
 export function Foretagsinstallningar({
   profil,
+  bransch,
+  onBransch,
   momsregistrerad,
   onMomsregistrerad,
   organisationsnummer,
@@ -70,6 +76,28 @@ export function Foretagsinstallningar({
           </p>
         )}
       </div>
+
+      {profil === 'enskild_firma' && (
+        <div className="faltgrupp">
+          <label htmlFor="bransch">Vad gör firman?</label>
+          <select
+            id="bransch"
+            className="falt"
+            value={bransch}
+            onChange={(handelse) => void onBransch(handelse.target.value as Bransch)}
+          >
+            {BRANSCHER.map((kandidat) => (
+              <option key={kandidat} value={kandidat}>
+                {BRANSCHNAMN[kandidat]}
+              </option>
+            ))}
+          </select>
+          <p className="hjalptext">
+            Styr bara i vilken ordning frågorna visas när du bokför. Allt går att bokföra
+            oavsett vad du väljer, och du kan byta när som helst.
+          </p>
+        </div>
+      )}
 
       {profil === 'forening' ? (
         <p>

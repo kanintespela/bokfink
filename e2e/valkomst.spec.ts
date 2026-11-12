@@ -180,3 +180,81 @@ test('the example is one book among the others, listed once', async ({ page }) =
       .filter({ hasText: 'Min bokföring' }),
   ).toHaveCount(1);
 });
+
+/** The first answer offered under "Pengar ut". */
+async function forstaUtgiftssvar(page: Page): Promise<string> {
+  await page.goto('/#bokfor');
+  await page.getByTestId('svar').getByRole('button', { name: 'Pengar ut' }).click();
+  return (await page.getByTestId('svar').getByRole('button').first().innerText())
+    .split('\n')[0]!
+    .trim();
+}
+
+test('the trade chosen on the welcome orders the questions, and can be changed later', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByLabel('Vad gör firman?').selectOption({ label: 'Hantverk eller bygg' });
+  await page.getByTestId('valkomst-borja').click();
+  await expect(page.getByTestId('valkomst')).toHaveCount(0);
+
+  await expect
+    .poll(() => forstaUtgiftssvar(page))
+    .toBe('Varor och material som du säljer vidare eller bygger in');
+
+  await page.goto('/#foretag');
+  await page
+    .getByLabel('Vad gör firman?')
+    .selectOption({ label: 'Tjänster eller konsult' });
+  // Saved a moment after the choice, so the questions are asked again until they change.
+  await expect
+    .poll(() => forstaUtgiftssvar(page))
+    .toBe('Telefon, internet, program och kontor');
+});
+
+test('a book with no recorded trade keeps the questions in the order it has always had', async ({
+  page,
+}) => {
+  // Booking settles the welcome without answering it, so no trade is recorded.
+  await page.goto('/#bokfor');
+  await page.getByLabel('Sök').fill('kontorsmaterial');
+  await page
+    .getByTestId('sokresultat')
+    .getByRole('button', { name: /Kontorsmaterial/ })
+    .click();
+  await page.getByLabel('Att betala').fill('250');
+  await page.locator('main').getByRole('button', { name: 'Bokför', exact: true }).click();
+  await expect(page.getByText(/Bokfört som/)).toBeVisible();
+
+  expect(await forstaUtgiftssvar(page)).toBe('Djuren');
+});
+
+test('rent is found by searching hyra, and is proposed without moms', async ({
+  page,
+}) => {
+  await page.goto('/#bokfor');
+  await page.getByLabel('Sök').fill('hyra');
+  await page
+    .getByTestId('sokresultat')
+    .getByRole('button', { name: /Lokalhyra/ })
+    .click();
+  await page.getByLabel('Att betala').fill('8000');
+  // The rate is the user's to pick, and starts at none.
+  await expect(
+    page.getByTestId('momsval').getByRole('button', { name: 'Ingen' }),
+  ).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: 'Visa konteringen' }).click();
+  await expect(page.getByText('5000', { exact: true }).first()).toBeVisible();
+  await page.locator('main').getByRole('button', { name: 'Bokför', exact: true }).click();
+  await expect(page.getByText(/Bokfört som/)).toBeVisible();
+});
+
+test('no one finds a company insurance by typing tåg', async ({ page }) => {
+  await page.goto('/#bokfor');
+  await page.getByLabel('Sök').fill('tåg');
+  const traffar = page.getByTestId('sokresultat');
+  await expect(traffar.getByRole('button', { name: /Resa/ })).toBeVisible();
+  await expect(traffar.getByRole('button', { name: /Företagsförsäkring/ })).toHaveCount(
+    0,
+  );
+});

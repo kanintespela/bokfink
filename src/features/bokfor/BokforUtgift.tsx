@@ -16,6 +16,7 @@ import {
 } from '../../domain/beslutstrad/beslutstrad';
 import { beslutstradFor, betalsattsnamnFor } from '../../domain/beslutstrad/tradval';
 import type { Bokprofil } from '../../domain/bok/bokprofil';
+import type { Bransch } from '../../domain/bok/bransch';
 import type { Konto, Kontonummer } from '../../domain/konto/konto';
 import { medProjektPaKonto, type Projekt } from '../../domain/projekt/projekt';
 import {
@@ -107,6 +108,8 @@ interface Props {
   readonly onHanvisning: (till: Hanvisning['till']) => void;
   /** What kind of book this is, which decides the questions and accounts offered. */
   readonly profil: Bokprofil;
+  /** What the firm does, which orders the questions; an association has none. */
+  readonly bransch: Bransch;
   /** The projects the cost or the income can be booked on. */
   readonly projekt: readonly Projekt[];
   readonly onBokfor: (val: {
@@ -146,6 +149,7 @@ const GENVAGAR = 4;
 export function BokforUtgift({
   faktureringsmetod,
   profil,
+  bransch,
   projekt,
   idag,
   anvandning,
@@ -212,7 +216,7 @@ export function BokforUtgift({
   const [beskar, setBeskar] = useState<{ fil: File; url: string } | undefined>();
   const kamera = useRef<HTMLInputElement>(null);
 
-  const rot = useMemo(() => beslutstradFor(profil), [profil]);
+  const rot = useMemo(() => beslutstradFor(profil, bransch), [profil, bransch]);
   const betalsattsnamn = useMemo(() => betalsattsnamnFor(profil), [profil]);
   const lov = useMemo(() => allaLov(rot), [rot]);
   /*

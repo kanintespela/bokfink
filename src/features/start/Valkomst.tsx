@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { BOKPROFILER, BOKPROFILNAMN, type Bokprofil } from '../../domain/bok/bokprofil';
+import { BRANSCHER, BRANSCHNAMN, type Bransch } from '../../domain/bok/bransch';
 import { PERIODNAMN } from '../moms/namn';
 import type { Momsperiod } from '../../domain/moms/period';
 import { granskaBoknamn } from '../../data/bokregister';
@@ -33,6 +34,7 @@ interface Props {
 export function Valkomst({ onKlar, onExempel, onAterstall }: Props) {
   const [profil, setProfil] = useState<Bokprofil>('enskild_firma');
   const [namn, setNamn] = useState('');
+  const [bransch, setBransch] = useState<Bransch>('annat');
   const [momsregistrerad, setMomsregistrerad] = useState(false);
   const [momsperiod, setMomsperiod] = useState<Momsperiod>('kvartal');
   const [arbetar, setArbetar] = useState(false);
@@ -52,7 +54,13 @@ export function Valkomst({ onKlar, onExempel, onAterstall }: Props) {
     }
     setArbetar(true);
     try {
-      await onKlar({ profil, namn: rentNamn, momsregistrerad, momsperiod });
+      await onKlar({
+        profil,
+        namn: rentNamn,
+        momsregistrerad,
+        momsperiod,
+        ...(arForening ? {} : { bransch }),
+      });
     } catch (orsak) {
       // Hard rule 11: said here, next to the button that was pressed.
       setFel(orsak instanceof Error ? orsak.message : String(orsak));
@@ -69,7 +77,7 @@ export function Valkomst({ onKlar, onExempel, onAterstall }: Props) {
         vad som har hänt, så väljer appen konton och räknar ut momsen. Allt du bokför
         sparas på den här enheten och skickas inte någonstans.
       </p>
-      <p>Tre frågor först, så att appen passar dig.</p>
+      <p>Några frågor först, så att appen passar dig.</p>
 
       <div className="faltgrupp" role="group" aria-labelledby="valkomst-profil">
         <span id="valkomst-profil">Vad ska du bokföra?</span>
@@ -109,6 +117,29 @@ export function Valkomst({ onKlar, onExempel, onAterstall }: Props) {
           går att byta under Mer, Böcker.
         </p>
       </div>
+
+      {!arForening && (
+        <div className="faltgrupp">
+          <label htmlFor="valkomst-bransch">Vad gör firman?</label>
+          <select
+            id="valkomst-bransch"
+            className="falt"
+            value={bransch}
+            onChange={(handelse) => setBransch(handelse.target.value as Bransch)}
+          >
+            {BRANSCHER.map((kandidat) => (
+              <option key={kandidat} value={kandidat}>
+                {BRANSCHNAMN[kandidat]}
+              </option>
+            ))}
+          </select>
+          <p className="hjalptext">
+            Styr bara i vilken ordning frågorna visas när du bokför, så att det du ofta
+            bokför kommer först. Allt går att bokföra oavsett, och du kan byta under Mer,
+            Företaget.
+          </p>
+        </div>
+      )}
 
       {arForening && (
         <div className="faltgrupp" role="group" aria-labelledby="valkomst-moms">

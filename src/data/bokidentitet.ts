@@ -1,4 +1,5 @@
 import { tolkaBokprofil, type Bokprofil } from '../domain/bok/bokprofil';
+import { tolkaBransch, type Bransch } from '../domain/bok/bransch';
 import type { BokfinkDatabase } from './db';
 
 /** The metadata key a database's book identity is kept under. */
@@ -58,4 +59,12 @@ export function bokprofilIMeta(
   return tolkaBokprofil(
     meta.find((kandidat) => kandidat.key === BOK_PROFIL_NYCKEL)?.value,
   );
+}
+
+/** The metadata key a firm's trade is kept under. */
+export const BOK_BRANSCH_NYCKEL = 'bransch';
+
+/** What the firm does, which orders the booking questions; see bransch.ts. */
+export async function lasBransch(db: BokfinkDatabase): Promise<Bransch> {
+  return tolkaBransch(await db.getMeta<unknown>(BOK_BRANSCH_NYCKEL));
 }

@@ -54,7 +54,13 @@ import {
   forUtgaendeBalanserTillNastaAr,
   skapaNastaRakenskapsar,
 } from '../data/arsavslut';
-import { BOK_NAMN_NYCKEL, lasBokprofil } from '../data/bokidentitet';
+import {
+  BOK_BRANSCH_NYCKEL,
+  BOK_NAMN_NYCKEL,
+  lasBokprofil,
+  lasBransch,
+} from '../data/bokidentitet';
+import type { Bransch } from '../domain/bok/bransch';
 import { ledigtBoknamn } from '../data/bokregister';
 import { bokforReservering, foreningskapitalFor } from '../data/foreningskapital';
 import { arEnbartStartdata, forberedBokforing } from '../data/uppstart';
@@ -253,6 +259,8 @@ interface Laddat {
   readonly momsregistrerad: boolean;
   /** Whether the first-run questions are still to be answered. */
   readonly valkomst: boolean;
+  /** What the firm does, which orders the booking questions. */
+  readonly bransch: Bransch;
   /** Whether this is the example book, made to look around in and then remove. */
   readonly exempel: boolean;
   readonly organisationsnummer: string;
@@ -486,6 +494,7 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
         await db.getMeta<boolean>('momsregistrerad'),
       ),
       valkomst: await skaVisaValkomst(db),
+      bransch: await lasBransch(db),
       exempel: (await db.getMeta<boolean>(EXEMPEL_NYCKEL)) === true,
       organisationsnummer: (await db.getMeta<string>('organisationsnummer')) ?? '',
       metod:
@@ -795,12 +804,12 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
   const foreslagetLov =
     forslagsmall === undefined
       ? undefined
-      : lovForMallId(forslagsmall.mall, beslutstradFor(laddat.profil));
+      : lovForMallId(forslagsmall.mall, beslutstradFor(laddat.profil, laddat.bransch));
   /*
    * The leaves as templates at today's rates, for matching a receipt's words.
    * The receipt suggests what it is; the rate is settled in the form.
    */
-  const lovmallar = allaLov(beslutstradFor(laddat.profil)).map((lov) =>
+  const lovmallar = allaLov(beslutstradFor(laddat.profil, laddat.bransch)).map((lov) =>
     lovTillMall(lov, momsForLov(lov, idag).sats),
   );
   const halvtPbb = (() => {
@@ -1492,6 +1501,11 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
             <Tillbaka onTillbaka={() => setVy('mer')} />
             <Foretagsinstallningar
               profil={laddat.profil}
+              bransch={laddat.bransch}
+              onBransch={async (bransch) => {
+                await db.setMeta(BOK_BRANSCH_NYCKEL, bransch);
+                setLaddat(await hamta());
+              }}
               momsregistrerad={laddat.momsregistrerad}
               onMomsregistrerad={async (registrerad) => {
                 await db.setMeta('momsregistrerad', registrerad);
@@ -1739,6 +1753,7 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
 
             <BokforUtgift
               profil={laddat.profil}
+              bransch={laddat.bransch}
               faktureringsmetod={
                 laddat.profil === 'enskild_firma' &&
                 laddat.metod === 'faktureringsmetoden'

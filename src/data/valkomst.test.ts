@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { uuidv7 } from '../domain/id/uuidv7';
 import { datum } from '../domain/tid/datum';
 import { fastKlocka } from '../domain/tid/klocka';
-import { BOK_ID_NYCKEL, BOK_PROFIL_NYCKEL } from './bokidentitet';
+import { BOK_ID_NYCKEL, BOK_PROFIL_NYCKEL, lasBransch } from './bokidentitet';
 import { lasTillstand } from './bokforing';
 import { BokfinkDatabase } from './db';
 import type { Skrivkontext } from './kommandon';
@@ -73,6 +73,29 @@ describe('genomforValkomst', () => {
     expect(await kontonummer(db)).toEqual(GRUNDKONTON.map((k) => k.nummer).sort());
     expect(await db.getMeta('momsperiod')).toBe('manad');
     expect(await skaVisaValkomst(db)).toBe(false);
+  });
+
+  it('records what a firm does, and an older book without one is a farm', async () => {
+    const db = await blankBok();
+    expect(await lasBransch(db)).toBe('gard');
+    await genomforValkomst(db, kontext, IDAG, {
+      profil: 'enskild_firma',
+      momsregistrerad: true,
+      momsperiod: 'kvartal',
+      bransch: 'hantverk',
+    });
+    expect(await lasBransch(db)).toBe('hantverk');
+  });
+
+  it('records no trade for an association', async () => {
+    const db = await blankBok();
+    await genomforValkomst(db, kontext, IDAG, {
+      profil: 'forening',
+      momsregistrerad: false,
+      momsperiod: 'kvartal',
+      bransch: 'handel',
+    });
+    expect(await lasBransch(db)).toBe('gard');
   });
 
   it("swaps the firm's starter accounts for the association's", async () => {
