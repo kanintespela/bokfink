@@ -13,6 +13,8 @@ export interface Valkomstval extends Valkomstsvar {
 
 interface Props {
   readonly onKlar: (val: Valkomstval) => Promise<void>;
+  /** Makes an example book to look around in, and opens it. */
+  readonly onExempel: () => Promise<void>;
   /** Opens the screen for reading a backup in, for someone who has used Bokfink before. */
   readonly onAterstall: () => Promise<void>;
 }
@@ -28,7 +30,7 @@ interface Props {
  * place of the overview, with the tab bar still there, so someone who would
  * rather look around first is not held up.
  */
-export function Valkomst({ onKlar, onAterstall }: Props) {
+export function Valkomst({ onKlar, onExempel, onAterstall }: Props) {
   const [profil, setProfil] = useState<Bokprofil>('enskild_firma');
   const [namn, setNamn] = useState('');
   const [momsregistrerad, setMomsregistrerad] = useState(false);
@@ -181,6 +183,29 @@ export function Valkomst({ onKlar, onAterstall }: Props) {
       <p className="hjalptext">
         Appen ber webbläsaren spara bokföringen när du går vidare. Svarar den nej säger
         översikten till.
+      </p>
+
+      <h3>Vill du bara titta först?</h3>
+      <p className="hjalptext">
+        En påhittad firma med ett års bokföring. Den ligger som en egen bok som går att ta
+        bort igen, och ändrar ingenting i din egen.
+      </p>
+      <p>
+        <button
+          type="button"
+          className="knapp knapp--text"
+          disabled={arbetar}
+          data-testid="valkomst-exempel"
+          onClick={() => {
+            setArbetar(true);
+            onExempel().catch((orsak: unknown) => {
+              setFel(orsak instanceof Error ? orsak.message : String(orsak));
+              setArbetar(false);
+            });
+          }}
+        >
+          Öppna en exempelbok
+        </button>
       </p>
 
       <h3>Har du använt Bokfink förut?</h3>

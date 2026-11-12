@@ -60,6 +60,8 @@ import { bokforReservering, foreningskapitalFor } from '../data/foreningskapital
 import { arEnbartStartdata, forberedBokforing } from '../data/uppstart';
 import { genomforValkomst, hoppaOverValkomst, skaVisaValkomst } from '../data/valkomst';
 import { Valkomst } from './start/Valkomst';
+import { Exempelkort } from './start/Exempelkort';
+import { EXEMPEL_NYCKEL } from '../data/exempelbok';
 import {
   kasseraUtkast,
   kopplaUnderlag,
@@ -251,6 +253,8 @@ interface Laddat {
   readonly momsregistrerad: boolean;
   /** Whether the first-run questions are still to be answered. */
   readonly valkomst: boolean;
+  /** Whether this is the example book, made to look around in and then remove. */
+  readonly exempel: boolean;
   readonly organisationsnummer: string;
   readonly metod: Redovisningsmetod;
   readonly kvitton: readonly Underlag[];
@@ -482,6 +486,7 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
         await db.getMeta<boolean>('momsregistrerad'),
       ),
       valkomst: await skaVisaValkomst(db),
+      exempel: (await db.getMeta<boolean>(EXEMPEL_NYCKEL)) === true,
       organisationsnummer: (await db.getMeta<string>('organisationsnummer')) ?? '',
       metod:
         (await db.getMeta<Redovisningsmetod>('redovisningsmetod')) ?? 'kontantmetoden',
@@ -976,6 +981,7 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
               setLagring(await requestPersistentStorage());
               setLaddat(await hamta());
             }}
+            onExempel={bokval.onExempel}
             onAterstall={async () => {
               await hoppaOverValkomst(db);
               setLaddat(await hamta());
@@ -983,8 +989,12 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
             }}
           />
         )}
+        {vy === 'attgora' && laddat.exempel && (
+          <Exempelkort onTaBort={() => void bokval.onTaBort(bokval.aktiv)} />
+        )}
         {vy === 'attgora' && !laddat.valkomst && (
           <AttGoraSida
+            exempel={laddat.exempel}
             idag={idag}
             senaste={laddat.senaste}
             verifikat={laddat.allaVerifikat}

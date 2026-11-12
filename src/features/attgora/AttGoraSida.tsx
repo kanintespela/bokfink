@@ -32,6 +32,8 @@ interface Props {
   /** The year's figures are worked out from these. */
   readonly verifikat: readonly BokfortVerifikat[];
   readonly rakenskapsar: readonly Rakenskapsar[];
+  /** The example book: nothing in it is worth a backup or a promise to keep. */
+  readonly exempel: boolean;
   readonly utkast: number;
   /** Receipts photographed but not booked yet. */
   readonly kvitton: number;
@@ -78,6 +80,7 @@ export function AttGoraSida({
   senaste,
   verifikat,
   rakenskapsar,
+  exempel,
   utkast,
   kvitton,
   dagarSedanBackup,
@@ -99,6 +102,7 @@ export function AttGoraSida({
    * before the app has shown what it does.
    */
   const backupGammal =
+    !exempel &&
     verifikat.length > 0 &&
     (dagarSedanBackup === undefined || dagarSedanBackup > GAMMAL_BACKUP_GRANS);
 
@@ -184,9 +188,12 @@ export function AttGoraSida({
        * Only once there is something to lose: a book nobody has booked in has
        * nothing a lost device would cost.
        */}
-      {senaste.length > 0 && lagring !== undefined && lagring !== 'persisted' && (
-        <Lagringskort lagring={lagring} onBeLagring={onBeLagring} />
-      )}
+      {!exempel &&
+        senaste.length > 0 &&
+        lagring !== undefined &&
+        lagring !== 'persisted' && (
+          <Lagringskort lagring={lagring} onBeLagring={onBeLagring} />
+        )}
 
       {(backupGammal || backupBesked !== undefined) && (
         <div className="kort" data-testid="backup-gammal">

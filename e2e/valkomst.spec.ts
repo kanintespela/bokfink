@@ -123,3 +123,60 @@ test('booking before answering settles the questions: the book is a firm', async
   await expect(page.getByTestId('valkomst')).toHaveCount(0);
   await expect(page.getByTestId('senaste-verifikat')).toBeVisible();
 });
+
+test('the example book has a year of bookings, says so, and asks nothing of the visitor', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByTestId('valkomst-exempel').click();
+
+  await expect(page.getByTestId('exempelkort')).toBeVisible();
+  await expect(page.getByTestId('aktiv-bok')).toContainText(
+    'Exempel: Lindgrens Snickeri',
+  );
+  await expect(page.getByTestId('senaste-verifikat')).toBeVisible();
+  // Nothing in it is worth a backup, or a promise from the browser to keep it.
+  await expect(page.getByTestId('backup-gammal')).toHaveCount(0);
+  await expect(page.getByTestId('lagring-ej-sparad')).toHaveCount(0);
+
+  await vyval(page).getByRole('button', { name: 'Verifikat' }).click();
+  await expect(page.getByText('Altanbygge, kund Berg')).toBeVisible();
+});
+
+test('removing the example leaves the first book as it was, still blank', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByTestId('valkomst-exempel').click();
+  await expect(page.getByTestId('exempelkort')).toBeVisible();
+
+  await page.getByTestId('ta-bort-exempel').click();
+  await page.getByTestId('ta-bort-exempel-ja').click();
+
+  await expect(page.getByTestId('bok-borttagen')).toContainText('är borttagen');
+  await expect(page.getByTestId('exempelkort')).toHaveCount(0);
+  // The first book never had its questions answered, so it asks them now.
+  await expect(page.getByTestId('valkomst')).toBeVisible();
+});
+
+test('the example is one book among the others, listed once', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('valkomst-exempel').click();
+  await expect(page.getByTestId('exempelkort')).toBeVisible();
+
+  await page.goto('/#bocker');
+  await expect(
+    page
+      .locator('ul.lista')
+      .first()
+      .locator('.listrad')
+      .filter({ hasText: 'Exempel: Lindgrens Snickeri' }),
+  ).toHaveCount(1);
+  await expect(
+    page
+      .locator('ul.lista')
+      .first()
+      .locator('.listrad')
+      .filter({ hasText: 'Min bokföring' }),
+  ).toHaveCount(1);
+});

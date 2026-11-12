@@ -11,6 +11,8 @@ import {
   type Bok,
 } from './data/bokregister';
 import { URSPRUNGLIG_BOK } from './data/bokidentitet';
+import { skapaExempelbok } from './data/exempelbok';
+import { systemklocka } from './platform/klocka';
 import {
   databasFor,
   lasBockerPaEnheten,
@@ -109,6 +111,14 @@ export function App() {
             onSkapa: async (namn, profil) => {
               const ny = await skapaBok(register, registerkontext, namn, profil);
               await valj(ny.id);
+            },
+            onExempel: async () => {
+              const exempel = await skapaExempelbok(
+                register,
+                registerkontext,
+                systemklocka(),
+              );
+              await valj(exempel.id);
             },
             onBytFarg: async (farg) => {
               await bytFargPaBok(register, registerkontext, aktiv.id, farg);

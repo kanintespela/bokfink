@@ -17,6 +17,8 @@ export interface Bokval {
   /** Opens another book. The whole app starts over in it. */
   readonly onValj: (id: string) => Promise<void>;
   readonly onSkapa: (namn: string, profil: Bokprofil) => Promise<void>;
+  /** Makes the example book, or finds it, and opens it. */
+  readonly onExempel: () => Promise<void>;
   readonly onBytFarg: (farg: Bokfarg | undefined) => Promise<void>;
   readonly onBytNamn: (namn: string) => Promise<void>;
   /** What a book holds, so the interface knows whether it may go without asking. */
