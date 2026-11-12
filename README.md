@@ -46,11 +46,13 @@ Frågorna när du bokför skrevs först för en gård med djur. Du väljer vad f
 
 ## Prova
 
-Öppna **https://bokfinken-app.github.io** i telefonen eller datorn. Det finns inget konto att skapa. På telefonen lägger du appen på hemskärmen (Safari: Dela, Lägg till på hemskärmen) så sparas den ordentligt och fungerar utan nät.
+Öppna **https://bokfinken-app.github.io** i telefonen eller datorn. Det finns inget konto att skapa. På telefonen lägger du appen på hemskärmen (Safari: Dela, Lägg till på hemskärmen) så sparas den ordentligt och fungerar utan nät. Gör det innan du bokför något: på en iPhone har appen på hemskärmen en egen lagring, skild från Safaris, så det du bokfört i Safari följer inte med utan måste flyttas över med en säkerhetskopia.
 
 Första gången ställer appen tre frågor: om du bokför för en firma eller en förening, vad boken heter och hur ofta du deklarerar moms. Vill du bara titta runt finns en exempelbok på samma skärm, med en påhittad firma och ett års bokföring. Den ligger som en egen bok som går att ta bort igen.
 
 Bokföringen sparas i webbläsaren på just den enhet du använder, inte hos någon annan. Det betyder att den inte följer med till en annan telefon eller webbläsare, och att den försvinner om du rensar webbplatsdata. Appen ber webbläsaren att behålla den och säger till på översikten om den vägrar, och när du har bokfört något föreslår den en säkerhetskopia. Ta kopian: den är det som skyddar bokföringen.
+
+**Om sajten försvinner.** Appen sparar sin kod på enheten, så den startar och fungerar även om adressen skulle bli otillgänglig. Då uppdateras den inte längre, och skatteregler ändras: NE-blanketten, prisbasbeloppet och momssatserna behöver följas upp varje år. En säkerhetskopia går att läsa in i en ny installation, och koden är öppen, så den kan läggas upp på en annan adress. Datan är bunden till adressen den bokfördes på, så kopian är det enda som följer med om adressen byts.
 
 Hittar du fel eller saknar något: [skriv ett ärende](https://github.com/kanintespela/bokfink/issues). Appen publiceras automatiskt från den här källkoden varje gång en ändring har klarat testerna.
 
