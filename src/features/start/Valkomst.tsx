@@ -165,7 +165,7 @@ export function Valkomst({ onKlar, onExempel, onAterstall }: Props) {
       <p>
         <button
           type="button"
-          className="knapp"
+          className="knapp knapp--primar"
           disabled={arbetar}
           data-testid="valkomst-borja"
           onClick={() => void borja()}
