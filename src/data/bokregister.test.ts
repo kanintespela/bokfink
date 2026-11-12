@@ -11,11 +11,13 @@ import {
   URSPRUNGLIG_BOK,
 } from './bokidentitet';
 import {
+  anslutBok,
   Bokregister,
   bytFargPaBok,
   bytNamnPaBok,
   filprefix,
   granskaBoknamn,
+  KanInteAnslutaError,
   KanInteTasBortError,
   lasBokinnehall,
   lasBocker,
@@ -382,5 +384,175 @@ describe('lasBokinnehall och tabortBok', () => {
     await expect(tabortBok(register, kontext, 'finns-inte')).rejects.toThrow(
       'finns inte på den här enheten',
     );
+  });
+});
+
+/*
+ * A book that lives on the sync server is given a place on this device under
+ * the server's identity for it, so that the two are one book and not two
+ * that happen to share a name.
+ */
+describe('anslutBok', () => {
+  let register: Bokregister;
+  /** A new identity per test: the database is named after it, and they share one store. */
+  let SERVERBOK: string;
+  const inloggning = { url: 'https://synk.example', token: 't', epost: 'a@example.se' };
+
+  beforeEach(() => {
+    register = new Bokregister(`kontera-bocker-anslut-${(raknare += 1)}`);
+    SERVERBOK = `019b76da-a800-7000-8000-${String(raknare).padStart(12, '0')}`;
+  });
+
+  const oppna = async (bok: Bok) => {
+    const db = new BokfinkDatabase(bok.databas);
+    await db.open();
+    return db;
+  };
+
+  it('creates the book under the identity the server knows it by', async () => {
+    const ansluten = await anslutBok(
+      register,
+      kontext,
+      SERVERBOK,
+      { namn: 'Bygdegårdsföreningen', profil: 'forening' },
+      { inloggning },
+    );
+
+    expect(ansluten.id).toBe(SERVERBOK);
+    expect(ansluten.namn).toBe('Bygdegårdsföreningen');
+    const db = await oppna(ansluten);
+    expect(await lasBokId(db)).toBe(SERVERBOK);
+    expect((await lasBocker(register, kontext)).bocker.map((bok) => bok.id)).toContain(
+      SERVERBOK,
+    );
+    db.close();
+  });
+
+  /*
+   * What the log does not carry. Without it an association's books would
+   * open as a firm's, and a book kept with faktureringsmetoden as one kept
+   * with kontantmetoden.
+   */
+  it('takes the kind of book and its settings from the description', async () => {
+    const ansluten = await anslutBok(
+      register,
+      kontext,
+      SERVERBOK,
+      {
+        namn: 'Bygdegårdsföreningen',
+        profil: 'forening',
+        momsperiod: 'ar',
+        momsregistrerad: false,
+        redovisningsmetod: 'faktureringsmetoden',
+      },
+      { inloggning },
+    );
+
+    const db = await oppna(ansluten);
+    expect(await lasBokprofil(db)).toBe('forening');
+    expect(await db.getMeta('momsperiod')).toBe('ar');
+    expect(await db.getMeta('momsregistrerad')).toBe(false);
+    expect(await db.getMeta('redovisningsmetod')).toBe('faktureringsmetoden');
+    db.close();
+  });
+
+  it('leaves a setting the book never chose unset, so the default applies', async () => {
+    const ansluten = await anslutBok(
+      register,
+      kontext,
+      SERVERBOK,
+      { namn: 'Firman', profil: 'enskild_firma' },
+      { inloggning },
+    );
+
+    const db = await oppna(ansluten);
+    expect(await db.getMeta('redovisningsmetod')).toBeUndefined();
+    expect(await db.getMeta('momsperiod')).toBeUndefined();
+    db.close();
+  });
+
+  it('is set up to sync, with the passphrase when the book has one', async () => {
+    const ansluten = await anslutBok(
+      register,
+      kontext,
+      SERVERBOK,
+      { namn: 'Firman', profil: 'enskild_firma' },
+      { inloggning, losenfras: 'en delad lösenfras' },
+    );
+
+    const db = await oppna(ansluten);
+    expect(await db.getMeta('synk.inloggning')).toEqual(inloggning);
+    expect(await db.getMeta('synk.losenfras')).toBe('en delad lösenfras');
+    expect((await lasBokinnehall(db)).synkad).toBe(true);
+    db.close();
+  });
+
+  it('holds no bookkeeping until the first sync has brought it', async () => {
+    const ansluten = await anslutBok(
+      register,
+      kontext,
+      SERVERBOK,
+      { namn: 'Firman', profil: 'enskild_firma' },
+      { inloggning },
+    );
+
+    const db = await oppna(ansluten);
+    expect(await db.table('handelse').count()).toBe(0);
+    db.close();
+  });
+
+  it('keeps the name recognisable when a book here already has it', async () => {
+    await skapaBok(register, kontext, 'Föreningen', 'forening');
+
+    const ansluten = await anslutBok(
+      register,
+      kontext,
+      SERVERBOK,
+      { namn: 'Föreningen', profil: 'forening' },
+      { inloggning },
+    );
+
+    expect(ansluten.namn).toBe('Föreningen (2)');
+  });
+
+  it('shortens a name longer than a book here may have', async () => {
+    const ansluten = await anslutBok(
+      register,
+      kontext,
+      SERVERBOK,
+      { namn: 'x'.repeat(LANGSTA_BOKNAMN + 20), profil: 'forening' },
+      { inloggning },
+    );
+
+    expect(ansluten.namn).toHaveLength(LANGSTA_BOKNAMN);
+  });
+
+  /*
+   * The same identity twice would be two databases writing into one log.
+   * That includes the first book, which is on every device from the start
+   * and is joined by logging in to the sync in it.
+   */
+  it('refuses a book that is already on the device', async () => {
+    const beskrivning = { namn: 'Firman', profil: 'enskild_firma' } as const;
+    await anslutBok(register, kontext, SERVERBOK, beskrivning, { inloggning });
+
+    await expect(
+      anslutBok(register, kontext, SERVERBOK, beskrivning, { inloggning }),
+    ).rejects.toThrow(KanInteAnslutaError);
+    await expect(
+      anslutBok(register, kontext, URSPRUNGLIG_BOK, beskrivning, { inloggning }),
+    ).rejects.toThrow('finns redan på den här enheten');
+  });
+
+  it('refuses an identity that could not be a book’s', async () => {
+    await expect(
+      anslutBok(
+        register,
+        kontext,
+        '../kontera',
+        { namn: 'Firman', profil: 'enskild_firma' },
+        { inloggning },
+      ),
+    ).rejects.toThrow(KanInteAnslutaError);
   });
 });

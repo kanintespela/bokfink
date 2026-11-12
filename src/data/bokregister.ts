@@ -2,7 +2,10 @@ import Dexie, { type Table } from 'dexie';
 
 import { nastaLedigaFarg, type Bokfarg } from '../domain/bok/bokfarg';
 import type { Bokprofil } from '../domain/bok/bokprofil';
+import type { Bokbeskrivning } from '../domain/bok/bokbeskrivning';
+import { antaBokbeskrivning } from './bokbeskrivning';
 import {
+  arBokidentitet,
   BOK_ID_NYCKEL,
   BOK_NAMN_NYCKEL,
   BOK_PROFIL_NYCKEL,
@@ -45,6 +48,10 @@ export const URSPRUNGLIG_DATABAS = 'kontera';
 const BOKDATABAS_PREFIX = 'kontera-bok-';
 
 const AKTIV_NYCKEL = 'aktiv';
+
+/** Where a book keeps its login to the sync server, and its passphrase. */
+const SYNK_INLOGGNING_NYCKEL = 'synk.inloggning';
+const SYNK_LOSENFRAS_NYCKEL = 'synk.losenfras';
 
 /** Long enough for "Exempelbygdens Bygdegårdsförening", short enough for a header. */
 export const LANGSTA_BOKNAMN = 40;
@@ -233,6 +240,80 @@ export async function skapaBok(
   return bok;
 }
 
+export class KanInteAnslutaError extends Error {
+  constructor(meddelande: string) {
+    super(meddelande);
+    this.name = 'KanInteAnslutaError';
+  }
+}
+
+/** What a joined book needs in order to fetch itself: the login, and the passphrase if it has one. */
+export interface Synkuppgifter {
+  /** The login as the sync stores it; opaque here. */
+  readonly inloggning: unknown;
+  readonly losenfras?: string;
+}
+
+/**
+ * Makes room on this device for a book that already exists on the sync
+ * server.
+ *
+ * The book is created under the server's identity for it, not a new one, so
+ * that what this device sends lands in the same book. It is given the
+ * description the book left on the server - its kind and the settings that
+ * decide how it is kept - and the login, and nothing else: the bookkeeping
+ * arrives with the first sync, which runs when the book is opened.
+ *
+ * The starter set the book is given on that first opening is dropped again
+ * by the sync, as for any device that joins books that already exist (see
+ * slappOrordStartdata in synk.ts).
+ *
+ * A book that is already here is refused rather than joined a second time:
+ * the same identity twice would be two databases sending into one log.
+ */
+export async function anslutBok(
+  register: Bokregister,
+  kontext: Registerkontext,
+  id: string,
+  beskrivning: Bokbeskrivning,
+  synk: Synkuppgifter,
+): Promise<Bok> {
+  if (!arBokidentitet(id)) {
+    throw new KanInteAnslutaError(`"${id}" är inte en bok som går att hämta.`);
+  }
+  const { bocker } = await lasBocker(register, kontext);
+  const redan = bocker.find((bok) => bok.id === id);
+  if (redan !== undefined) {
+    throw new KanInteAnslutaError(
+      `Boken finns redan på den här enheten, som ${redan.namn}.`,
+    );
+  }
+
+  const bok: Bok = {
+    id,
+    // The server's name, unless a book here already has it.
+    namn: ledigtBoknamn(beskrivning.namn.slice(0, LANGSTA_BOKNAMN), bocker, id),
+    databas: `${BOKDATABAS_PREFIX}${id}`,
+    skapad: kontext.nu(),
+    farg: nastaLedigaFarg(bocker.map((kandidat) => kandidat.farg)),
+  };
+
+  const db = new BokfinkDatabase(bok.databas);
+  try {
+    await db.setMeta(BOK_ID_NYCKEL, id);
+    await antaBokbeskrivning(db, { ...beskrivning, namn: bok.namn });
+    await db.setMeta(SYNK_INLOGGNING_NYCKEL, synk.inloggning);
+    if (synk.losenfras !== undefined) {
+      await db.setMeta(SYNK_LOSENFRAS_NYCKEL, synk.losenfras);
+    }
+  } finally {
+    db.close();
+  }
+
+  await register.bocker.put(bok);
+  return bok;
+}
+
 /** Sets, or with undefined clears, the colour of a book. */
 export async function bytFargPaBok(
   register: Bokregister,
@@ -339,7 +420,7 @@ export async function lasBokinnehall(db: BokfinkDatabase): Promise<Bokinnehall> 
   const [logg, tillstand, synk] = await Promise.all([
     lasLogg(db),
     lasTillstand(db),
-    db.getMeta<unknown>('synk.inloggning'),
+    db.getMeta<unknown>(SYNK_INLOGGNING_NYCKEL),
   ]);
   return {
     tom: arEnbartStartdata(logg),

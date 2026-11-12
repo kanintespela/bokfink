@@ -12,6 +12,7 @@ import { verifikatserie } from '../domain/verifikat/serie';
 import { skapaUtkast } from '../domain/verifikat/verifikat';
 import { franBase64, tillBase64 } from './base64';
 import { lasLogg, lasTillstand } from './bokforing';
+import { anslutBok, Bokregister } from './bokregister';
 import { BokfinkDatabase } from './db';
 import {
   bokforUtkast,
@@ -752,6 +753,35 @@ describe('a new device joining books that already exist', () => {
       (await lasLogg(telefonen)).map((post) => post.id),
     );
     expect(await osankta(nya)).toBe(0);
+  });
+
+  /*
+   * The whole way a book gets from the server onto a second device: a place
+   * is made for it from its description, it is opened - which gives it a
+   * starter set of its own, here an association's - and the first sync
+   * replaces that with the books themselves.
+   */
+  it('fills a book joined from the server with that book and nothing else', async () => {
+    const register = new Bokregister(`kontera-bocker-synk-${(raknare += 1)}`);
+    const ansluten = await anslutBok(
+      register,
+      { nu: () => '2026-11-12T08:00:00.000Z' },
+      `019b76da-a800-7000-8000-${String(raknare).padStart(12, '0')}`,
+      { namn: 'Bygdegårdsföreningen', profil: 'forening' },
+      { inloggning: { url: 'https://synk.example', token: 't', epost: 'a@example.se' } },
+    );
+    const hamtad = new BokfinkDatabase(ansluten.databas);
+    await hamtad.open();
+    await forberedBokforing(hamtad, kontext('datorn'), IDAG);
+
+    const resultat = await synka(hamtad, server.transport, krypto, 'datorn', { hasha });
+
+    expect(resultat.skickade).toBe(0);
+    expect((await lasLogg(hamtad)).map((post) => post.id)).toEqual(
+      (await lasLogg(telefonen)).map((post) => post.id),
+    );
+    expect(await osankta(hamtad)).toBe(0);
+    hamtad.close();
   });
 
   /*
