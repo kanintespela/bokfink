@@ -20,6 +20,7 @@ import { ar, type Datum } from '../domain/tid/datum';
 import type { Verifikatserie } from '../domain/verifikat/serie';
 import { skapaUtkast, type BokfortVerifikat } from '../domain/verifikat/verifikat';
 import { lasTillstand, tillampa } from './bokforing';
+import { kravVerifikat } from './anlaggningskop';
 import type { BokfinkDatabase } from './db';
 import { bokforUtkast, huvud, nyttId, type Skrivkontext } from './kommandon';
 
@@ -29,6 +30,7 @@ export async function registreraAnlaggningstillgang(
   uppgifter: Omit<Anlaggningstillgangsuppgifter, 'id'>,
 ): Promise<Anlaggningstillgang> {
   const tillgang = skapaAnlaggningstillgang({ id: nyttId(kontext), ...uppgifter });
+  await kravVerifikat(db, tillgang.verifikatId);
   await tillampa(db, { ...huvud(kontext), typ: 'anlaggning.registrerad', tillgang });
   return tillgang;
 }

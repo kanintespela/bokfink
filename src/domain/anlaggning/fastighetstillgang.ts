@@ -44,6 +44,8 @@ export interface Fastighetstillgang {
    * redan skrivits av i tidigare bokföring (t.ex. vid migrering av historik).
    */
   readonly ackumuleradAvskrivning: Ore;
+  /** The verifikat the purchase was booked with; see Anlaggningstillgang.verifikatId. */
+  readonly verifikatId?: Uuid;
   readonly avyttring?: Fastighetsavyttring;
 }
 
@@ -55,6 +57,7 @@ export interface Fastighetstillgangsuppgifter {
   readonly kategori: Fastighetskategori;
   /** Utelämnas för en nyanskaffad tillgång - då är den noll. */
   readonly ackumuleradAvskrivning?: Ore;
+  readonly verifikatId?: Uuid;
 }
 
 export function skapaFastighetstillgang(
@@ -87,6 +90,9 @@ export function skapaFastighetstillgang(
     anskaffningsvarde: uppgifter.anskaffningsvarde,
     kategori: uppgifter.kategori,
     ackumuleradAvskrivning,
+    ...(uppgifter.verifikatId === undefined
+      ? {}
+      : { verifikatId: uppgifter.verifikatId }),
   };
 }
 
