@@ -4,6 +4,7 @@ import {
   type Markor,
   type Synktransport,
 } from '../data/synk';
+import { arBokidentitet } from '../data/bokidentitet';
 
 /**
  * The sync server, spoken to over its REST API.
@@ -124,17 +125,6 @@ export async function fornyaInloggning(inloggning: Inloggning): Promise<Inloggni
     throw new SynkfelError('Servern svarade utan en inloggningsnyckel.');
   }
   return { ...inloggning, token: data.token };
-}
-
-/**
- * Whether a string can be a book's identity on the server.
- *
- * An identity is a UUID or the first book's fixed word, and it ends up in a
- * request filter and - on a device that joins the book - in a database name.
- * One that came off a server is checked before it is used for either.
- */
-export function arBokidentitet(bok: string): boolean {
-  return /^[A-Za-z0-9-]{1,64}$/.test(bok);
 }
 
 /** A book the server holds, and what it has been told about it. */
