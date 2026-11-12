@@ -333,6 +333,11 @@ p {
   touch-action: manipulation;
 }
 
+/* A form that belongs to the row above it, inside the same list item. */
+.listrad__formular {
+  padding: 0 var(--rum-4) var(--rum-3);
+}
+
 .listrad__text {
   display: flex;
   flex-direction: column;

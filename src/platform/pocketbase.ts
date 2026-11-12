@@ -4,6 +4,7 @@ import {
   type Markor,
   type Synktransport,
 } from '../data/synk';
+import { arBokidentitet } from '../data/bokidentitet';
 
 /**
  * The sync server, spoken to over its REST API.
@@ -31,6 +32,15 @@ const COLLECTION = 'handelser';
  * the bytes in it are ciphertext.
  */
 const FILCOLLECTION = 'filer';
+
+/**
+ * The collection that says which books the server holds.
+ *
+ * One row per book, with what the book calls itself. Also the collection a
+ * server from before books were kept apart does not have, which is how such
+ * a server is recognised before anything is sent to it.
+ */
+const BOKCOLLECTION = 'bocker';
 
 /** PocketBase's own page limit; asking for more is silently capped. */
 const SIDSTORLEK = 500;
@@ -117,14 +127,121 @@ export async function fornyaInloggning(inloggning: Inloggning): Promise<Inloggni
   return { ...inloggning, token: data.token };
 }
 
-/** The transport the sync protocol asks for, over one PocketBase collection. */
-export function pocketbaseTransport(inloggning: Inloggning): Synktransport {
+/** A book the server holds, and what it has been told about it. */
+export interface Serverbok {
+  readonly bok: string;
+  /** As the book wrote it: JSON, or ciphertext when it syncs encrypted. */
+  readonly beskrivning: string;
+}
+
+/**
+ * Every book on the server, oldest first.
+ *
+ * Not part of the transport, which is made for one book: this is the
+ * question asked before there is a book to make one for.
+ */
+export async function bockerPaServern(inloggning: Inloggning): Promise<Serverbok[]> {
+  const alla: Serverbok[] = [];
+  for (let sida = 1; ; sida += 1) {
+    const parametrar = new URLSearchParams({
+      perPage: String(SIDSTORLEK),
+      page: String(sida),
+      fields: 'bok,beskrivning',
+      sort: 'created,id',
+    });
+    const svar = await las(
+      `${inloggning.url}/api/collections/${BOKCOLLECTION}/records?${parametrar.toString()}`,
+      { Authorization: inloggning.token },
+      { samling: BOKCOLLECTION, vad: 'listan över böcker' },
+    );
+    const poster = (svar.items ?? []) as Partial<Serverbok>[];
+    for (const post of poster) {
+      if (
+        typeof post.bok === 'string' &&
+        arBokidentitet(post.bok) &&
+        typeof post.beskrivning === 'string'
+      ) {
+        alla.push({ bok: post.bok, beskrivning: post.beskrivning });
+      }
+    }
+    if (poster.length < SIDSTORLEK) {
+      return alla;
+    }
+  }
+}
+
+/**
+ * The transport the sync protocol asks for, for one book.
+ *
+ * Every row on the server names its book, and the server hands out only the
+ * rows of the book named in the request's `bok` parameter - that is its
+ * access rule, not a filter added here, so a request that names no book is
+ * given nothing rather than everything (see the migration
+ * …_bok_per_rad.js).
+ */
+export function pocketbaseTransport(inloggning: Inloggning, bok: string): Synktransport {
+  if (!arBokidentitet(bok)) {
+    throw new SynkfelError(`"${bok}" är inte en bok som går att synka.`);
+  }
   const huvuden = {
     'Content-Type': 'application/json',
     Authorization: inloggning.token,
   };
 
+  /** The server's own row for this book, if it has one. */
+  async function bokrad(): Promise<{ id: string; beskrivning: string } | undefined> {
+    const parametrar = new URLSearchParams({
+      perPage: '1',
+      filter: `bok="${bok}"`,
+      fields: 'id,beskrivning',
+    });
+    const svar = await las(
+      `${inloggning.url}/api/collections/${BOKCOLLECTION}/records?${parametrar.toString()}`,
+      huvuden,
+      { samling: BOKCOLLECTION, vad: 'bokens beskrivning' },
+    );
+    const post = ((svar.items ?? []) as { id?: string; beskrivning?: string }[])[0];
+    return typeof post?.id === 'string' && typeof post.beskrivning === 'string'
+      ? { id: post.id, beskrivning: post.beskrivning }
+      : undefined;
+  }
+
   return {
+    async bokbeskrivning(): Promise<string | undefined> {
+      return (await bokrad())?.beskrivning;
+    },
+
+    async beskrivBok(beskrivning: string): Promise<void> {
+      const rad = await bokrad();
+      const svar = await fetch(
+        `${inloggning.url}/api/collections/${BOKCOLLECTION}/records${
+          rad === undefined ? '' : `/${rad.id}`
+        }`,
+        {
+          method: rad === undefined ? 'POST' : 'PATCH',
+          headers: huvuden,
+          body: JSON.stringify({ bok, beskrivning }),
+        },
+      ).catch(() => {
+        throw new SynkfelError('Servern svarar inte. Försök igen när du har nät.');
+      });
+      if (svar.ok) {
+        return;
+      }
+      // Two devices telling the server about the same book at the same
+      // moment: the unique index lets one in, and the book is described.
+      if (
+        rad === undefined &&
+        svar.status === 400 &&
+        (await svar.text()).includes('"bok"')
+      ) {
+        return;
+      }
+      throw new SynkfelError(
+        `Servern svarade ${svar.status} när bokens namn skulle sparas på den.`,
+      );
+    },
+
     async hamta(markor: Markor | undefined): Promise<Fjarrpost[]> {
       const alla: Fjarrpost[] = [];
       let fran = markor;
@@ -136,9 +253,10 @@ export function pocketbaseTransport(inloggning: Inloggning): Synktransport {
        */
       for (;;) {
         const parametrar = new URLSearchParams({
+          bok,
           sort: 'created,id',
           perPage: String(SIDSTORLEK),
-          fields: 'id,op_id,device,payload,created',
+          fields: 'id,op_id,device,payload,created,bok',
         });
         if (fran !== undefined) {
           // Two entries can share a timestamp, so the id breaks the tie.
@@ -153,8 +271,29 @@ export function pocketbaseTransport(inloggning: Inloggning): Synktransport {
           huvuden,
           { samling: COLLECTION, vad: 'händelser' },
         );
-        const poster = (sida.items ?? []) as Fjarrpost[];
-        alla.push(...poster);
+        const poster = (sida.items ?? []) as (Fjarrpost & { bok?: string })[];
+        /*
+         * Checked although the server's rule already promises it. An entry
+         * from another book, folded into this one, cannot be taken out
+         * again - so the one place they could arrive does not take the
+         * server's word for it.
+         */
+        if (poster.some((post) => post.bok !== bok)) {
+          throw new SynkfelError(
+            'Servern lämnade ut händelser som hör till en annan bok, och ingenting ' +
+              'har lästs in. Den behöver uppdateras: se "Uppdatera schemat" i ' +
+              'server/pocketbase/README.md.',
+          );
+        }
+        alla.push(
+          ...poster.map(({ id, op_id, device, payload, created }) => ({
+            op_id,
+            device,
+            payload,
+            created,
+            ...(id === undefined ? {} : { id }),
+          })),
+        );
 
         const sista = poster[poster.length - 1];
         if (poster.length < SIDSTORLEK || sista === undefined) {
@@ -175,6 +314,7 @@ export function pocketbaseTransport(inloggning: Inloggning): Synktransport {
               op_id: post.op_id,
               device: post.device,
               payload: post.payload,
+              bok,
             }),
           },
         ).catch(() => {
@@ -215,6 +355,7 @@ export function pocketbaseTransport(inloggning: Inloggning): Synktransport {
       const alla: string[] = [];
       for (let sida = 1; ; sida += 1) {
         const parametrar = new URLSearchParams({
+          bok,
           perPage: String(SIDSTORLEK),
           page: String(sida),
           fields: 'sha256',
@@ -246,6 +387,7 @@ export function pocketbaseTransport(inloggning: Inloggning): Synktransport {
        */
       const kropp = new FormData();
       kropp.set('sha256', adress);
+      kropp.set('bok', bok);
       kropp.set('data', new Blob([chiffer as BlobPart]), `${adress}.bin`);
 
       /*
@@ -288,6 +430,7 @@ export function pocketbaseTransport(inloggning: Inloggning): Synktransport {
 
     async hamtaFil(adress: string): Promise<Uint8Array | undefined> {
       const parametrar = new URLSearchParams({
+        bok,
         perPage: '1',
         filter: `sha256="${adress}"`,
         fields: 'id,collectionId,data',
@@ -385,7 +528,8 @@ async function las(
     throw new SynkfelError(
       svar.status === 404
         ? `Servern saknar samlingen "${samling}". Den skapas av ` +
-            'server/pocketbase/pb_migrations/ när servern startar.'
+            'server/pocketbase/pb_migrations/ när servern startar; se "Uppdatera ' +
+            'schemat" i server/pocketbase/README.md.'
         : `Servern svarade ${svar.status} när ${vad} skulle hämtas.`,
     );
   }

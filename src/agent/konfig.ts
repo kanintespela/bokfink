@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { BOKPROFILER, STANDARD_BOKPROFIL } from '../domain/bok/bokprofil';
+import { URSPRUNGLIG_BOK } from '../data/bokidentitet';
 
 /**
  * What the assistant needs to reach the books: the sync server, a login to
@@ -18,6 +19,14 @@ const konfigschema = z.object({
   epost: z.string().min(1),
   losenord: z.string().min(1),
   losenfras: z.string().min(1).optional(),
+  /**
+   * Which of the server's books the assistant works in.
+   *
+   * A file that says nothing means the first book, which is the one every
+   * file written before a server could hold several was about. Another
+   * book's identity is shown under Böcker in the app.
+   */
+  bok: z.string().min(1).max(64).default(URSPRUNGLIG_BOK),
   /** Written on every entry as the device it came from. */
   enhet: z.string().min(1).default('claude-pi'),
 });

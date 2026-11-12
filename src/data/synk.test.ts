@@ -2,6 +2,7 @@ import 'fake-indexeddb/auto';
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { tolkaBokbeskrivning, type Bokbeskrivning } from '../domain/bok/bokbeskrivning';
 import { oreFromKronor } from '../domain/belopp/ore';
 import { uuidv7, type Uuid } from '../domain/id/uuidv7';
 import { kontonummer, skapaKonto } from '../domain/konto/konto';
@@ -11,6 +12,7 @@ import { verifikatserie } from '../domain/verifikat/serie';
 import { skapaUtkast } from '../domain/verifikat/verifikat';
 import { franBase64, tillBase64 } from './base64';
 import { lasLogg, lasTillstand } from './bokforing';
+import { anslutBok, Bokregister } from './bokregister';
 import { BokfinkDatabase } from './db';
 import {
   bokforUtkast,
@@ -52,9 +54,19 @@ const AR_2026 = '019b76da-a800-7000-8000-000000002026' as Uuid;
 function fejkserver() {
   const poster: Fjarrpost[] = [];
   const filer = new Map<string, Uint8Array>();
+  /** What the server has been told about the book, and how many times. */
+  const bok: { beskrivning: string | undefined; skrivningar: number } = {
+    beskrivning: undefined,
+    skrivningar: 0,
+  };
   let klocka = 0;
 
   const transport: Synktransport = {
+    bokbeskrivning: async () => bok.beskrivning,
+    beskrivBok: async (beskrivning) => {
+      bok.beskrivning = beskrivning;
+      bok.skrivningar += 1;
+    },
     hamta: async (markor) => {
       const efter = markor === undefined ? '' : `${markor.created}|${markor.id}`;
       return poster
@@ -83,7 +95,7 @@ function fejkserver() {
     hamtaFil: async (adress) => filer.get(adress),
   };
 
-  return { transport, poster, filer };
+  return { transport, poster, filer, bok };
 }
 
 /**
@@ -210,6 +222,8 @@ describe('synka', () => {
   it('keeps the queue when the send fails', async () => {
     await grundlagg(telefonen, 'telefonen');
     const trasig: Synktransport = {
+      bokbeskrivning: async () => undefined,
+      beskrivBok: async () => undefined,
       hamta: async () => [],
       skicka: async () => {
         throw new Error('nätverket dog');
@@ -524,6 +538,171 @@ describe('synka', () => {
  * template twice, and starter accounts and an empty year arriving after the
  * real ones - with names, SRU codes and opening balances at stake.
  */
+/*
+ * The log does not say what a book is called or what kind it is, so the
+ * book leaves a description beside it for a device that joins later. Asking
+ * for it is also how a server that cannot keep books apart is found out
+ * before it is given a second one.
+ */
+describe('telling the server about the book', () => {
+  let telefonen: BokfinkDatabase;
+  let datorn: BokfinkDatabase;
+  let server: ReturnType<typeof fejkserver>;
+
+  const forening: Bokbeskrivning = {
+    namn: 'Bygdegårdsföreningen',
+    profil: 'forening',
+    momsregistrerad: false,
+  };
+
+  const lasPaServern = async () =>
+    tolkaBokbeskrivning(await krypto.dekryptera(server.bok.beskrivning ?? ''));
+
+  beforeEach(async () => {
+    telefonen = await nyDb();
+    datorn = await nyDb();
+    server = fejkserver();
+    await grundlagg(telefonen, 'telefonen');
+  });
+
+  it('describes the book to a server that has not heard of it', async () => {
+    await synka(telefonen, server.transport, krypto, 'telefonen', {
+      hasha,
+      beskrivning: forening,
+    });
+
+    expect(await lasPaServern()).toEqual(forening);
+  });
+
+  it('sends the description through the same encryption as the entries', async () => {
+    await synka(telefonen, server.transport, krypto, 'telefonen', {
+      hasha,
+      beskrivning: forening,
+    });
+
+    expect(server.bok.beskrivning).not.toContain('Bygdegårdsföreningen');
+  });
+
+  it('says it once, not on every round', async () => {
+    for (let varv = 0; varv < 3; varv += 1) {
+      await synka(telefonen, server.transport, krypto, 'telefonen', {
+        hasha,
+        beskrivning: forening,
+      });
+    }
+
+    expect(server.bok.skrivningar).toBe(1);
+  });
+
+  it('says it again when the book is renamed or a setting changes', async () => {
+    await synka(telefonen, server.transport, krypto, 'telefonen', {
+      hasha,
+      beskrivning: forening,
+    });
+    await synka(telefonen, server.transport, krypto, 'telefonen', {
+      hasha,
+      beskrivning: { ...forening, namn: 'Byalaget', momsregistrerad: true },
+    });
+
+    expect(server.bok.skrivningar).toBe(2);
+    expect(await lasPaServern()).toEqual({
+      namn: 'Byalaget',
+      profil: 'forening',
+      momsregistrerad: true,
+    });
+  });
+
+  /*
+   * The name is each device's own. A computer that calls the book something
+   * else must not overwrite what the phone said just by syncing - or the two
+   * would take turns on every round - but a rename made on it afterwards is
+   * a change like any other.
+   */
+  it('leaves a description it finds alone, until something changes here', async () => {
+    await synka(telefonen, server.transport, krypto, 'telefonen', {
+      hasha,
+      beskrivning: forening,
+    });
+    const paDatorn = { ...forening, namn: 'Föreningen (dator)' };
+
+    await synka(datorn, server.transport, krypto, 'datorn', {
+      hasha,
+      beskrivning: paDatorn,
+    });
+    await synka(datorn, server.transport, krypto, 'datorn', {
+      hasha,
+      beskrivning: paDatorn,
+    });
+    expect(server.bok.skrivningar).toBe(1);
+    expect((await lasPaServern()).namn).toBe('Bygdegårdsföreningen');
+
+    await synka(datorn, server.transport, krypto, 'datorn', {
+      hasha,
+      beskrivning: { ...paDatorn, namn: 'Byalaget' },
+    });
+    expect((await lasPaServern()).namn).toBe('Byalaget');
+  });
+
+  /*
+   * A server from before books were kept apart has no way to answer. Had
+   * the round gone on, a second book's entries would have joined the first
+   * one's on it, where nothing can be taken away again.
+   */
+  it('sends nothing to a server that cannot say which books it holds', async () => {
+    const gammal: Synktransport = {
+      ...server.transport,
+      bokbeskrivning: async () => {
+        throw new Error('Servern saknar samlingen "bocker".');
+      },
+    };
+    const kade = await osankta(telefonen);
+
+    await expect(
+      synka(telefonen, gammal, krypto, 'telefonen', { hasha, beskrivning: forening }),
+    ).rejects.toThrow('saknar samlingen "bocker"');
+
+    expect(server.poster).toHaveLength(0);
+    expect(await osankta(telefonen)).toBe(kade);
+  });
+
+  /*
+   * The receipt assistant holds a copy of the log and none of the book's
+   * settings, so it has nothing to say - but it must not be the one that
+   * slips a book onto a server that cannot keep it apart either.
+   */
+  it('asks even when it has no description to give, and gives none', async () => {
+    let fragor = 0;
+    const raknande: Synktransport = {
+      ...server.transport,
+      bokbeskrivning: async () => {
+        fragor += 1;
+        return undefined;
+      },
+    };
+
+    await synka(telefonen, raknande, krypto, 'assistenten', { hasha });
+
+    expect(fragor).toBe(1);
+    expect(server.bok.skrivningar).toBe(0);
+  });
+
+  it('describes the book to the next server after this one is forgotten', async () => {
+    await synka(telefonen, server.transport, krypto, 'telefonen', {
+      hasha,
+      beskrivning: forening,
+    });
+    const nasta = fejkserver();
+
+    await glomServern(telefonen);
+    await synka(telefonen, nasta.transport, krypto, 'telefonen', {
+      hasha,
+      beskrivning: forening,
+    });
+
+    expect(nasta.bok.skrivningar).toBe(1);
+  });
+});
+
 describe('a new device joining books that already exist', () => {
   const IDAG = fastKlocka(datum('2026-09-13'));
 
@@ -574,6 +753,35 @@ describe('a new device joining books that already exist', () => {
       (await lasLogg(telefonen)).map((post) => post.id),
     );
     expect(await osankta(nya)).toBe(0);
+  });
+
+  /*
+   * The whole way a book gets from the server onto a second device: a place
+   * is made for it from its description, it is opened - which gives it a
+   * starter set of its own, here an association's - and the first sync
+   * replaces that with the books themselves.
+   */
+  it('fills a book joined from the server with that book and nothing else', async () => {
+    const register = new Bokregister(`kontera-bocker-synk-${(raknare += 1)}`);
+    const ansluten = await anslutBok(
+      register,
+      { nu: () => '2026-11-12T08:00:00.000Z' },
+      `019b76da-a800-7000-8000-${String(raknare).padStart(12, '0')}`,
+      { namn: 'Bygdegårdsföreningen', profil: 'forening' },
+      { inloggning: { url: 'https://synk.example', token: 't', epost: 'a@example.se' } },
+    );
+    const hamtad = new BokfinkDatabase(ansluten.databas);
+    await hamtad.open();
+    await forberedBokforing(hamtad, kontext('datorn'), IDAG);
+
+    const resultat = await synka(hamtad, server.transport, krypto, 'datorn', { hasha });
+
+    expect(resultat.skickade).toBe(0);
+    expect((await lasLogg(hamtad)).map((post) => post.id)).toEqual(
+      (await lasLogg(telefonen)).map((post) => post.id),
+    );
+    expect(await osankta(hamtad)).toBe(0);
+    hamtad.close();
   });
 
   /*

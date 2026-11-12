@@ -1,3 +1,4 @@
+import { skrivBokbeskrivning, type Bokbeskrivning } from '../domain/bok/bokbeskrivning';
 import type { Handelse } from '../domain/handelse/handelse';
 import type { Uuid } from '../domain/id/uuidv7';
 import type { Sha256, Underlag } from '../domain/underlag/underlag';
@@ -42,14 +43,30 @@ export interface Fjarrpost {
 }
 
 /**
- * What the app needs from a server, and nothing more.
+ * What the app needs from a server for one book, and nothing more.
  *
  * Narrow on purpose: everything behind this interface can be replaced - the
  * plan requires that PocketBase be swappable for a dumb file store without a
- * rule being lost, and an interface with four methods is what makes that
+ * rule being lost, and an interface with seven methods is what makes that
  * claim checkable rather than aspirational.
+ *
+ * A transport is made for one book and sees only that book's entries and
+ * files. Which book is not a parameter of any method, so that nothing in the
+ * protocol can ask for one book and write to another; a file store would
+ * satisfy it with a directory per book.
  */
 export interface Synktransport {
+  /**
+   * What the server has been told about this book, or undefined when it has
+   * never heard of it.
+   *
+   * Asked first in every round, before anything is sent. A server that
+   * cannot answer is one that does not keep books apart, and must not be
+   * given a second one.
+   */
+  bokbeskrivning(): Promise<string | undefined>;
+  /** Tells the server about this book, or replaces what it was told. */
+  beskrivBok(beskrivning: string): Promise<void>;
   /** Everything after the marker, oldest first. */
   hamta(efterMarkor: Markor | undefined): Promise<Fjarrpost[]>;
   /** Stores entries the server does not have. Duplicates are not an error. */
@@ -136,6 +153,9 @@ export class AvvisadError extends Error {
 
 const MARKOR_NYCKEL = 'synkmarkor';
 
+/** The description this device last gave the server, as it was written. */
+const BESKRIVNING_NYCKEL = 'synk.beskrivning';
+
 /**
  * One round: send what is queued, then take everything new.
  *
@@ -149,8 +169,20 @@ export async function synka(
   transport: Synktransport,
   krypto: Krypto,
   enhet: string,
-  { hasha }: { hasha: (data: Uint8Array) => Promise<Sha256> },
+  {
+    hasha,
+    beskrivning,
+  }: {
+    hasha: (data: Uint8Array) => Promise<Sha256>;
+    /**
+     * What the book is called and what kind it is, for a device that joins
+     * it later. Left out by a caller that does not know - the receipt
+     * assistant holds a copy of the log and none of the book's settings.
+     */
+    beskrivning?: Bokbeskrivning;
+  },
 ): Promise<Synkresultat> {
+  await anmalBok(db, transport, krypto, beskrivning);
   await slappOrordStartdata(db, transport, krypto);
   const { skickade, avvisade, avvisningsorsak } = await skickaKon(
     db,
@@ -168,6 +200,46 @@ export async function synka(
     avvisade,
     ...(avvisningsorsak === undefined ? {} : { avvisningsorsak }),
   };
+}
+
+/**
+ * Makes sure the server knows the book, and what it is.
+ *
+ * The question comes first and is always asked, also when there is nothing
+ * to tell: it is the one call a server from before books were kept apart
+ * cannot answer, and it fails there - before a single entry of a second book
+ * has been put in the first one's pile.
+ *
+ * The server is told when it has not heard of the book, and again when what
+ * this device would say has changed since it last said it - a new name, a
+ * changed setting. Not whenever the two differ: the name is each device's
+ * own, and two devices calling the book different things would otherwise
+ * overwrite each other on every round. A device that finds the book already
+ * described leaves that description alone and only notes its own.
+ */
+async function anmalBok(
+  db: BokfinkDatabase,
+  transport: Synktransport,
+  krypto: Krypto,
+  beskrivning: Bokbeskrivning | undefined,
+): Promise<void> {
+  const paServern = await transport.bokbeskrivning();
+  if (beskrivning === undefined) {
+    return;
+  }
+
+  const text = skrivBokbeskrivning(beskrivning);
+  const senast = await db.getMeta<string>(BESKRIVNING_NYCKEL);
+  if (paServern !== undefined && senast === text) {
+    return;
+  }
+  if (paServern !== undefined && senast === undefined) {
+    await db.setMeta(BESKRIVNING_NYCKEL, text);
+    return;
+  }
+
+  await transport.beskrivBok(await krypto.kryptera(text));
+  await db.setMeta(BESKRIVNING_NYCKEL, text);
 }
 
 /**
@@ -322,6 +394,8 @@ async function synkaFiler(
  */
 export async function glomServern(db: BokfinkDatabase): Promise<void> {
   await db.setMeta(MARKOR_NYCKEL, undefined);
+  // The next server has not been told about the book either.
+  await db.setMeta(BESKRIVNING_NYCKEL, undefined);
   const logg = await lasLogg(db);
   await db
     .table<{ id: Uuid }, Uuid>(SYNKKO_TABLE)

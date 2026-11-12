@@ -20,6 +20,17 @@ export const BOK_NAMN_NYCKEL = 'boknamn';
 export const URSPRUNGLIG_BOK = 'kontera';
 
 /**
+ * Whether a string can be a book's identity on the server.
+ *
+ * An identity is a UUID or the first book's fixed word, and it ends up in a
+ * request filter and - on a device that joins the book - in a database name.
+ * One that came off a server is checked before it is used for either.
+ */
+export function arBokidentitet(bok: string): boolean {
+  return /^[A-Za-z0-9-]{1,64}$/.test(bok);
+}
+
+/**
  * Which books a database holds.
  *
  * Each book is a database of its own, and a backup carries its book's identity in the metadata, so a restore can tell

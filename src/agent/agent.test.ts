@@ -47,6 +47,8 @@ function fejkserver(): Synktransport & { hamtadeFiler: number } {
         }
       }
     },
+    bokbeskrivning: async () => undefined,
+    beskrivBok: async () => undefined,
     filadresser: async () => [...filer.keys()],
     skickaFil: async (adress: string, chiffer: Uint8Array) => {
       filer.set(adress, chiffer);

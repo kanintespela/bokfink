@@ -57,9 +57,12 @@ import {
 import {
   BOK_BRANSCH_NYCKEL,
   BOK_NAMN_NYCKEL,
+  lasBokId,
   lasBokprofil,
   lasBransch,
 } from '../data/bokidentitet';
+import { lasBokbeskrivning } from '../data/bokbeskrivning';
+import { getOrCreateDeviceId } from '../data/device';
 import type { Bransch } from '../domain/bok/bransch';
 import { ledigtBoknamn } from '../data/bokregister';
 import { bokforReservering, foreningskapitalFor } from '../data/foreningskapital';
@@ -96,12 +99,15 @@ import { exporteraSomText, importera, las } from '../data/backup';
 import { arKrypterad, laspaket, paketera } from '../data/kryptokopia';
 import { glomServern, osankta, synka } from '../data/synk';
 import {
+  bockerPaServern,
   fornyaInloggning,
   loggaIn,
   pocketbaseTransport,
   type Inloggning,
 } from '../platform/pocketbase';
 import { Synk } from './synk/Synk';
+import { lasUppServerbok, tolkaServerbocker } from './synk/serverbocker';
+import { Serverbocker } from './bocker/Serverbocker';
 import { useAutosynk } from './synk/autosynk';
 import {
   dekryptera,
@@ -672,26 +678,39 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
    * below needs the same function, and two copies of it would be two places
    * to change the day the result line grows a sentence.
    */
+  /*
+   * The stored login, traded for a fresh one. Renewed before every use, so
+   * the login lasts as long as the app is used rather than a fixed time
+   * from when the password was typed.
+   */
+  const fornyadInloggning = useCallback(async () => {
+    const lagrad = await db.getMeta<Inloggning>('synk.inloggning');
+    if (lagrad === undefined) {
+      throw new Error('Logga in mot servern först.');
+    }
+    const inloggning = await fornyaInloggning(lagrad);
+    await db.setMeta('synk.inloggning', inloggning);
+    return inloggning;
+  }, [db]);
+
   const korSynk = useCallback(async () => {
-    const lagrad = laddat?.synk.inloggning;
     const fras = await db.getMeta<string>('synk.losenfras');
     // The passphrase is optional (decision X); without one the entries go
     // to the server as they are.
-    if (laddat === undefined || lagrad === undefined) {
+    if (laddat === undefined) {
       throw new Error('Logga in mot servern först.');
     }
-
-    // Renewed every round, so the login lasts as long as the app is used
-    // rather than five days from when the password was typed.
-    const inloggning = await fornyaInloggning(lagrad);
-    await db.setMeta('synk.inloggning', inloggning);
+    const inloggning = await fornyadInloggning();
 
     const resultat = await synka(
       db,
-      pocketbaseTransport(inloggning),
+      pocketbaseTransport(inloggning, await lasBokId(db)),
       await synkkrypto(fras),
       laddat.synk.enhet,
-      { hasha: hashaFil },
+      {
+        hasha: hashaFil,
+        beskrivning: await lasBokbeskrivning(db, bokval.aktiv.namn),
+      },
     );
     await db.setMeta('synk.senast', new Date().toISOString());
     setLaddat(await hamta());
@@ -729,7 +748,7 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
       filer +
       avvisade
     );
-  }, [db, laddat, hamta]);
+  }, [db, laddat, hamta, bokval.aktiv.namn, fornyadInloggning]);
 
   const [autosynkfel, setAutosynkfel] = useState<string | undefined>();
 
@@ -1623,6 +1642,44 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
           <>
             <Tillbaka onTillbaka={() => setVy('mer')} />
             <Bocker {...bokval} />
+            <Serverbocker
+              inloggad={laddat.synk.inloggning !== undefined}
+              bokId={bokval.aktiv.id}
+              onLista={async () =>
+                tolkaServerbocker(
+                  await bockerPaServern(await fornyadInloggning()),
+                  bokval.bocker,
+                  [await db.getMeta<string>('synk.losenfras')],
+                  synkkrypto,
+                )
+              }
+              onHamta={async (rad, skrivenFras) => {
+                if (rad.slag === 'olaslig') {
+                  throw new Error(rad.fel);
+                }
+                const losenfras = rad.slag === 'lasbar' ? rad.losenfras : skrivenFras;
+                const beskrivning =
+                  rad.slag === 'lasbar'
+                    ? rad.beskrivning
+                    : await lasUppServerbok(rad.chiffer, skrivenFras ?? '', synkkrypto);
+                const inloggning = await fornyadInloggning();
+                await bokval.onAnslut(
+                  rad.id,
+                  beskrivning,
+                  { inloggning, ...(losenfras === undefined ? {} : { losenfras }) },
+                  async (nyBok) => {
+                    await synka(
+                      nyBok,
+                      pocketbaseTransport(inloggning, rad.id),
+                      await synkkrypto(losenfras),
+                      await getOrCreateDeviceId(nyBok),
+                      { hasha: hashaFil },
+                    );
+                    await nyBok.setMeta('synk.senast', new Date().toISOString());
+                  },
+                );
+              }}
+            />
           </>
         )}
 

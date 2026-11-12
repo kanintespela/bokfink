@@ -5,7 +5,10 @@ import {
   URSPRUNGLIG_DATABAS,
   type Bok,
   type Bokinnehall,
+  type Synkuppgifter,
 } from '../../data/bokregister';
+import type { BokfinkDatabase } from '../../data/db';
+import type { Bokbeskrivning } from '../../domain/bok/bokbeskrivning';
 import { BOKFARGER, BOKFARGNAMN, type Bokfarg } from '../../domain/bok/bokfarg';
 import { BOKPROFILER, BOKPROFILNAMN, type Bokprofil } from '../../domain/bok/bokprofil';
 import { Uppgiftsstatus, useUppgift } from '../data/uppgift';
@@ -25,6 +28,22 @@ export interface Bokval {
   readonly onInnehall: (bok: Bok) => Promise<Bokinnehall>;
   /** Takes the book away for good. The open book may be the one. */
   readonly onTaBort: (bok: Bok) => Promise<void>;
+  /**
+   * Makes room here for a book the sync server holds, fills it, and opens
+   * it.
+   *
+   * Filled before it is opened, by the caller's own first sync: a book that
+   * opened empty would be given a starter set and could be booked in before
+   * the real books had arrived, and the two would then be merged rather
+   * than the starter set dropped. A fetch that fails still leaves the book
+   * here, logged in, to be filled by the next sync - and says so.
+   */
+  readonly onAnslut: (
+    id: string,
+    beskrivning: Bokbeskrivning,
+    synk: Synkuppgifter,
+    hamta: (db: BokfinkDatabase) => Promise<void>,
+  ) => Promise<void>;
 }
 
 /**
