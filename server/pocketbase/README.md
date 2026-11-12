@@ -4,6 +4,11 @@ Bokfink synkar mellan telefon och dator genom att byta händelseloggar över en
 PocketBase-instans. Servern är en brevlåda: den lagrar händelser och lämnar
 tillbaka dem i ankomstordning, utan att veta något om bokföring.
 
+En server kan hålla flera böcker, till exempel firmans och en förenings. Varje
+rad bär sin bok, och servern lämnar bara ut raderna för den bok som efterfrågas
+([beslut AC](../../docs/UTVECKLINGSPLAN.md#9-öppna-beslut)). Alla som har en
+inloggning på servern når alla böcker på den.
+
 Med en lösenfras i appen krypteras allt innan det skickas, och servern kan
 inte läsa bokföringen. Utan lösenfras, som är standard sedan
 [beslut X](../../docs/UTVECKLINGSPLAN.md#9-öppna-beslut), kan den som kommer åt
@@ -37,8 +42,9 @@ cp -r pb_migrations /opt/kontera-pocketbase/
 `pb_migrations/` är serverns schema. PocketBase kör det själv varje gång den
 startar och hoppar över det som redan är gjort, så samlingarna behöver aldrig
 skapas för hand. Där finns collection `handelser` med ett unikt index på
-`op_id` — det är det indexet som gör synken idempotent — och collection
-`filer` med ett unikt index på `sha256`. Användarens inloggning gäller i 30
+`op_id` — det är det indexet som gör synken idempotent — collection `filer`
+med ett unikt index på `bok` och `sha256` tillsammans, och collection `bocker`
+med en rad per bok. Användarens inloggning gäller i 30
 dagar och förnyas vid varje synk, så det är hur länge en enhet får ligga
 oanvänd innan den måste loggas in igen.
 
@@ -86,14 +92,32 @@ En rad per händelse:
 | `device` | Vilken enhet som skrev den |
 | `payload` | Händelsen som JSON, eller krypterad med AES-GCM om enheten har en lösenfras. Servern har aldrig nyckeln |
 | `created` | Serverns egen tidsstämpel, som är markören för inkrementell hämtning |
+| `bok` | Vilken bok händelsen hör till: bokens identitet, som är `kontera` för den första boken och en UUID för övriga |
 
-Och en rad per underlag:
+En rad per underlag:
 
 | Fält | Innehåll |
 |---|---|
-| `sha256` | Filens innehållsadress. Unikt index — samma fil skickas aldrig två gånger |
+| `sha256` | Filens innehållsadress. Unik inom boken — samma fil skickas aldrig två gånger |
 | `data` | Filen som den är, eller krypterad med AES-GCM och med nonce först om enheten har en lösenfras |
 | `created` | Serverns egen tidsstämpel |
+| `bok` | Vilken bok underlaget hör till. Samma kvitto i två böcker är två rader, eftersom böckerna kan ha olika lösenfras |
+
+Och en rad per bok:
+
+| Fält | Innehåll |
+|---|---|
+| `bok` | Bokens identitet. Unikt index |
+| `beskrivning` | Det boken säger om sig själv: namn, slag (firma eller förening), bransch, momsperiod, momsregistrering och redovisningsmetod. JSON, eller krypterad som händelserna om boken har en lösenfras |
+| `created`, `updated` | Serverns egna tidsstämplar. Raden skrivs om när boken byter namn eller en av inställningarna ändras |
+
+Beskrivningen finns för att en annan enhet ska kunna hämta boken under Mer,
+Böcker i appen. Händelseloggen säger inte vad boken heter eller vad den är för
+slags bok, och en förenings bokföring ska inte öppnas som en firmas.
+
+Servern lämnar bara ut händelser och underlag för den bok som begäran namnger
+i parametern `bok`. Det är samlingarnas åtkomstregel, inte ett filter i appen:
+en begäran utan bok får en tom lista, och en rad utan bok tas inte emot.
 
 Underlagen ligger i en egen collection eftersom de är olika saker: en händelse
 är liten, spelas om och hämtas i ordning, medan en fil är megabyte som hämtas
@@ -124,6 +148,27 @@ sudo systemctl restart kontera-pocketbase
 
 PocketBase kör de nya filerna när den startar. Kontrollera med
 `journalctl -u kontera-pocketbase -n 20` att de kom med.
+
+### Flera böcker (`…_bok_per_rad.js`)
+
+Migreringen lägger fältet `bok` på `handelser` och `filer`, ger de rader som
+redan finns den första bokens identitet (`kontera`), byter åtkomstreglerna och
+skapar `bocker`. Ingen rad tas bort eller får nytt innehåll, och den backas
+inte: att ta bort fältet skulle lägga alla böcker i en hög igen.
+
+- **Ta en säkerhetskopia av `pb_data/` först**, som före varje uppdatering.
+- **De befintliga raderna antas höra till den första boken.** Har någon annan
+  bok synkat mot servern stämmer det inte — hör av dig innan du kör den.
+- **Uppdatera servern före eller samtidigt med appen.** En uppdaterad app
+  vägrar synka mot en server utan migreringen och säger att samlingen
+  `bocker` saknas. En app som inte hunnit uppdatera sig får ingenting från en
+  uppdaterad server och får sina händelser avvisade; de ligger kvar på enheten
+  och skickas när appen har uppdaterats. Ingenting går förlorat åt något håll.
+- **Kvittoassistenten** behöver byggas om (`npm run agent`) efter
+  uppdateringen. Den hör till den första boken om inte `bok` anges i
+  `~/.config/kontera/agent.json`.
+
+### Stora händelser (`…_payload_utan_tak.js`)
 
 Det är det här appen ber om när den säger att servern inte tar emot så stora
 händelser. Det första skriptet satte gränsen för en händelse till `0`, vilket

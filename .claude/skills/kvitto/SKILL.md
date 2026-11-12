@@ -129,6 +129,11 @@ lösenord eller lösenfras åt ägaren – ge kommandot och låt ägaren fylla i
 }
 ```
 
+Servern kan hålla flera böcker. Assistenten arbetar i den första boken om
+filen inte säger annat. Ska den höra till en annan bok läggs raden
+`"bok": "<bokens identitet>"` till; identiteten står längst ner under Mer,
+Böcker i appen när boken är öppen.
+
 `url` ska vara Bokfinks egen synkserver, på samma maskin `http://127.0.0.1:8091`.
 Maskinen kör fler PocketBase-instanser, och fram till 2026-10-28 pekade filen
 på en annan av dem, där bara en gammal kopia av bokföringen fanns.
