@@ -48,9 +48,9 @@ I en firmabok är frågorna i dag formade efter en gård med djur. Andra verksam
 
 Öppna **https://bokfinken-app.github.io** i telefonen eller datorn. Det finns inget konto att skapa. På telefonen lägger du appen på hemskärmen (Safari: Dela, Lägg till på hemskärmen) så sparas den ordentligt och fungerar utan nät.
 
-Vill du bara titta runt: skapa en egen bok under Mer, Böcker och bokför fritt. Det går att ta bort boken igen därifrån.
+Första gången ställer appen tre frågor: om du bokför för en firma eller en förening, vad boken heter och hur ofta du deklarerar moms. Vill du bara titta runt finns en exempelbok på samma skärm, med en påhittad firma och ett års bokföring. Den ligger som en egen bok som går att ta bort igen.
 
-Bokföringen sparas i webbläsaren på just den enhet du använder, inte hos någon annan. Det betyder att den inte följer med till en annan telefon eller webbläsare, och att den försvinner om du rensar webbplatsdata. Ta därför en säkerhetskopia under Mer, Säkerhetskopia när du bokfört något du vill behålla.
+Bokföringen sparas i webbläsaren på just den enhet du använder, inte hos någon annan. Det betyder att den inte följer med till en annan telefon eller webbläsare, och att den försvinner om du rensar webbplatsdata. Appen ber webbläsaren att behålla den och säger till på översikten om den vägrar, och när du har bokfört något föreslår den en säkerhetskopia. Ta kopian: den är det som skyddar bokföringen.
 
 Hittar du fel eller saknar något: [skriv ett ärende](https://github.com/kanintespela/bokfink/issues). Appen publiceras automatiskt från den här källkoden varje gång en ändring har klarat testerna.
 

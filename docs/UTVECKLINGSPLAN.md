@@ -404,7 +404,7 @@ Fakturering (Etapp 6) nedprioriterad efter beslut M (behövs sällan eller aldri
 - Körjournal med milersättning och avdragsberäkning
 - Traktamente och representation med gällande avdragsregler
 - Tillgänglighet, mörkt läge, tumvänliga klickytor, snabbknappar från hemskärmen
-- Onboarding för första start
+- ✅ **Onboarding för första start** (2026-11-12). Översikten i en tom första bok ställer tre frågor i stället för att öppna på en lösenfras: firma eller förening, vad boken heter, och hur ofta moms deklareras (en förening svarar först om den är momsregistrerad). Frågorna ligger där översikten ligger, med flikarna kvar, och att bokföra något innan de är besvarade avgör dem som enskild firma. Valet av bokens slag låses annars när något skrivits i boken (`bokprofil.ts`); den första boken är det enda stället där det fortfarande går, och ändringen vägras så fort boken innehåller något annat än startuppsättningen (`src/data/valkomst.ts`). Webbläsaren ombeds spara bokföringen när knappen trycks, inte vid start, eftersom Firefox visar en förfrågan. Därefter varnar översikten om webbläsaren sagt nej (`readPersistence`, som bara läser). **Säkerhetskopian** efterfrågas först när något är bokfört och förklarar vad den är till för. **Exempelbok** (`src/data/exempelbok.ts`): en påhittad firma med fjorton verifikat som ligger som en egen bok, märkt som exempel och med en bekräftad väg att ta bort den. Momsbefriad firma finns inte ännu och sägs rakt ut i frågan om moms.
 
 ### Etapp 10 — Föreningsbok · M
 
