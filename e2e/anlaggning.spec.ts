@@ -140,3 +140,24 @@ test('stops asking about a purchase that was not an asset', async ({ page }) => 
   await page.goto('/#frikontering');
   await expect(page.getByTestId('anlaggningsforslag')).toHaveCount(0);
 });
+
+/*
+ * A building owned since 2011 and written off at 4 % for three years before
+ * the register was set up here: 77 734 kr, of which 3 × 3 109,36 = 9 328,08
+ * is already written off. The register has to start from 68 405,92 kr, which
+ * is what the ledger says, and not from the full cost.
+ */
+test('registers an older building with what is already written off', async ({ page }) => {
+  await page.goto('/#anlaggning');
+
+  await page.getByLabel('Komponentens benämning').fill('B2 ekonomibyggnader');
+  await page.getByLabel('Komponentens anskaffningsdatum').fill('2011-12-01');
+  await page.getByLabel('Komponentens anskaffningsvärde').fill('77734');
+  await page.getByLabel('Redan avskrivet (valfritt)').fill('9328,08');
+  await page.getByTestId('registrera-fastighet').click();
+  await expect(page.getByTestId('fastighet-besked')).toContainText('registrerad');
+
+  const rad = page.getByTestId('fastighetslista');
+  await expect(rad).toContainText('4 %');
+  await expect(rad).toContainText('68 405,92');
+});

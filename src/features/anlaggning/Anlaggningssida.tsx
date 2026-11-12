@@ -74,6 +74,7 @@ interface Props {
     readonly anskaffningsvarde: Ore;
     readonly kategori: Fastighetskategori;
     readonly verifikatId?: Uuid;
+    readonly ackumuleradAvskrivning?: Ore;
   }) => Promise<string>;
   readonly onAvyttraFastighet: (
     id: Uuid,
