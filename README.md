@@ -42,7 +42,7 @@ Det här finns **inte** ännu:
 - **Att börja med ett tidigare år** utan en SIE-fil från ett annat program.
 - **Löner och anställda.** Aktiebolag, handelsbolag, föreningar som måste upprätta årsredovisning och flera användare på samma bok ligger utanför det appen är tänkt för.
 
-Frågorna när du bokför skrevs först för en gård med djur. Du väljer vad firman gör (gård, tjänster, hantverk, handel eller annat) när du börjar, och det styr bara i vilken ordning svaren visas, så att det du ofta bokför kommer först. Allt går att bokföra oavsett val. Några vanliga poster saknar fortfarande färdiga svar och konteras då fritt: representation, underentreprenader inom bygg (där omvänd moms kan gälla) och leasing. De kräver att reglerna för moms och avdrag avgörs först.
+Frågorna när du bokför skrevs först för en gård med djur. Du väljer vad firman gör (gård, tjänster, hantverk, handel eller annat) när du börjar, och det styr bara i vilken ordning svaren visas, så att det du ofta bokför kommer först. Allt går att bokföra oavsett val. Representation (måltid, fika och gåva) och byggtjänster från underentreprenör med omvänd moms har egna flöden som delar upp momsen och avdragen enligt Skatteverkets regler. Leasing av personbil saknar färdigt svar och konteras fritt, eftersom momsavdraget är begränsat.
 
 ## Prova
 
