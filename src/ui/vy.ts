@@ -19,6 +19,7 @@ export const VYER = [
   'moms',
   'frikontering',
   'utland',
+  'representation',
   'bank',
   'fakturor',
   'rapporter',
@@ -50,7 +51,8 @@ export const VYNAMN: Record<Vy, string> = {
   kvitton: 'Kvitton',
   mer: 'Mer',
   frikontering: 'Fri kontering',
-  utland: 'Köp från utlandet',
+  utland: 'Köp med omvänd moms',
+  representation: 'Representation',
   bank: 'Stäm av kontoutdrag',
   fakturor: 'Fakturor',
   bokfor: 'Bokför',
@@ -87,6 +89,8 @@ export function doldaVyer(profil: Bokprofil, momsregistrerad: boolean): Readonly
     dolda.add('moms');
   }
   if (!momsregistrerad || profil !== 'enskild_firma') dolda.add('utland');
+  // Its moms rules are a registered firm's; an association has questions of its own.
+  if (!momsregistrerad || profil !== 'enskild_firma') dolda.add('representation');
   // Invoices on the receivable and payable are for the firm's chart of accounts.
   if (profil !== 'enskild_firma') dolda.add('fakturor');
   if (!harFunktion(profil, 'nebilaga')) {

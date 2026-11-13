@@ -17,7 +17,7 @@ describe('doldaVyer', () => {
 
   it('hides what belongs to an owner, and moms, from an association without moms', () => {
     expect([...doldaVyer('forening', false)].sort()).toEqual(
-      ['fakturor', 'lager', 'moms', 'nebilaga', 'utland'].sort(),
+      ['fakturor', 'lager', 'moms', 'nebilaga', 'representation', 'utland'].sort(),
     );
   });
 

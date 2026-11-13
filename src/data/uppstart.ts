@@ -57,6 +57,10 @@ export const GRUNDKONTON: readonly Kontoutkast[] = [
   { nummer: '2631', namn: 'Utgående moms på försäljning inom Sverige, 6 %' },
   { nummer: '2641', namn: 'Debiterad ingående moms' },
   { nummer: '2645', namn: 'Beräknad ingående moms på förvärv från utlandet' },
+  {
+    nummer: '2647',
+    namn: 'Ingående moms omvänd skattskyldighet varor och tjänster i Sverige',
+  },
   { nummer: '2650', namn: 'Redovisningskonto för moms' },
   { nummer: '2900', namn: 'Övriga skulder' },
   {
@@ -67,6 +71,10 @@ export const GRUNDKONTON: readonly Kontoutkast[] = [
   { nummer: '3900', namn: 'Övriga rörelseintäkter' },
   { nummer: '3980', namn: 'Erhållna bidrag' },
   { nummer: '4000', namn: 'Varor' },
+  {
+    nummer: '4425',
+    namn: 'Inköpta tjänster i Sverige, omvänd skattskyldighet, 25 % moms',
+  },
   { nummer: '4515', namn: 'Inköp av varor från annat EU-land, 25 %' },
   { nummer: '4531', namn: 'Inköp av tjänster från land utanför EU, 25 %' },
   { nummer: '4535', namn: 'Inköp av tjänster från annat EU-land, 25 %' },
@@ -84,6 +92,8 @@ export const GRUNDKONTON: readonly Kontoutkast[] = [
   { nummer: '5800', namn: 'Resekostnader' },
   { nummer: '5900', namn: 'Reklam och PR' },
   { nummer: '6100', namn: 'Kontorsmateriel och trycksaker' },
+  { nummer: '6071', namn: 'Representation, avdragsgill' },
+  { nummer: '6072', namn: 'Representation, ej avdragsgill' },
   { nummer: '6200', namn: 'Tele och post' },
   { nummer: '6310', namn: 'Företagsförsäkringar' },
   { nummer: '6500', namn: 'Övriga externa tjänster' },

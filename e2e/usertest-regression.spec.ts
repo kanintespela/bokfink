@@ -161,7 +161,7 @@ for (const [typ, box] of [
     await page.getByLabel('Sök', { exact: true }).fill('omvänd');
     await page
       .getByTestId('sokresultat')
-      .getByRole('button', { name: /Köp från utlandet/ })
+      .getByRole('button', { name: /Köp med omvänd moms/ })
       .click();
     await page.getByLabel('Vad har du köpt?').selectOption(typ);
     await page.getByLabel('Vad avser det?').fill('Testinköp från utlandet');

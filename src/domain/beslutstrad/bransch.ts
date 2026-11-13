@@ -22,6 +22,7 @@ const RESOR = 'Resor';
 const AMORTERING = 'Amortering på ett lån';
 const VAROR = 'Varor och material som du säljer vidare eller bygger in';
 const LOKAL = 'Hyra av lokal';
+const REPRESENTATION = 'Representation, fika eller gåva till kund';
 const ANNAT = 'Något annat';
 
 const UT: Record<Exclude<Bransch, 'gard'>, readonly string[]> = {
@@ -29,6 +30,7 @@ const UT: Record<Exclude<Bransch, 'gard'>, readonly string[]> = {
     KONTOR,
     TJANSTER,
     RESOR,
+    REPRESENTATION,
     LOKAL,
     BILEN,
     AVGIFTER,
@@ -47,6 +49,7 @@ const UT: Record<Exclude<Bransch, 'gard'>, readonly string[]> = {
     TJANSTER,
     AVGIFTER,
     RESOR,
+    REPRESENTATION,
     LOKAL,
     FASTIGHET,
     AMORTERING,
@@ -62,6 +65,7 @@ const UT: Record<Exclude<Bransch, 'gard'>, readonly string[]> = {
     BILEN,
     AVGIFTER,
     RESOR,
+    REPRESENTATION,
     FASTIGHET,
     AMORTERING,
     DJUR,
@@ -71,6 +75,7 @@ const UT: Record<Exclude<Bransch, 'gard'>, readonly string[]> = {
     KONTOR,
     TJANSTER,
     RESOR,
+    REPRESENTATION,
     BILEN,
     MASKINER,
     VAROR,

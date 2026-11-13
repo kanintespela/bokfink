@@ -13,6 +13,7 @@ describe('utlandsköp med omvänd moms, 25% och full avdragsrätt', () => {
     ['eu-tjanst', 21, '4535'],
     ['eu-vara', 20, '4515'],
     ['utanfor-eu-tjanst', 22, '4531'],
+    ['bygg-sverige', 24, '4425'],
   ] as const)(
     'reports base and both VAT legs for %s without deducting VAT from the payment',
     (typ, box, konto) => {
@@ -83,5 +84,21 @@ describe('utlandsköp med omvänd moms, 25% och full avdragsrätt', () => {
     expect(() =>
       utlandskopKonteringar('eu-tjanst', oreFromKronor('10'), kontonummer('3000')),
     ).toThrow();
+  });
+});
+
+describe('byggtjänst från underentreprenör i Sverige', () => {
+  it('books the input moms on 2647 and the output moms on 2614, and nets to nothing', () => {
+    const rader = utlandskopKonteringar(
+      'bygg-sverige',
+      oreFromKronor('10000'),
+      kontonummer('1930'),
+    );
+    expect(rader.map((rad) => [rad.konto, rad.belopp])).toEqual([
+      ['4425', 1_000_000],
+      ['2614', -250_000],
+      ['2647', 250_000],
+      ['1930', -1_000_000],
+    ]);
   });
 });

@@ -2,18 +2,49 @@ import { delaOchAvrunda, negate, ore, type Ore } from '../belopp/ore';
 import { kontonummer, type Kontonummer } from '../konto/konto';
 import type { Kontering } from '../verifikat/verifikat';
 
-/** Paid purchases without invoiced VAT, 25% Swedish VAT and full deduction. */
+/**
+ * Paid purchases without invoiced VAT, 25% Swedish VAT and full deduction.
+ *
+ * Bought from abroad, or - 'bygg-sverige' - a construction service from a
+ * subcontractor in Sweden, where the buyer is liable for the moms
+ * ("omvänd betalningsskyldighet inom byggsektorn"). The foreign ones book the
+ * output moms on 2614 and the input moms on 2645; the Swedish one books the
+ * output moms on 2614 as well and the input moms on 2647, BAS's account for
+ * reverse charge in Sweden.
+ *
+ * Skatteverket, "Omvänd betalningsskyldighet inom byggsektorn" and "Avdragsrätt,
+ * fakturering och redovisning", https://www.skatteverket.se/foretag/moms/sarskildamomsregler/byggverksamhet/omvandbetalningsskyldighetinombyggsektorn.4.47eb30f51122b1aaad28000545.html :
+ * the seller does not charge moms and writes "omvänd betalningsskyldighet" on
+ * the invoice; the buyer reports the purchase in field 24 and the moms it
+ * works out itself in field 30, and deducts it in field 48. Material that comes
+ * with the service is part of it. Whether the rule applies is for the seller to
+ * decide, and shows on the invoice, so the screen asks about the invoice and not
+ * about who the buyer is.
+ */
 export const UTLANDSKOP = {
   'eu-tjanst': {
     namn: 'Tjänst från annat EU-land enligt huvudregeln',
     konto: '4535',
     ruta: 21,
+    ingaende: '2645',
   },
-  'eu-vara': { namn: 'Varor från annat EU-land', konto: '4515', ruta: 20 },
+  'eu-vara': {
+    namn: 'Varor från annat EU-land',
+    konto: '4515',
+    ruta: 20,
+    ingaende: '2645',
+  },
   'utanfor-eu-tjanst': {
     namn: 'Tjänst från land utanför EU enligt huvudregeln',
     konto: '4531',
     ruta: 22,
+    ingaende: '2645',
+  },
+  'bygg-sverige': {
+    namn: 'Byggtjänst från underentreprenör i Sverige',
+    konto: '4425',
+    ruta: 24,
+    ingaende: '2647',
   },
 } as const;
 export type Utlandskopstyp = keyof typeof UTLANDSKOP;
@@ -44,7 +75,7 @@ export function utlandskopKonteringar(
   return [
     { konto: kontonummer(val.konto), belopp: underlag },
     { konto: kontonummer('2614'), belopp: negate(moms) },
-    { konto: kontonummer('2645'), belopp: moms },
+    { konto: kontonummer(val.ingaende), belopp: moms },
     { konto: betalkonto, belopp: negate(underlag) },
   ];
 }

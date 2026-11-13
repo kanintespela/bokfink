@@ -62,9 +62,12 @@ test('finds an account by what it is called', async ({ page }) => {
   await falt.fill('ingaende');
 
   const forslag = page.getByTestId('kontoforslag-0').getByRole('button');
-  await expect(forslag.first()).toHaveText('2641 Debiterad ingående moms');
+  // More than one account has "ingående" in its name, and the one that starts with it
+  // comes first; the point is that typing it without å finds them.
+  const debiterad = forslag.filter({ hasText: '2641 Debiterad ingående moms' });
+  await expect(debiterad).toHaveCount(1);
 
-  await forslag.first().click();
+  await debiterad.click();
   await expect(falt).toHaveValue('2641');
   await expect(page.getByTestId('kontoforslag-0')).toBeHidden();
 

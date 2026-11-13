@@ -181,6 +181,7 @@ import { AttGoraSida } from './attgora/AttGoraSida';
 import { Utkastlista } from './utkast/Utkastlista';
 import { FriKontering, type Friforslag } from './bokfor/FriKontering';
 import { Utlandskop } from './bokfor/Utlandskop';
+import { Representation } from './bokfor/Representation';
 import { Kontosida } from './konton/Kontosida';
 import { Projektsida } from './projekt/Projektsida';
 import { Fordelningssida } from './projekt/Fordelningssida';
@@ -1732,6 +1733,18 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
             the time. */}
         {vy === 'enhet' && <StartPage db={db} />}
 
+        {vy === 'representation' && (
+          <Representation
+            idag={idag}
+            konton={laddat.konton}
+            onTillbaka={() => setVy('bokfor')}
+            onGranska={(forslag) => {
+              setFriStart(forslag);
+              setVy('frikontering');
+            }}
+          />
+        )}
+
         {vy === 'utland' && (
           <Utlandskop
             idag={idag}
@@ -1865,6 +1878,10 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
                     onUtlandskop: () => {
                       setFriStart(undefined);
                       setVy('utland');
+                    },
+                    onRepresentation: () => {
+                      setFriStart(undefined);
+                      setVy('representation');
                     },
                   }
                 : {})}

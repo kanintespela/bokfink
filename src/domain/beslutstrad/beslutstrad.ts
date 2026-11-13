@@ -49,7 +49,8 @@ export interface Lov {
 export interface Hanvisning {
   readonly typ: 'hanvisning';
   readonly id: string;
-  readonly till: 'moms' | 'lager' | 'periodisering' | 'anlaggning' | 'egetkapital';
+  readonly till:
+    'moms' | 'lager' | 'periodisering' | 'anlaggning' | 'egetkapital' | 'representation';
   readonly text: string;
 }
 
@@ -776,6 +777,15 @@ const PENGAR_UT: Fraga = {
       }),
     },
     { text: 'Amortering på ett lån', till: AMORTERING },
+    {
+      text: 'Representation, fika eller gåva till kund',
+      till: {
+        typ: 'hanvisning',
+        id: 'representation',
+        till: 'representation',
+        text: 'Representation bokförs under Representation, eftersom avdraget för moms och för inkomstskatt skiljer sig.',
+      },
+    },
     {
       text: 'Varor och material som du säljer vidare eller bygger in',
       till: lov({

@@ -102,6 +102,8 @@ interface Props {
   readonly onFriKontering?: () => void;
   /** Paid foreign purchases with reverse charge, deliberately a separate flow. */
   readonly onUtlandskop?: () => void;
+  /** Meals, coffee and gifts for customers, where moms and income tax part ways. */
+  readonly onRepresentation?: () => void;
   /** Opens the free posting with this booking's rows filled in. */
   readonly onAndraKontering?: (start: Friforslag) => void;
   /** Goes to the screen a leaf says the thing is done on. */
@@ -136,6 +138,12 @@ const ORD = {
 /** How many of the most used leaves are offered before the first question. */
 const GENVAGAR = 4;
 
+/** Words that lead to the purchases booked with reverse charge, which the tree has no leaf for. */
+const UTLANDSORD = /eu|utland|omvänd|import|valuta|underentrepren|byggtjänst/i;
+
+/** Words that lead to representation, which the tree answers with a screen of its own. */
+const REPRESENTATIONSORD = /represent|gåva|gava|present|lunch|middag|fika|blommor/i;
+
 /**
  * Booking an entry: what happened, how much, paid how.
  *
@@ -167,6 +175,7 @@ export function BokforUtgift({
   onBokfor,
   onFriKontering,
   onUtlandskop,
+  onRepresentation,
   onAndraKontering,
   onHanvisning,
 }: Props) {
@@ -495,20 +504,27 @@ export function BokforUtgift({
 
         {sok.trim() !== '' ? (
           traffar.length === 0 &&
-          !(onUtlandskop !== undefined && /eu|utland|omvänd|import|valuta/i.test(sok)) ? (
+          !(onUtlandskop !== undefined && UTLANDSORD.test(sok)) &&
+          !(onRepresentation !== undefined && REPRESENTATIONSORD.test(sok)) ? (
             <p className="tomt" data-testid="inga-traffar">
               Inget matchar ”{sok}”. Svara på frågorna i stället, eller kontera fritt.
             </p>
           ) : (
             <ul className="lista" data-testid="sokresultat">
-              {onUtlandskop !== undefined &&
-                /eu|utland|omvänd|import|valuta/i.test(sok) && (
-                  <li>
-                    <button type="button" className="listrad" onClick={onUtlandskop}>
-                      Köp från utlandet med omvänd moms (25 %)
-                    </button>
-                  </li>
-                )}
+              {onUtlandskop !== undefined && UTLANDSORD.test(sok) && (
+                <li>
+                  <button type="button" className="listrad" onClick={onUtlandskop}>
+                    Köp med omvänd moms (25 %)
+                  </button>
+                </li>
+              )}
+              {onRepresentation !== undefined && REPRESENTATIONSORD.test(sok) && (
+                <li>
+                  <button type="button" className="listrad" onClick={onRepresentation}>
+                    Representation, fika eller gåva till kund
+                  </button>
+                </li>
+              )}
               {traffar.map((kandidat) => (
                 <li key={kandidat.id}>
                   <Lovknapp
@@ -553,7 +569,18 @@ export function BokforUtgift({
         {onUtlandskop !== undefined && sok.trim() === '' && (
           <p>
             <button type="button" className="knapp knapp--text" onClick={onUtlandskop}>
-              Köp från utlandet med omvänd moms
+              Köp med omvänd moms
+            </button>
+          </p>
+        )}
+        {onRepresentation !== undefined && sok.trim() === '' && (
+          <p>
+            <button
+              type="button"
+              className="knapp knapp--text"
+              onClick={onRepresentation}
+            >
+              Representation, fika eller gåva
             </button>
           </p>
         )}
@@ -747,7 +774,7 @@ export function BokforUtgift({
           </p>
           {onUtlandskop !== undefined && (
             <button type="button" className="knapp knapp--text" onClick={onUtlandskop}>
-              Inköp utan fakturerad moms? Köp från utlandet med omvänd moms
+              Inköp utan fakturerad moms? Köp med omvänd moms
             </button>
           )}
         </div>

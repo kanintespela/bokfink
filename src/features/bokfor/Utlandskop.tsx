@@ -36,6 +36,8 @@ export function Utlandskop({ idag, konton, onTillbaka, onGranska }: Props) {
   const [iValuta, setIValuta] = useState(false);
   const [betal, setBetal] = useState('1930');
   const [bekraftat, setBekraftat] = useState(false);
+  // A construction service bought in Sweden is in kronor.
+  const valutaAktiv = iValuta && typ !== 'bygg-sverige';
   let hinder: string | undefined;
   let forslag: Friforslag | undefined;
   try {
@@ -46,7 +48,7 @@ export function Utlandskop({ idag, konton, onTillbaka, onGranska }: Props) {
       throw new Error('Ange ett belopp skilt från noll.');
     let underlag = last;
     let valutaText = '';
-    if (iValuta) {
+    if (valutaAktiv) {
       const kod = valutakod(valuta);
       const kursen = kurs(kurstext);
       underlag = tillRedovisningsvaluta(last, kursen);
@@ -68,13 +70,14 @@ export function Utlandskop({ idag, konton, onTillbaka, onGranska }: Props) {
     hinder = orsak instanceof Error ? orsak.message : String(orsak);
   }
   return (
-    <section aria-label="Köp från utlandet">
+    <section aria-label="Köp med omvänd moms">
       <Tillbaka onTillbaka={onTillbaka} />
-      <h2>Köp från utlandet med omvänd moms</h2>
+      <h2>Köp med omvänd moms</h2>
       <p>
-        För betalda inköp utan fakturerad moms, med 25 % svensk moms och full avdragsrätt.
-        Momsen beräknas ovanpå inköpsbeloppet och bokförs både som utgående och ingående
-        moms. Beloppet du betalat ändras inte.
+        För betalda inköp där fakturan är utan moms och momsen i stället redovisas av dig
+        som köpare: köp från utlandet, och byggtjänster från en underentreprenör i
+        Sverige. Momsen är 25 % med full avdragsrätt. Den beräknas ovanpå inköpsbeloppet
+        och bokförs både som utgående och ingående moms. Beloppet du betalat ändras inte.
       </p>
       <p className="hjalptext">
         Det här gäller inte till exempel hotell, persontransporter eller import av varor
@@ -96,6 +99,14 @@ export function Utlandskop({ idag, konton, onTillbaka, onGranska }: Props) {
             </option>
           ))}
         </select>
+        {typ === 'bygg-sverige' && (
+          <p className="hjalptext" data-testid="bygghjalp">
+            Fakturan ska ha texten ”omvänd betalningsskyldighet” och inte visa någon moms.
+            Det är säljaren som avgör om reglerna gäller. Har fakturan moms bokför du den
+            som en vanlig Köpt tjänst i stället. Material som ingår i tjänsten räknas med.
+            Det gäller bara arbete på fastighet.
+          </p>
+        )}
       </div>
       <div className="faltgrupp">
         <label htmlFor="utlandsbeskrivning">Vad avser det?</label>
@@ -118,20 +129,24 @@ export function Utlandskop({ idag, konton, onTillbaka, onGranska }: Props) {
         />
       </div>
       <Beloppsfalt
-        etikett={iValuta ? 'Belopp i valutan, utan moms' : 'Belopp i kronor, utan moms'}
+        etikett={
+          valutaAktiv ? 'Belopp i valutan, utan moms' : 'Belopp i kronor, utan moms'
+        }
         varde={belopp}
         onChange={setBelopp}
       />
-      <p>
-        <button
-          type="button"
-          className="knapp knapp--text"
-          onClick={() => setIValuta(!iValuta)}
-        >
-          {iValuta ? 'Beloppet är i kronor' : 'Beloppet är i annan valuta'}
-        </button>
-      </p>
-      {iValuta && (
+      {typ !== 'bygg-sverige' && (
+        <p>
+          <button
+            type="button"
+            className="knapp knapp--text"
+            onClick={() => setIValuta(!iValuta)}
+          >
+            {iValuta ? 'Beloppet är i kronor' : 'Beloppet är i annan valuta'}
+          </button>
+        </p>
+      )}
+      {valutaAktiv && (
         <>
           <div className="faltgrupp">
             <label htmlFor="utlandsvaluta">Valuta</label>
@@ -175,8 +190,9 @@ export function Utlandskop({ idag, konton, onTillbaka, onGranska }: Props) {
             checked={bekraftat}
             onChange={(e) => setBekraftat(e.target.checked)}
           />{' '}
-          Fakturan är utan moms och köpet omfattas av 25 % omvänd moms med full
-          avdragsrätt.
+          {typ === 'bygg-sverige'
+            ? 'Fakturan är utan moms och har texten omvänd betalningsskyldighet, och momsen dras av helt.'
+            : 'Fakturan är utan moms och köpet omfattas av 25 % omvänd moms med full avdragsrätt.'}
         </label>
       </p>
       {forslag !== undefined && (
