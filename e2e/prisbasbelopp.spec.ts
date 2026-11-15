@@ -1,4 +1,13 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+
+/** The prisbasbelopp sits folded under the Avskrivning tab. */
+async function oppnaPrisbasbelopp(page: Page) {
+  await page
+    .getByRole('group', { name: 'Visa' })
+    .getByRole('button', { name: 'Avskrivning' })
+    .click();
+  await page.getByText('Prisbasbelopp', { exact: true }).click();
+}
 
 /*
  * A year the app does not ship with, fetched from SCB with one tap and saved
@@ -19,6 +28,7 @@ test('fetches next year’s prisbasbelopp from SCB and keeps it', async ({ page 
   });
 
   await page.goto('/#anlaggning');
+  await oppnaPrisbasbelopp(page);
   await page.getByLabel('År', { exact: true }).fill('2027');
   await page.getByTestId('hamta-prisbasbelopp').click();
 
@@ -30,6 +40,7 @@ test('fetches next year’s prisbasbelopp from SCB and keeps it', async ({ page 
   await expect(page.getByTestId('kanda-prisbasbelopp')).toContainText('inlagt av dig');
 
   await page.reload();
+  await oppnaPrisbasbelopp(page);
   await expect(page.getByTestId('kanda-prisbasbelopp')).toContainText('59 600,00');
 });
 
@@ -37,6 +48,7 @@ test('says so when SCB cannot be reached', async ({ page }) => {
   await page.route('https://api.scb.se/**', (route) => route.abort());
 
   await page.goto('/#anlaggning');
+  await oppnaPrisbasbelopp(page);
   await page.getByLabel('År', { exact: true }).fill('2027');
   await page.getByTestId('hamta-prisbasbelopp').click();
 

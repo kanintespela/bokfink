@@ -143,6 +143,7 @@ export function Anlaggningssida({
   const [laggTill, setLaggTill] = useState(
     anlaggningar.length + fastigheter.length === 0,
   );
+  const [flik, setFlik] = useState<'register' | 'avskrivning'>('register');
   const [typval, setTypval] = useState<'inventarie' | Fastighetstyp>('inventarie');
   const [oppen, setOppen] = useState<string | undefined>();
   const [avyttringstyp, setAvyttringstyp] = useState<'forsaljning' | 'utrangering'>(
@@ -220,22 +221,18 @@ export function Anlaggningssida({
       <Tillbaka onTillbaka={onTillbaka} />
       <div className="rubrikrad">
         <h2>Anläggningsregister</h2>
-        <button
-          type="button"
-          className="knapp"
-          aria-expanded={laggTill}
-          data-testid="lagg-till"
-          onClick={() => setLaggTill(!laggTill)}
-        >
-          {laggTill ? 'Stäng' : '+ Lägg till'}
-        </button>
+        {flik === 'register' && (
+          <button
+            type="button"
+            className="knapp"
+            aria-expanded={laggTill}
+            data-testid="lagg-till"
+            onClick={() => setLaggTill(!laggTill)}
+          >
+            {laggTill ? 'Stäng' : '+ Lägg till'}
+          </button>
+        )}
       </div>
-
-      <p className="hjalptext" data-testid="anlaggning-inledning">
-        {forening
-          ? 'Inventarier skrivs av var och en för sig under sin nyttjandeperiod. Registret nedan är det som årets avskrivning räknas på, så en tillgång som ska skrivas av måste finnas i det. Byggnader hanteras längre ned.'
-          : 'Maskiner och inventarier skrivs av kollektivt, som en klumpsumma för allt som ägs - inte per tillgång. Registret nedan är till för spårbarhet och för kompletteringsregeln, som behöver varje tillgångs eget anskaffningsvärde och ålder.'}
-      </p>
 
       {arbetar && <p data-testid="anlaggning-arbetar">Arbetar …</p>}
 
@@ -251,448 +248,496 @@ export function Anlaggningssida({
         </p>
       )}
 
-      <Oregistreradekop
-        kop={kop}
-        oppnaFor={oppnaKop}
-        onRegistrera={onRegistrera}
-        onRegistreraFastighet={onRegistreraFastighet}
-        onInteAnlaggning={onInteAnlaggning}
-      />
-
-      {laggTill && (
-        <section
-          className="kort"
-          aria-label="Lägg till i registret"
-          data-testid="lagg-till-panel"
+      <div className="segment" role="group" aria-label="Visa">
+        <button
+          type="button"
+          aria-pressed={flik === 'register'}
+          onClick={() => setFlik('register')}
         >
-          <div className="faltgrupp">
-            <label htmlFor="anlaggning-typ">Vad ska läggas till?</label>
-            <select
-              id="anlaggning-typ"
-              className="falt"
-              value={typval}
-              onChange={(handelse) =>
-                setTypval(handelse.target.value as 'inventarie' | Fastighetstyp)
-              }
+          Register
+        </button>
+        <button
+          type="button"
+          aria-pressed={flik === 'avskrivning'}
+          onClick={() => setFlik('avskrivning')}
+        >
+          Avskrivning
+        </button>
+      </div>
+
+      {flik === 'register' ? (
+        <>
+          <p className="hjalptext" data-testid="anlaggning-inledning">
+            {forening
+              ? 'Inventarier skrivs av var och en för sig under sin nyttjandeperiod. Registret nedan är det som årets avskrivning räknas på, så en tillgång som ska skrivas av måste finnas i det. Byggnader hanteras längre ned.'
+              : 'Maskiner och inventarier skrivs av kollektivt, som en klumpsumma för allt som ägs - inte per tillgång. Registret nedan är till för spårbarhet och för kompletteringsregeln, som behöver varje tillgångs eget anskaffningsvärde och ålder.'}
+          </p>
+
+          <Oregistreradekop
+            kop={kop}
+            oppnaFor={oppnaKop}
+            onRegistrera={onRegistrera}
+            onRegistreraFastighet={onRegistreraFastighet}
+            onInteAnlaggning={onInteAnlaggning}
+          />
+
+          {laggTill && (
+            <section
+              className="kort"
+              aria-label="Lägg till i registret"
+              data-testid="lagg-till-panel"
             >
-              <option value="inventarie">Maskin eller inventarie</option>
-              <option value="byggnad">Byggnad</option>
-              <option value="markanlaggning">Markanläggning</option>
-              <option value="mark">Mark</option>
-              <option value="skog">Skog</option>
+              <div className="faltgrupp">
+                <label htmlFor="anlaggning-typ">Vad ska läggas till?</label>
+                <select
+                  id="anlaggning-typ"
+                  className="falt"
+                  value={typval}
+                  onChange={(handelse) =>
+                    setTypval(handelse.target.value as 'inventarie' | Fastighetstyp)
+                  }
+                >
+                  <option value="inventarie">Maskin eller inventarie</option>
+                  <option value="byggnad">Byggnad</option>
+                  <option value="markanlaggning">Markanläggning</option>
+                  <option value="mark">Mark</option>
+                  <option value="skog">Skog</option>
+                </select>
+              </div>
+
+              {typval === 'inventarie' ? (
+                <>
+                  <div className="faltgrupp">
+                    <label htmlFor="anlaggning-benamning">Tillgångens benämning</label>
+                    <input
+                      id="anlaggning-benamning"
+                      className="falt"
+                      value={benamning}
+                      onChange={(handelse) => setBenamning(handelse.target.value)}
+                    />
+                  </div>
+
+                  <div className="faltgrupp">
+                    <label htmlFor="anlaggning-datum">
+                      Tillgångens anskaffningsdatum
+                    </label>
+                    <input
+                      id="anlaggning-datum"
+                      className="falt"
+                      type="date"
+                      value={anskaffningsdatum}
+                      onChange={(handelse) =>
+                        setAnskaffningsdatum(handelse.target.value as Datum)
+                      }
+                    />
+                  </div>
+
+                  <div className="faltgrupp">
+                    <label htmlFor="anlaggning-belopp">
+                      Tillgångens anskaffningsvärde
+                    </label>
+                    <input
+                      id="anlaggning-belopp"
+                      className="falt"
+                      inputMode="decimal"
+                      value={belopp}
+                      onChange={(handelse) => setBelopp(handelse.target.value)}
+                    />
+                  </div>
+
+                  <div className="faltgrupp">
+                    <label htmlFor="anlaggning-nyttjandeperiod">
+                      Uppskattad nyttjandeperiod, år
+                    </label>
+                    <input
+                      id="anlaggning-nyttjandeperiod"
+                      className="falt"
+                      inputMode="numeric"
+                      value={nyttjandeperiod}
+                      onChange={(handelse) => setNyttjandeperiod(handelse.target.value)}
+                    />
+                  </div>
+
+                  {direktavdrag && (
+                    <p role="status" data-testid="direktavdrag-varning">
+                      {forening
+                        ? 'Det här får kostnadsföras direkt i stället för att registreras här - värdet understiger ett halvt prisbasbelopp (BFNAR 2010:1 punkt 6.27). Bokför det som en vanlig utgift.'
+                        : 'Det här får kostnadsföras direkt i stället för att registreras här - värdet är högst ett halvt prisbasbelopp, eller nyttjandeperioden högst tre år (BFN K1 punkt 6.30, 6.31). Bokför det som en vanlig utgift.'}
+                    </p>
+                  )}
+
+                  <button
+                    type="button"
+                    className="knapp knapp--primar"
+                    disabled={
+                      arbetar ||
+                      benamning.trim() === '' ||
+                      beloppOre === undefined ||
+                      !Number.isInteger(nyttjandeperiodTal) ||
+                      nyttjandeperiodTal <= 0
+                    }
+                    data-testid="registrera-anlaggning"
+                    onClick={() =>
+                      void kor(async () => {
+                        const resultat = await onRegistrera({
+                          benamning,
+                          anskaffningsdatum,
+                          anskaffningsvarde: beloppOre!,
+                          nyttjandeperiod: nyttjandeperiodTal,
+                        });
+                        setBenamning('');
+                        setBelopp('');
+                        setLaggTill(false);
+                        return resultat;
+                      })
+                    }
+                  >
+                    Registrera
+                  </button>
+                </>
+              ) : (
+                <Fastighetsformular
+                  key={typval}
+                  typ={typval}
+                  idag={idag}
+                  onRegistrera={onRegistreraFastighet}
+                  onKlar={() => setLaggTill(false)}
+                  kor={kor}
+                  arbetar={arbetar}
+                />
+              )}
+            </section>
+          )}
+
+          <h3>Maskiner och inventarier</h3>
+
+          {agda.length === 0 ? (
+            <p className="tomt" data-testid="inga-anlaggningar">
+              Inget är registrerat ännu.
+            </p>
+          ) : (
+            <ul className="lista" data-testid="anlaggningslista">
+              {agda.map((tillgang) => {
+                const visas = oppen === tillgang.id;
+                return (
+                  <li key={tillgang.id}>
+                    <button
+                      type="button"
+                      className="listrad"
+                      aria-expanded={visas}
+                      onClick={() => setOppen(visas ? undefined : tillgang.id)}
+                    >
+                      <span className="listrad__text">
+                        <span>{tillgang.benamning}</span>
+                        <span className="listrad__sekundar">
+                          {tillgang.anskaffningsdatum}
+                          {kopt(tillgang.verifikatId, verifikatnamn)}
+                        </span>
+                      </span>
+                      <span className="belopp">
+                        {formatKronor(tillgang.anskaffningsvarde)}
+                      </span>
+                    </button>
+
+                    {visas && (
+                      <div className="kort" data-testid={`avyttra-${tillgang.id}`}>
+                        <div className="segment">
+                          <button
+                            type="button"
+                            aria-pressed={avyttringstyp === 'forsaljning'}
+                            onClick={() => setAvyttringstyp('forsaljning')}
+                          >
+                            Sålt
+                          </button>
+                          <button
+                            type="button"
+                            aria-pressed={avyttringstyp === 'utrangering'}
+                            onClick={() => setAvyttringstyp('utrangering')}
+                          >
+                            Utrangerat
+                          </button>
+                        </div>
+
+                        <div className="faltgrupp">
+                          <label htmlFor="avyttringsdatum">Datum</label>
+                          <input
+                            id="avyttringsdatum"
+                            className="falt"
+                            type="date"
+                            value={avyttringsdatum}
+                            onChange={(handelse) =>
+                              setAvyttringsdatum(handelse.target.value as Datum)
+                            }
+                          />
+                        </div>
+
+                        {avyttringstyp === 'forsaljning' && (
+                          <div className="faltgrupp">
+                            <label htmlFor="avyttringsbelopp">Försäljningsinkomst</label>
+                            <input
+                              id="avyttringsbelopp"
+                              className="falt"
+                              inputMode="decimal"
+                              value={avyttringsbelopp}
+                              onChange={(handelse) =>
+                                setAvyttringsbelopp(handelse.target.value)
+                              }
+                            />
+                          </div>
+                        )}
+
+                        <button
+                          type="button"
+                          className="knapp knapp--primar"
+                          disabled={arbetar}
+                          data-testid={`bekrafta-avyttring-${tillgang.id}`}
+                          onClick={() =>
+                            void kor(async () => {
+                              const inkomst =
+                                avyttringstyp === 'forsaljning' &&
+                                avyttringsbelopp.trim() !== ''
+                                  ? oreFromKronor(avyttringsbelopp)
+                                  : oreFromKronor('0');
+                              const resultat = await onAvyttra(tillgang.id, {
+                                datum: avyttringsdatum,
+                                typ: avyttringstyp,
+                                forsaljningsinkomst: inkomst,
+                              });
+                              setAvyttringsbelopp('');
+                              return resultat;
+                            })
+                          }
+                        >
+                          {avyttringstyp === 'forsaljning'
+                            ? 'Registrera försäljning'
+                            : 'Registrera utrangering'}
+                        </button>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          <Fastighetslista
+            forening={forening}
+            standardkonton={
+              forening
+                ? { kostnad: '7820', ack: '1118' }
+                : { kostnad: '7820', ack: '1129' }
+            }
+            fastigheter={fastigheter}
+            verifikatnamn={verifikatnamn}
+            idag={idag}
+            onAvyttra={onAvyttraFastighet}
+            onMakulera={onMakuleraFastighet}
+            onBokforAvskrivning={onBokforFastighetsavskrivning}
+            kor={kor}
+            arbetar={arbetar}
+          />
+
+          <Saldaposter
+            anlaggningar={anlaggningar}
+            fastigheter={fastigheter}
+            verifikatnamn={verifikatnamn}
+          />
+
+          <Registerimport
+            onPlanera={onPlaneraRegisterimport}
+            onGenomfor={onGenomforRegisterimport}
+          />
+        </>
+      ) : (
+        <>
+          <h3>Årets avskrivning</h3>
+
+          <p className="hjalptext">
+            Byggnader och markanläggningar skrivs av för sig: öppna posten under Register.
+          </p>
+
+          <div className="faltgrupp">
+            <label htmlFor="avskrivning-ar">Räkenskapsår</label>
+            <select
+              id="avskrivning-ar"
+              className="falt"
+              value={ar}
+              onChange={(handelse) => setAr(handelse.target.value)}
+            >
+              {rakenskapsar.map((kandidat) => (
+                <option key={kandidat.id} value={kandidat.id}>
+                  {kandidat.start.slice(0, 4)}
+                </option>
+              ))}
             </select>
           </div>
 
-          {typval === 'inventarie' ? (
+          {forening ? (
+            <Linjaravskrivningssektion
+              anlaggningar={anlaggningar}
+              rakenskapsar={rakenskapsar.find((kandidat) => kandidat.id === ar)}
+              arbetar={arbetar}
+              kor={kor}
+              onBokfor={(belopp, kostnadskonto, ackKonto) =>
+                onBokforAvskrivning(ar as Uuid, belopp, kostnadskonto, ackKonto)
+              }
+            />
+          ) : (
             <>
               <div className="faltgrupp">
-                <label htmlFor="anlaggning-benamning">Tillgångens benämning</label>
+                <label htmlFor="poolkonton">Konton för potten, kommaseparerat</label>
                 <input
-                  id="anlaggning-benamning"
+                  id="poolkonton"
                   className="falt"
-                  value={benamning}
-                  onChange={(handelse) => setBenamning(handelse.target.value)}
+                  value={poolkontoText}
+                  onChange={(handelse) => setPoolkontoText(handelse.target.value)}
                 />
               </div>
-
-              <div className="faltgrupp">
-                <label htmlFor="anlaggning-datum">Tillgångens anskaffningsdatum</label>
-                <input
-                  id="anlaggning-datum"
-                  className="falt"
-                  type="date"
-                  value={anskaffningsdatum}
-                  onChange={(handelse) =>
-                    setAnskaffningsdatum(handelse.target.value as Datum)
-                  }
-                />
-              </div>
-
-              <div className="faltgrupp">
-                <label htmlFor="anlaggning-belopp">Tillgångens anskaffningsvärde</label>
-                <input
-                  id="anlaggning-belopp"
-                  className="falt"
-                  inputMode="decimal"
-                  value={belopp}
-                  onChange={(handelse) => setBelopp(handelse.target.value)}
-                />
-              </div>
-
-              <div className="faltgrupp">
-                <label htmlFor="anlaggning-nyttjandeperiod">
-                  Uppskattad nyttjandeperiod, år
-                </label>
-                <input
-                  id="anlaggning-nyttjandeperiod"
-                  className="falt"
-                  inputMode="numeric"
-                  value={nyttjandeperiod}
-                  onChange={(handelse) => setNyttjandeperiod(handelse.target.value)}
-                />
-              </div>
-
-              {direktavdrag && (
-                <p role="status" data-testid="direktavdrag-varning">
-                  {forening
-                    ? 'Det här får kostnadsföras direkt i stället för att registreras här - värdet understiger ett halvt prisbasbelopp (BFNAR 2010:1 punkt 6.27). Bokför det som en vanlig utgift.'
-                    : 'Det här får kostnadsföras direkt i stället för att registreras här - värdet är högst ett halvt prisbasbelopp, eller nyttjandeperioden högst tre år (BFN K1 punkt 6.30, 6.31). Bokför det som en vanlig utgift.'}
-                </p>
-              )}
 
               <button
                 type="button"
-                className="knapp knapp--primar"
-                disabled={
-                  arbetar ||
-                  benamning.trim() === '' ||
-                  beloppOre === undefined ||
-                  !Number.isInteger(nyttjandeperiodTal) ||
-                  nyttjandeperiodTal <= 0
-                }
-                data-testid="registrera-anlaggning"
+                className="knapp"
+                disabled={arbetar || ar === ''}
+                data-testid="berakna-avskrivning"
                 onClick={() =>
                   void kor(async () => {
-                    const resultat = await onRegistrera({
-                      benamning,
-                      anskaffningsdatum,
-                      anskaffningsvarde: beloppOre!,
-                      nyttjandeperiod: nyttjandeperiodTal,
-                    });
-                    setBenamning('');
-                    setBelopp('');
-                    setLaggTill(false);
-                    return resultat;
+                    const rakenskapsarId = ar as Uuid;
+                    const resultat = await onBeraknaAvskrivning(
+                      rakenskapsarId,
+                      tolkaKonton(poolkontoText),
+                    );
+                    setUnderlag(resultat);
+                    return `Underlag ${formatKronor(resultat.forslag.underlag)} kr.`;
                   })
                 }
               >
-                Registrera
+                Beräkna
               </button>
-            </>
-          ) : (
-            <Fastighetsformular
-              key={typval}
-              typ={typval}
-              idag={idag}
-              onRegistrera={onRegistreraFastighet}
-              onKlar={() => setLaggTill(false)}
-              kor={kor}
-              arbetar={arbetar}
-            />
-          )}
-        </section>
-      )}
 
-      <h3>Maskiner och inventarier</h3>
+              {underlag !== undefined && (
+                <div className="kort" data-testid="avskrivningsforslag">
+                  <dl>
+                    <dt>IB</dt>
+                    <dd>{formatKronor(underlag.ib)}</dd>
+                    <dt>Årets inköp</dt>
+                    <dd>{formatKronor(underlag.aretsInkop)}</dd>
+                    <dt>Årets avyttrat</dt>
+                    <dd>{formatKronor(underlag.aretsAvyttrat)}</dd>
+                    <dt>Avskrivningsunderlag</dt>
+                    <dd>{formatKronor(underlag.forslag.underlag)}</dd>
+                  </dl>
 
-      {agda.length === 0 ? (
-        <p className="tomt" data-testid="inga-anlaggningar">
-          Inget är registrerat ännu.
-        </p>
-      ) : (
-        <ul className="lista" data-testid="anlaggningslista">
-          {agda.map((tillgang) => {
-            const visas = oppen === tillgang.id;
-            return (
-              <li key={tillgang.id}>
-                <button
-                  type="button"
-                  className="listrad"
-                  aria-expanded={visas}
-                  onClick={() => setOppen(visas ? undefined : tillgang.id)}
-                >
-                  <span className="listrad__text">
-                    <span>{tillgang.benamning}</span>
-                    <span className="listrad__sekundar">
-                      {tillgang.anskaffningsdatum}
-                      {kopt(tillgang.verifikatId, verifikatnamn)}
-                    </span>
-                  </span>
-                  <span className="belopp">
-                    {formatKronor(tillgang.anskaffningsvarde)}
-                  </span>
-                </button>
-
-                {visas && (
-                  <div className="kort" data-testid={`avyttra-${tillgang.id}`}>
-                    <div className="segment">
-                      <button
-                        type="button"
-                        aria-pressed={avyttringstyp === 'forsaljning'}
-                        onClick={() => setAvyttringstyp('forsaljning')}
-                      >
-                        Sålt
-                      </button>
-                      <button
-                        type="button"
-                        aria-pressed={avyttringstyp === 'utrangering'}
-                        onClick={() => setAvyttringstyp('utrangering')}
-                      >
-                        Utrangerat
-                      </button>
-                    </div>
-
-                    <div className="faltgrupp">
-                      <label htmlFor="avyttringsdatum">Datum</label>
-                      <input
-                        id="avyttringsdatum"
-                        className="falt"
-                        type="date"
-                        value={avyttringsdatum}
-                        onChange={(handelse) =>
-                          setAvyttringsdatum(handelse.target.value as Datum)
-                        }
-                      />
-                    </div>
-
-                    {avyttringstyp === 'forsaljning' && (
-                      <div className="faltgrupp">
-                        <label htmlFor="avyttringsbelopp">Försäljningsinkomst</label>
-                        <input
-                          id="avyttringsbelopp"
-                          className="falt"
-                          inputMode="decimal"
-                          value={avyttringsbelopp}
-                          onChange={(handelse) =>
-                            setAvyttringsbelopp(handelse.target.value)
-                          }
-                        />
-                      </div>
-                    )}
-
-                    <button
-                      type="button"
-                      className="knapp knapp--primar"
-                      disabled={arbetar}
-                      data-testid={`bekrafta-avyttring-${tillgang.id}`}
-                      onClick={() =>
-                        void kor(async () => {
-                          const inkomst =
-                            avyttringstyp === 'forsaljning' &&
-                            avyttringsbelopp.trim() !== ''
-                              ? oreFromKronor(avyttringsbelopp)
-                              : oreFromKronor('0');
-                          const resultat = await onAvyttra(tillgang.id, {
-                            datum: avyttringsdatum,
-                            typ: avyttringstyp,
-                            forsaljningsinkomst: inkomst,
-                          });
-                          setAvyttringsbelopp('');
-                          return resultat;
-                        })
+                  <div className="faltgrupp">
+                    <label htmlFor="avskrivningskostnadkonto">
+                      Kostnadskonto för avskrivningen
+                    </label>
+                    <input
+                      id="avskrivningskostnadkonto"
+                      className="falt"
+                      value={avskrivningskostnadText}
+                      onChange={(handelse) =>
+                        setAvskrivningskostnadText(handelse.target.value)
                       }
-                    >
-                      {avyttringstyp === 'forsaljning'
-                        ? 'Registrera försäljning'
-                        : 'Registrera utrangering'}
-                    </button>
+                    />
                   </div>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
 
-      <Fastighetslista
-        forening={forening}
-        standardkonton={
-          forening ? { kostnad: '7820', ack: '1118' } : { kostnad: '7820', ack: '1129' }
-        }
-        fastigheter={fastigheter}
-        verifikatnamn={verifikatnamn}
-        idag={idag}
-        onAvyttra={onAvyttraFastighet}
-        onMakulera={onMakuleraFastighet}
-        onBokforAvskrivning={onBokforFastighetsavskrivning}
-        kor={kor}
-        arbetar={arbetar}
-      />
+                  <div className="faltgrupp">
+                    <label htmlFor="ackavskrivningkonto">
+                      Kontot för ackumulerade avskrivningar
+                    </label>
+                    <input
+                      id="ackavskrivningkonto"
+                      className="falt"
+                      value={ackAvskrivningText}
+                      onChange={(handelse) =>
+                        setAckAvskrivningText(handelse.target.value)
+                      }
+                    />
+                  </div>
 
-      <Saldaposter
-        anlaggningar={anlaggningar}
-        fastigheter={fastigheter}
-        verifikatnamn={verifikatnamn}
-      />
+                  <p className="hjalptext">
+                    {underlag.forslag.underlag <= 0
+                      ? 'Underlaget är noll, så det finns inget att skriva av än - registrera och bokför en anskaffning först.'
+                      : 'Tre regler räknade parallellt, plus möjligheten att skriva av hela underlaget när det är litet nog - vilken som bokförs är alltid ett val, aldrig ett förslag som redan är ifyllt (hård regel 10).'}
+                  </p>
 
-      <h2>Årets avskrivning</h2>
-
-      <Prisbasbeloppssektion
-        egna={egnaPrisbasbelopp}
-        idag={idag}
-        onHamta={onHamtaPrisbasbelopp}
-        onSpara={onSparaPrisbasbelopp}
-      />
-
-      <div className="faltgrupp">
-        <label htmlFor="avskrivning-ar">Räkenskapsår</label>
-        <select
-          id="avskrivning-ar"
-          className="falt"
-          value={ar}
-          onChange={(handelse) => setAr(handelse.target.value)}
-        >
-          {rakenskapsar.map((kandidat) => (
-            <option key={kandidat.id} value={kandidat.id}>
-              {kandidat.start.slice(0, 4)}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {forening ? (
-        <Linjaravskrivningssektion
-          anlaggningar={anlaggningar}
-          rakenskapsar={rakenskapsar.find((kandidat) => kandidat.id === ar)}
-          arbetar={arbetar}
-          kor={kor}
-          onBokfor={(belopp, kostnadskonto, ackKonto) =>
-            onBokforAvskrivning(ar as Uuid, belopp, kostnadskonto, ackKonto)
-          }
-        />
-      ) : (
-        <>
-          <div className="faltgrupp">
-            <label htmlFor="poolkonton">Konton för potten, kommaseparerat</label>
-            <input
-              id="poolkonton"
-              className="falt"
-              value={poolkontoText}
-              onChange={(handelse) => setPoolkontoText(handelse.target.value)}
-            />
-          </div>
-
-          <button
-            type="button"
-            className="knapp"
-            disabled={arbetar || ar === ''}
-            data-testid="berakna-avskrivning"
-            onClick={() =>
-              void kor(async () => {
-                const rakenskapsarId = ar as Uuid;
-                const resultat = await onBeraknaAvskrivning(
-                  rakenskapsarId,
-                  tolkaKonton(poolkontoText),
-                );
-                setUnderlag(resultat);
-                return `Underlag ${formatKronor(resultat.forslag.underlag)} kr.`;
-              })
-            }
-          >
-            Beräkna
-          </button>
-
-          {underlag !== undefined && (
-            <div className="kort" data-testid="avskrivningsforslag">
-              <dl>
-                <dt>IB</dt>
-                <dd>{formatKronor(underlag.ib)}</dd>
-                <dt>Årets inköp</dt>
-                <dd>{formatKronor(underlag.aretsInkop)}</dd>
-                <dt>Årets avyttrat</dt>
-                <dd>{formatKronor(underlag.aretsAvyttrat)}</dd>
-                <dt>Avskrivningsunderlag</dt>
-                <dd>{formatKronor(underlag.forslag.underlag)}</dd>
-              </dl>
-
-              <div className="faltgrupp">
-                <label htmlFor="avskrivningskostnadkonto">
-                  Kostnadskonto för avskrivningen
-                </label>
-                <input
-                  id="avskrivningskostnadkonto"
-                  className="falt"
-                  value={avskrivningskostnadText}
-                  onChange={(handelse) =>
-                    setAvskrivningskostnadText(handelse.target.value)
-                  }
-                />
-              </div>
-
-              <div className="faltgrupp">
-                <label htmlFor="ackavskrivningkonto">
-                  Kontot för ackumulerade avskrivningar
-                </label>
-                <input
-                  id="ackavskrivningkonto"
-                  className="falt"
-                  value={ackAvskrivningText}
-                  onChange={(handelse) => setAckAvskrivningText(handelse.target.value)}
-                />
-              </div>
-
-              <p className="hjalptext">
-                {underlag.forslag.underlag <= 0
-                  ? 'Underlaget är noll, så det finns inget att skriva av än - registrera och bokför en anskaffning först.'
-                  : 'Tre regler räknade parallellt, plus möjligheten att skriva av hela underlaget när det är litet nog - vilken som bokförs är alltid ett val, aldrig ett förslag som redan är ifyllt (hård regel 10).'}
-              </p>
-
-              <ul className="lista" data-testid="avskrivningsforslag-rader">
-                {(
-                  [
-                    ['Huvudregeln, 30 %', underlag.forslag.huvudregeln, 'huvudregeln'],
-                    [
-                      'Kompletteringsregeln',
-                      underlag.forslag.kompletteringsregeln,
-                      'kompletteringsregeln',
-                    ],
-                    [
-                      'Restvärdesavskrivning, 25 %',
-                      underlag.forslag.restvardesavskrivning,
-                      'restvardesavskrivning',
-                    ],
-                    ...(underlag.forslag.helaUnderlaget === undefined
-                      ? []
-                      : ([
-                          [
-                            'Hela underlaget (under halvt prisbasbelopp)',
-                            underlag.forslag.helaUnderlaget,
-                            'helaUnderlaget',
-                          ],
-                        ] as const)),
-                  ] as const
-                ).map(([namn, avskrivning, nyckel]) => (
-                  <li key={nyckel}>
-                    <div className="listrad">
-                      <span className="listrad__text">
-                        <span>{namn}</span>
-                      </span>
-                      <span className="belopp">{formatKronor(avskrivning)}</span>
-                    </div>
-                    <p>
-                      <button
-                        type="button"
-                        className="knapp"
-                        disabled={arbetar || avskrivning <= 0}
-                        data-testid={`bokfor-${nyckel}`}
-                        onClick={() =>
-                          void kor(async () => {
-                            const resultat = await onBokforAvskrivning(
-                              ar as Uuid,
-                              avskrivning,
-                              kontonummer(avskrivningskostnadText),
-                              kontonummer(ackAvskrivningText),
-                            );
-                            setUnderlag(undefined);
-                            return resultat;
-                          })
-                        }
-                      >
-                        Bokför {formatKronor(avskrivning)} kr
-                      </button>
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            </div>
+                  <ul className="lista" data-testid="avskrivningsforslag-rader">
+                    {(
+                      [
+                        [
+                          'Huvudregeln, 30 %',
+                          underlag.forslag.huvudregeln,
+                          'huvudregeln',
+                        ],
+                        [
+                          'Kompletteringsregeln',
+                          underlag.forslag.kompletteringsregeln,
+                          'kompletteringsregeln',
+                        ],
+                        [
+                          'Restvärdesavskrivning, 25 %',
+                          underlag.forslag.restvardesavskrivning,
+                          'restvardesavskrivning',
+                        ],
+                        ...(underlag.forslag.helaUnderlaget === undefined
+                          ? []
+                          : ([
+                              [
+                                'Hela underlaget (under halvt prisbasbelopp)',
+                                underlag.forslag.helaUnderlaget,
+                                'helaUnderlaget',
+                              ],
+                            ] as const)),
+                      ] as const
+                    ).map(([namn, avskrivning, nyckel]) => (
+                      <li key={nyckel}>
+                        <div className="listrad">
+                          <span className="listrad__text">
+                            <span>{namn}</span>
+                          </span>
+                          <span className="belopp">{formatKronor(avskrivning)}</span>
+                        </div>
+                        <p>
+                          <button
+                            type="button"
+                            className="knapp"
+                            disabled={arbetar || avskrivning <= 0}
+                            data-testid={`bokfor-${nyckel}`}
+                            onClick={() =>
+                              void kor(async () => {
+                                const resultat = await onBokforAvskrivning(
+                                  ar as Uuid,
+                                  avskrivning,
+                                  kontonummer(avskrivningskostnadText),
+                                  kontonummer(ackAvskrivningText),
+                                );
+                                setUnderlag(undefined);
+                                return resultat;
+                              })
+                            }
+                          >
+                            Bokför {formatKronor(avskrivning)} kr
+                          </button>
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </>
           )}
+
+          <details>
+            <summary>Prisbasbelopp</summary>
+            <Prisbasbeloppssektion
+              egna={egnaPrisbasbelopp}
+              idag={idag}
+              onHamta={onHamtaPrisbasbelopp}
+              onSpara={onSparaPrisbasbelopp}
+            />
+          </details>
         </>
       )}
-
-      <Registerimport
-        onPlanera={onPlaneraRegisterimport}
-        onGenomfor={onGenomforRegisterimport}
-      />
     </section>
   );
 }

@@ -69,7 +69,6 @@ export function Prisbasbeloppssektion({ egna, idag, onHamta, onSpara }: Props) {
 
   return (
     <div className="kort" data-testid="prisbasbelopp">
-      <h3>Prisbasbelopp</h3>
       <p className="hjalptext">
         Gränsen för inventarier och lager som får kostnadsföras direkt är ett halvt
         prisbasbelopp för räkenskapsåret.

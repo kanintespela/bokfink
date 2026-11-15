@@ -17,6 +17,10 @@ async function nyForeningsbok(page: Page, tid = '2026-10-22T10:00:00+02:00') {
 }
 
 async function registrera(page: Page, namn: string, varde: string, ar: string) {
+  await page
+    .getByRole('group', { name: 'Visa' })
+    .getByRole('button', { name: 'Register' })
+    .click();
   if (!(await page.getByTestId('lagg-till-panel').isVisible())) {
     await page.getByTestId('lagg-till').click();
   }
@@ -39,6 +43,10 @@ test("depreciates an association's inventarier one by one, not as a firm's pool"
     'var och en för sig',
   );
   // None of the firm's pool: no percentages, no kompletteringsregel, no pool accounts.
+  await page
+    .getByRole('group', { name: 'Visa' })
+    .getByRole('button', { name: 'Avskrivning' })
+    .click();
   await expect(page.getByTestId('berakna-avskrivning')).toHaveCount(0);
   await expect(page.getByLabel('Konton för potten, kommaseparerat')).toHaveCount(0);
 
@@ -47,6 +55,10 @@ test("depreciates an association's inventarier one by one, not as a firm's pool"
 
   await page.clock.setSystemTime(new Date('2027-01-20T10:00:00+01:00'));
   await page.reload();
+  await page
+    .getByRole('group', { name: 'Visa' })
+    .getByRole('button', { name: 'Avskrivning' })
+    .click();
   await page.getByLabel('Räkenskapsår', { exact: true }).selectOption({ label: '2026' });
 
   await expect(page.getByTestId('linjar-rader')).toContainText('Ljudanläggning');
@@ -74,6 +86,10 @@ test("depreciates an association's inventarier one by one, not as a firm's pool"
 test('says nothing is to be written off when the register is empty', async ({ page }) => {
   await nyForeningsbok(page);
   await page.goto('/#anlaggning');
+  await page
+    .getByRole('group', { name: 'Visa' })
+    .getByRole('button', { name: 'Avskrivning' })
+    .click();
 
   await expect(page.getByTestId('linjar-inga-rader')).toBeVisible();
   await expect(page.getByTestId('bokfor-linjar-avskrivning')).toBeDisabled();

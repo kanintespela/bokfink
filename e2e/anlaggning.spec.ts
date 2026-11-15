@@ -57,6 +57,10 @@ test('warns before registering something that qualifies for direktavdrag', async
 // A new ledger has BAS K1's 1220-1229 already, with nothing on them.
 test('says there is nothing to depreciate when the pool is empty', async ({ page }) => {
   await page.goto('/#anlaggning');
+  await page
+    .getByRole('group', { name: 'Visa' })
+    .getByRole('button', { name: 'Avskrivning' })
+    .click();
   await page.getByTestId('berakna-avskrivning').click();
 
   await expect(page.getByTestId('avskrivningsforslag')).toContainText(
