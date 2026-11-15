@@ -21,6 +21,8 @@ import { Tillbaka } from '../../ui/Tillbaka';
 import type { Anlaggningskop } from '../../domain/anlaggning/anlaggningskop';
 import { Fastighetssektion } from './Fastighetssektion';
 import { kopt, Oregistreradekop } from './Oregistreradekop';
+import type { Registerimportplan } from '../../data/registerimport';
+import { Registerimport } from './Registerimport';
 import { Linjaravskrivningssektion } from './Linjaravskrivningssektion';
 import { Prisbasbeloppssektion } from './Prisbasbeloppssektion';
 
@@ -36,6 +38,8 @@ interface Props {
   readonly egnaPrisbasbelopp: ReadonlyMap<number, Ore>;
   readonly onHamtaPrisbasbelopp: (ar: number) => Promise<Ore>;
   readonly onSparaPrisbasbelopp: (ar: number, belopp: Ore) => Promise<void>;
+  readonly onPlaneraRegisterimport: (text: string) => Promise<Registerimportplan>;
+  readonly onGenomforRegisterimport: (plan: Registerimportplan) => Promise<number>;
   /** Booked purchases of this year that the register does not hold. */
   readonly kop: readonly Anlaggningskop[];
   /** The purchase whose form is open on arrival, when the screen was reached from one. */
@@ -103,6 +107,8 @@ interface Props {
 export function Anlaggningssida({
   onTillbaka,
   profil,
+  onPlaneraRegisterimport,
+  onGenomforRegisterimport,
   kop,
   oppnaKop,
   onInteAnlaggning,
@@ -605,6 +611,11 @@ export function Anlaggningssida({
         onRegistrera={onRegistreraFastighet}
         onAvyttra={onAvyttraFastighet}
         onBokforAvskrivning={onBokforFastighetsavskrivning}
+      />
+
+      <Registerimport
+        onPlanera={onPlaneraRegisterimport}
+        onGenomfor={onGenomforRegisterimport}
       />
     </section>
   );
