@@ -66,8 +66,8 @@ interface Props {
  * in from the verifikat - what it was called, when, and what it cost without
  * moms - so that nothing is typed twice, and everything in it can be changed
  * before it is saved. Nothing is registered until the button is pressed, and
- * "Inte en anläggning" ends the question for a verifikat that only looked
- * like one.
+ * "Lägg inte in i registret" ends the question for a verifikat that only looked
+ * like an asset, or whose asset is in the register already.
  */
 export function Oregistreradekop({
   kop,
@@ -135,7 +135,7 @@ export function Oregistreradekop({
                       type="button"
                       className="knapp knapp--text"
                       disabled={arbetar}
-                      aria-label={`${post.verifikat.beskrivning} är inte en anläggning`}
+                      aria-label={`${post.verifikat.beskrivning} läggs inte in i registret`}
                       onClick={() =>
                         void kor(async () => {
                           await onInteAnlaggning(post.verifikat.id);
@@ -143,7 +143,7 @@ export function Oregistreradekop({
                         })
                       }
                     >
-                      Inte en anläggning
+                      Lägg inte in i registret
                     </button>
                   </p>
                 )}

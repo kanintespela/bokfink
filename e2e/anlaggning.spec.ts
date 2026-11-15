@@ -120,6 +120,25 @@ test('offers a booked markanläggning to the register, filled in from the verifi
   await expect(page.getByTestId('anlaggningskop-vantar')).toHaveCount(0);
 });
 
+test('stops asking about a purchase from the suggestion right after booking', async ({
+  page,
+}) => {
+  await page.goto('/#frikontering');
+  await page.getByLabel('Vad avser det?').fill('Redan i registret');
+  await page.getByLabel('Konto, rad 1').fill('1150');
+  await page.getByLabel('Debet, rad 1').fill('100');
+  await page.getByLabel('Konto, rad 2').fill('1930');
+  await page.getByLabel('Kredit, rad 2').fill('100');
+  await page.getByTestId('bokfor-fri').click();
+  await page
+    .getByTestId('anlaggningsforslag')
+    .getByRole('button', { name: 'Lägg inte in i registret' })
+    .click();
+  await expect(page.getByTestId('anlaggningsforslag')).toHaveCount(0);
+  await page.goto('/#anlaggning');
+  await expect(page.getByTestId('oregistrerade-kop')).toHaveCount(0);
+});
+
 test('stops asking about a purchase that was not an asset', async ({ page }) => {
   await page.goto('/#frikontering');
   await page.getByLabel('Vad avser det?').fill('Rättelse av konto');
@@ -133,7 +152,7 @@ test('stops asking about a purchase that was not an asset', async ({ page }) => 
 
   await page.goto('/#anlaggning');
   await page
-    .getByRole('button', { name: 'Rättelse av konto är inte en anläggning' })
+    .getByRole('button', { name: 'Rättelse av konto läggs inte in i registret' })
     .click();
 
   await expect(page.getByTestId('oregistrerade-kop')).toContainText('föreslås inte igen');

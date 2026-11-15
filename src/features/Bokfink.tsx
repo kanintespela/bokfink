@@ -1037,6 +1037,10 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
                   setOppnaKop(kop.verifikat.id);
                   setVy('anlaggning');
                 }}
+                onLaggInte={async () => {
+                  await avfardaAnlaggningskop(db, kop.verifikat.id);
+                  setLaddat(await hamta());
+                }}
               />
             ))}
         {vy === 'attgora' && (

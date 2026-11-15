@@ -15,9 +15,12 @@ import { SLAGNAMN } from './Oregistreradekop';
 export function Anlaggningsforslag({
   kop,
   onLaggIn,
+  onLaggInte,
 }: {
   readonly kop: Anlaggningskop;
   readonly onLaggIn: () => void;
+  /** Ends the question for this verifikat: it is in the register already, or never belonged there. */
+  readonly onLaggInte: () => void;
 }) {
   const rad = useRef<HTMLParagraphElement>(null);
   useEffect(() => {
@@ -31,6 +34,9 @@ export function Anlaggningsforslag({
       anläggningsregistret än.{' '}
       <button type="button" className="knapp" onClick={onLaggIn}>
         Lägg in i registret
+      </button>{' '}
+      <button type="button" className="knapp knapp--text" onClick={onLaggInte}>
+        Lägg inte in i registret
       </button>
     </p>
   );
