@@ -17,6 +17,10 @@ async function nyForeningsbok(page: Page, tid = '2026-10-22T10:00:00+02:00') {
 }
 
 async function registrera(page: Page, namn: string, varde: string, ar: string) {
+  if (!(await page.getByTestId('lagg-till-panel').isVisible())) {
+    await page.getByTestId('lagg-till').click();
+  }
+  await page.getByLabel('Vad ska läggas till?').selectOption('inventarie');
   await page.getByLabel('Tillgångens benämning').fill(namn);
   await page.getByLabel('Tillgångens anskaffningsvärde').fill(varde);
   await page.getByLabel('Uppskattad nyttjandeperiod, år').fill(ar);
@@ -99,10 +103,11 @@ test("offers the association's own accounts for a building's depreciation", asyn
   await nyForeningsbok(page);
   await page.goto('/#anlaggning');
 
+  await page.getByLabel('Vad ska läggas till?').selectOption('byggnad');
   await page.getByLabel('Komponentens benämning').fill('Samlingslokalen');
   await page.getByLabel('Komponentens anskaffningsvärde').fill('1000000');
   await page.getByTestId('registrera-fastighet').click();
-  await expect(page.getByTestId('fastighet-besked')).toBeVisible();
+  await expect(page.getByTestId('anlaggning-besked')).toBeVisible();
 
   await page.getByTestId('fastighetslista').getByRole('button').first().click();
   const detalj = page.getByTestId(/^fastighet-detalj-/);

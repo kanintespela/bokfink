@@ -19,7 +19,12 @@ import { halvtPrisbasbelopp as halvtPrisbasbeloppFor } from '../../domain/skatt/
 import type { Uuid } from '../../domain/id/uuidv7';
 import { Tillbaka } from '../../ui/Tillbaka';
 import type { Anlaggningskop } from '../../domain/anlaggning/anlaggningskop';
-import { Fastighetssektion } from './Fastighetssektion';
+import {
+  Fastighetsformular,
+  Fastighetslista,
+  type Fastighetstyp,
+} from './Fastighetssektion';
+import { Saldaposter } from './Saldaposter';
 import { kopt, Oregistreradekop } from './Oregistreradekop';
 import type { Registerimportplan } from '../../data/registerimport';
 import { Registerimport } from './Registerimport';
@@ -134,6 +139,11 @@ export function Anlaggningssida({
   const [anskaffningsdatum, setAnskaffningsdatum] = useState(idag);
   const [belopp, setBelopp] = useState('');
   const [nyttjandeperiod, setNyttjandeperiod] = useState('5');
+  // A register with nothing in it starts on the form; one with entries starts on the list.
+  const [laggTill, setLaggTill] = useState(
+    anlaggningar.length + fastigheter.length === 0,
+  );
+  const [typval, setTypval] = useState<'inventarie' | Fastighetstyp>('inventarie');
   const [oppen, setOppen] = useState<string | undefined>();
   const [avyttringstyp, setAvyttringstyp] = useState<'forsaljning' | 'utrangering'>(
     'forsaljning',
@@ -203,16 +213,43 @@ export function Anlaggningssida({
       .map((del) => kontonummer(del));
   }
 
+  const agda = anlaggningar.filter((tillgang) => tillgang.avyttring === undefined);
+
   return (
     <section aria-label="Anläggningsregister">
       <Tillbaka onTillbaka={onTillbaka} />
-      <h2>Anläggningsregister</h2>
+      <div className="rubrikrad">
+        <h2>Anläggningsregister</h2>
+        <button
+          type="button"
+          className="knapp"
+          aria-expanded={laggTill}
+          data-testid="lagg-till"
+          onClick={() => setLaggTill(!laggTill)}
+        >
+          {laggTill ? 'Stäng' : '+ Lägg till'}
+        </button>
+      </div>
 
       <p className="hjalptext" data-testid="anlaggning-inledning">
         {forening
           ? 'Inventarier skrivs av var och en för sig under sin nyttjandeperiod. Registret nedan är det som årets avskrivning räknas på, så en tillgång som ska skrivas av måste finnas i det. Byggnader hanteras längre ned.'
           : 'Maskiner och inventarier skrivs av kollektivt, som en klumpsumma för allt som ägs - inte per tillgång. Registret nedan är till för spårbarhet och för kompletteringsregeln, som behöver varje tillgångs eget anskaffningsvärde och ålder.'}
       </p>
+
+      {arbetar && <p data-testid="anlaggning-arbetar">Arbetar …</p>}
+
+      {besked !== undefined && (
+        <p className="kort" role="status" data-testid="anlaggning-besked">
+          {besked}
+        </p>
+      )}
+
+      {fel !== undefined && (
+        <p role="alert" data-testid="anlaggning-fel">
+          {fel}
+        </p>
+      )}
 
       <Oregistreradekop
         kop={kop}
@@ -222,13 +259,139 @@ export function Anlaggningssida({
         onInteAnlaggning={onInteAnlaggning}
       />
 
-      {anlaggningar.length === 0 ? (
+      {laggTill && (
+        <section
+          className="kort"
+          aria-label="Lägg till i registret"
+          data-testid="lagg-till-panel"
+        >
+          <div className="faltgrupp">
+            <label htmlFor="anlaggning-typ">Vad ska läggas till?</label>
+            <select
+              id="anlaggning-typ"
+              className="falt"
+              value={typval}
+              onChange={(handelse) =>
+                setTypval(handelse.target.value as 'inventarie' | Fastighetstyp)
+              }
+            >
+              <option value="inventarie">Maskin eller inventarie</option>
+              <option value="byggnad">Byggnad</option>
+              <option value="markanlaggning">Markanläggning</option>
+              <option value="mark">Mark</option>
+              <option value="skog">Skog</option>
+            </select>
+          </div>
+
+          {typval === 'inventarie' ? (
+            <>
+              <div className="faltgrupp">
+                <label htmlFor="anlaggning-benamning">Tillgångens benämning</label>
+                <input
+                  id="anlaggning-benamning"
+                  className="falt"
+                  value={benamning}
+                  onChange={(handelse) => setBenamning(handelse.target.value)}
+                />
+              </div>
+
+              <div className="faltgrupp">
+                <label htmlFor="anlaggning-datum">Tillgångens anskaffningsdatum</label>
+                <input
+                  id="anlaggning-datum"
+                  className="falt"
+                  type="date"
+                  value={anskaffningsdatum}
+                  onChange={(handelse) =>
+                    setAnskaffningsdatum(handelse.target.value as Datum)
+                  }
+                />
+              </div>
+
+              <div className="faltgrupp">
+                <label htmlFor="anlaggning-belopp">Tillgångens anskaffningsvärde</label>
+                <input
+                  id="anlaggning-belopp"
+                  className="falt"
+                  inputMode="decimal"
+                  value={belopp}
+                  onChange={(handelse) => setBelopp(handelse.target.value)}
+                />
+              </div>
+
+              <div className="faltgrupp">
+                <label htmlFor="anlaggning-nyttjandeperiod">
+                  Uppskattad nyttjandeperiod, år
+                </label>
+                <input
+                  id="anlaggning-nyttjandeperiod"
+                  className="falt"
+                  inputMode="numeric"
+                  value={nyttjandeperiod}
+                  onChange={(handelse) => setNyttjandeperiod(handelse.target.value)}
+                />
+              </div>
+
+              {direktavdrag && (
+                <p role="status" data-testid="direktavdrag-varning">
+                  {forening
+                    ? 'Det här får kostnadsföras direkt i stället för att registreras här - värdet understiger ett halvt prisbasbelopp (BFNAR 2010:1 punkt 6.27). Bokför det som en vanlig utgift.'
+                    : 'Det här får kostnadsföras direkt i stället för att registreras här - värdet är högst ett halvt prisbasbelopp, eller nyttjandeperioden högst tre år (BFN K1 punkt 6.30, 6.31). Bokför det som en vanlig utgift.'}
+                </p>
+              )}
+
+              <button
+                type="button"
+                className="knapp knapp--primar"
+                disabled={
+                  arbetar ||
+                  benamning.trim() === '' ||
+                  beloppOre === undefined ||
+                  !Number.isInteger(nyttjandeperiodTal) ||
+                  nyttjandeperiodTal <= 0
+                }
+                data-testid="registrera-anlaggning"
+                onClick={() =>
+                  void kor(async () => {
+                    const resultat = await onRegistrera({
+                      benamning,
+                      anskaffningsdatum,
+                      anskaffningsvarde: beloppOre!,
+                      nyttjandeperiod: nyttjandeperiodTal,
+                    });
+                    setBenamning('');
+                    setBelopp('');
+                    setLaggTill(false);
+                    return resultat;
+                  })
+                }
+              >
+                Registrera
+              </button>
+            </>
+          ) : (
+            <Fastighetsformular
+              key={typval}
+              typ={typval}
+              idag={idag}
+              onRegistrera={onRegistreraFastighet}
+              onKlar={() => setLaggTill(false)}
+              kor={kor}
+              arbetar={arbetar}
+            />
+          )}
+        </section>
+      )}
+
+      <h3>Maskiner och inventarier</h3>
+
+      {agda.length === 0 ? (
         <p className="tomt" data-testid="inga-anlaggningar">
           Inget är registrerat ännu.
         </p>
       ) : (
         <ul className="lista" data-testid="anlaggningslista">
-          {anlaggningar.map((tillgang) => {
+          {agda.map((tillgang) => {
             const visas = oppen === tillgang.id;
             return (
               <li key={tillgang.id}>
@@ -243,8 +406,6 @@ export function Anlaggningssida({
                     <span className="listrad__sekundar">
                       {tillgang.anskaffningsdatum}
                       {kopt(tillgang.verifikatId, verifikatnamn)}
-                      {tillgang.avyttring !== undefined &&
-                        ` · ${tillgang.avyttring.typ === 'forsaljning' ? 'Såld' : 'Utrangerad'} ${tillgang.avyttring.datum}`}
                     </span>
                   </span>
                   <span className="belopp">
@@ -252,7 +413,7 @@ export function Anlaggningssida({
                   </span>
                 </button>
 
-                {visas && tillgang.avyttring === undefined && (
+                {visas && (
                   <div className="kort" data-testid={`avyttra-${tillgang.id}`}>
                     <div className="segment">
                       <button
@@ -333,86 +494,26 @@ export function Anlaggningssida({
         </ul>
       )}
 
-      <h2>Ny anläggningstillgång</h2>
-
-      <div className="faltgrupp">
-        <label htmlFor="anlaggning-benamning">Tillgångens benämning</label>
-        <input
-          id="anlaggning-benamning"
-          className="falt"
-          value={benamning}
-          onChange={(handelse) => setBenamning(handelse.target.value)}
-        />
-      </div>
-
-      <div className="faltgrupp">
-        <label htmlFor="anlaggning-datum">Tillgångens anskaffningsdatum</label>
-        <input
-          id="anlaggning-datum"
-          className="falt"
-          type="date"
-          value={anskaffningsdatum}
-          onChange={(handelse) => setAnskaffningsdatum(handelse.target.value as Datum)}
-        />
-      </div>
-
-      <div className="faltgrupp">
-        <label htmlFor="anlaggning-belopp">Tillgångens anskaffningsvärde</label>
-        <input
-          id="anlaggning-belopp"
-          className="falt"
-          inputMode="decimal"
-          value={belopp}
-          onChange={(handelse) => setBelopp(handelse.target.value)}
-        />
-      </div>
-
-      <div className="faltgrupp">
-        <label htmlFor="anlaggning-nyttjandeperiod">Uppskattad nyttjandeperiod, år</label>
-        <input
-          id="anlaggning-nyttjandeperiod"
-          className="falt"
-          inputMode="numeric"
-          value={nyttjandeperiod}
-          onChange={(handelse) => setNyttjandeperiod(handelse.target.value)}
-        />
-      </div>
-
-      {direktavdrag && (
-        <p role="status" data-testid="direktavdrag-varning">
-          {forening
-            ? 'Det här får kostnadsföras direkt i stället för att registreras här - värdet understiger ett halvt prisbasbelopp (BFNAR 2010:1 punkt 6.27). Bokför det som en vanlig utgift.'
-            : 'Det här får kostnadsföras direkt i stället för att registreras här - värdet är högst ett halvt prisbasbelopp, eller nyttjandeperioden högst tre år (BFN K1 punkt 6.30, 6.31). Bokför det som en vanlig utgift.'}
-        </p>
-      )}
-
-      <button
-        type="button"
-        className="knapp knapp--primar"
-        disabled={
-          arbetar ||
-          benamning.trim() === '' ||
-          beloppOre === undefined ||
-          !Number.isInteger(nyttjandeperiodTal) ||
-          nyttjandeperiodTal <= 0
+      <Fastighetslista
+        forening={forening}
+        standardkonton={
+          forening ? { kostnad: '7820', ack: '1118' } : { kostnad: '7820', ack: '1129' }
         }
-        data-testid="registrera-anlaggning"
-        onClick={() =>
-          void kor(async () => {
-            const resultat = await onRegistrera({
-              benamning,
-              anskaffningsdatum,
-              anskaffningsvarde: beloppOre!,
-              nyttjandeperiod: nyttjandeperiodTal,
-            });
-            setBenamning('');
-            setBelopp('');
-            return resultat;
-          })
-        }
-      >
-        Registrera
-      </button>
+        fastigheter={fastigheter}
+        verifikatnamn={verifikatnamn}
+        idag={idag}
+        onAvyttra={onAvyttraFastighet}
+        onMakulera={onMakuleraFastighet}
+        onBokforAvskrivning={onBokforFastighetsavskrivning}
+        kor={kor}
+        arbetar={arbetar}
+      />
+
+      <Saldaposter
+        anlaggningar={anlaggningar}
+        fastigheter={fastigheter}
+        verifikatnamn={verifikatnamn}
+      />
 
       <h2>Årets avskrivning</h2>
 
@@ -587,34 +688,6 @@ export function Anlaggningssida({
           )}
         </>
       )}
-
-      {arbetar && <p data-testid="anlaggning-arbetar">Arbetar …</p>}
-
-      {besked !== undefined && (
-        <p className="kort" role="status" data-testid="anlaggning-besked">
-          {besked}
-        </p>
-      )}
-
-      {fel !== undefined && (
-        <p role="alert" data-testid="anlaggning-fel">
-          {fel}
-        </p>
-      )}
-
-      <Fastighetssektion
-        forening={forening}
-        standardkonton={
-          forening ? { kostnad: '7820', ack: '1118' } : { kostnad: '7820', ack: '1129' }
-        }
-        fastigheter={fastigheter}
-        verifikatnamn={verifikatnamn}
-        idag={idag}
-        onRegistrera={onRegistreraFastighet}
-        onAvyttra={onAvyttraFastighet}
-        onMakulera={onMakuleraFastighet}
-        onBokforAvskrivning={onBokforFastighetsavskrivning}
-      />
 
       <Registerimport
         onPlanera={onPlaneraRegisterimport}

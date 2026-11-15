@@ -20,16 +20,21 @@ import type { Uuid } from '../../domain/id/uuidv7';
 import { Bekraftaknapp } from '../../ui/Bekraftaknapp';
 import { kopt } from './Oregistreradekop';
 
-interface Props {
+type Kategorival = 'byggnad' | 'markanlaggning' | 'mark' | 'skog';
+
+/** What the page's single "Lägg till" form passes down, and what the list props share. */
+export type Fastighetstyp = Kategorival;
+
+interface Samband {
+  /** Runs an action and says how it went, once, at the top of the page. */
+  readonly kor: (uppgift: () => Promise<string>) => Promise<void>;
+  readonly arbetar: boolean;
+}
+
+interface ListProps extends Samband {
+  /** What is owned. A sold or scrapped entry belongs in the section for those. */
   readonly fastigheter: readonly Fastighetstillgang[];
   readonly idag: Datum;
-  readonly onRegistrera: (uppgifter: {
-    readonly benamning: string;
-    readonly anskaffningsdatum: Datum;
-    readonly anskaffningsvarde: Ore;
-    readonly kategori: Fastighetskategori;
-    readonly ackumuleradAvskrivning?: Ore;
-  }) => Promise<string>;
   readonly onAvyttra: (
     id: Uuid,
     avyttring: {
@@ -53,35 +58,26 @@ interface Props {
   readonly forening: boolean;
 }
 
-type Kategorival = 'byggnad' | 'markanlaggning' | 'mark' | 'skog';
-
 /**
- * Byggnader, markanläggningar, mark och skog - varje sak skriver av sig
- * själv (BFN K1 punkt 6.14-6.24), till skillnad från den kollektiva potten
- * ovanför. Ackumulerad avskrivning lever i registret självt (se
+ * Byggnader, markanläggningar, mark och skog som ägs - varje sak skriver av
+ * sig själv (BFN K1 punkt 6.14-6.24), till skillnad från den kollektiva
+ * potten. Ackumulerad avskrivning lever i registret självt (se
  * fastighetstillgang.ts), så förslaget här behöver ingen liggarläsning
  * - det räcker att titta på tillgången.
  */
-export function Fastighetssektion({
+export function Fastighetslista({
   standardkonton,
   verifikatnamn,
   forening,
   fastigheter,
   idag,
-  onRegistrera,
   onAvyttra,
   onMakulera,
   onBokforAvskrivning,
-}: Props) {
-  const [benamning, setBenamning] = useState('');
-  const [anskaffningsdatum, setAnskaffningsdatum] = useState(idag);
-  const [belopp, setBelopp] = useState('');
-  const [redanAvskrivet, setRedanAvskrivet] = useState('');
-  const [kategorival, setKategorival] = useState<Kategorival>('byggnad');
-  const [byggnadstyp, setByggnadstyp] = useState<Byggnadstyp>('ekonomibyggnad_ovrig');
-  const [markanlaggningstyp, setMarkanlaggningstyp] =
-    useState<Markanlaggningstyp>('ovrig');
-
+  kor,
+  arbetar,
+}: ListProps) {
+  const agda = fastigheter.filter((tillgang) => tillgang.avyttring === undefined);
   const [oppen, setOppen] = useState<string | undefined>();
   const [avyttringstyp, setAvyttringstyp] = useState<'forsaljning' | 'utrangering'>(
     'forsaljning',
@@ -91,56 +87,24 @@ export function Fastighetssektion({
   const [kostnadskontoText, setKostnadskontoText] = useState(standardkonton.kostnad);
   const [ackkontoText, setAckkontoText] = useState(standardkonton.ack);
 
-  const [arbetar, setArbetar] = useState(false);
-  const [besked, setBesked] = useState<string | undefined>();
-  const [fel, setFel] = useState<string | undefined>();
-
-  async function kor(uppgift: () => Promise<string>) {
-    setArbetar(true);
-    setBesked(undefined);
-    setFel(undefined);
-    try {
-      setBesked(await uppgift());
-    } catch (orsak) {
-      // Hard rule 11: shown, not swallowed.
-      setFel(orsak instanceof Error ? orsak.message : String(orsak));
-    } finally {
-      setArbetar(false);
-    }
-  }
-
-  const beloppOre = (() => {
-    try {
-      return belopp.trim() === '' ? undefined : oreFromKronor(belopp);
-    } catch {
-      return undefined;
-    }
-  })();
-
-  const kategori: Fastighetskategori =
-    kategorival === 'byggnad'
-      ? { typ: 'byggnad', byggnadstyp }
-      : kategorival === 'markanlaggning'
-        ? { typ: 'markanlaggning', markanlaggningstyp }
-        : { typ: kategorival };
-
   return (
-    <section aria-label="Fastighetskomponenter">
-      <h2>Byggnader, markanläggningar, mark och skog</h2>
+    <section aria-label="Byggnader och mark">
+      <h3>Byggnader och mark</h3>
 
       <p className="hjalptext">
-        Här skrivs varje sak av för sig, med sin egen procentsats
-        {forening ? '' : ' - till skillnad från maskiner och inventarier ovan'}. Mark och
-        skog skrivs aldrig av.
+        Byggnader, markanläggningar, mark och skog. Varje sak skrivs av för sig, med sin
+        egen procentsats
+        {forening ? '' : ' - till skillnad från maskiner och inventarier'}. Mark och skog
+        skrivs aldrig av.
       </p>
 
-      {fastigheter.length === 0 ? (
+      {agda.length === 0 ? (
         <p className="tomt" data-testid="inga-fastigheter">
           Inget är registrerat ännu.
         </p>
       ) : (
         <ul className="lista" data-testid="fastighetslista">
-          {fastigheter.map((tillgang) => {
+          {agda.map((tillgang) => {
             const visas = oppen === tillgang.id;
             const forslag = arsAvskrivning(tillgang, tillgang.ackumuleradAvskrivning);
             const vardeNu = bokfortVarde(tillgang, tillgang.ackumuleradAvskrivning);
@@ -158,8 +122,6 @@ export function Fastighetssektion({
                       {arligAvskrivningsprocent(tillgang.kategori)} % · Bokfört värde{' '}
                       {formatKronor(vardeNu)}
                       {kopt(tillgang.verifikatId, verifikatnamn)}
-                      {tillgang.avyttring !== undefined &&
-                        ` · ${tillgang.avyttring.typ === 'forsaljning' ? 'Sålt' : 'Utrangerat'} ${tillgang.avyttring.datum}`}
                     </span>
                   </span>
                   <span className="belopp">
@@ -167,7 +129,7 @@ export function Fastighetssektion({
                   </span>
                 </button>
 
-                {visas && tillgang.avyttring === undefined && (
+                {visas && (
                   <div className="kort" data-testid={`fastighet-detalj-${tillgang.id}`}>
                     <dl>
                       <dt>Ackumulerad avskrivning</dt>
@@ -323,9 +285,58 @@ export function Fastighetssektion({
           })}
         </ul>
       )}
+    </section>
+  );
+}
 
-      <h3>Ny fastighetskomponent</h3>
+interface FormProps extends Samband {
+  readonly typ: Kategorival;
+  readonly idag: Datum;
+  readonly onRegistrera: (uppgifter: {
+    readonly benamning: string;
+    readonly anskaffningsdatum: Datum;
+    readonly anskaffningsvarde: Ore;
+    readonly kategori: Fastighetskategori;
+    readonly ackumuleradAvskrivning?: Ore;
+  }) => Promise<string>;
+  /** Called once the entry is saved, so the page can fold the form away. */
+  readonly onKlar: () => void;
+}
 
+/** The fields for a new building, markanläggning, mark or skog. The page picks which. */
+export function Fastighetsformular({
+  typ: kategorival,
+  idag,
+  onRegistrera,
+  onKlar,
+  kor,
+  arbetar,
+}: FormProps) {
+  const [benamning, setBenamning] = useState('');
+  const [anskaffningsdatum, setAnskaffningsdatum] = useState(idag);
+  const [belopp, setBelopp] = useState('');
+  const [redanAvskrivet, setRedanAvskrivet] = useState('');
+  const [byggnadstyp, setByggnadstyp] = useState<Byggnadstyp>('ekonomibyggnad_ovrig');
+  const [markanlaggningstyp, setMarkanlaggningstyp] =
+    useState<Markanlaggningstyp>('ovrig');
+
+  const beloppOre = (() => {
+    try {
+      return belopp.trim() === '' ? undefined : oreFromKronor(belopp);
+    } catch {
+      return undefined;
+    }
+  })();
+
+  const kategori: Fastighetskategori =
+    kategorival === 'byggnad'
+      ? { typ: 'byggnad', byggnadstyp }
+      : kategorival === 'markanlaggning'
+        ? { typ: 'markanlaggning', markanlaggningstyp }
+        : { typ: kategorival };
+
+  return (
+    <>
       <div className="faltgrupp">
         <label htmlFor="fastighet-benamning">Komponentens benämning</label>
         <input
@@ -377,21 +388,6 @@ export function Fastighetssektion({
           Fyll i för en tillgång som har skrivits av tidigare år: summan av de
           avskrivningar som redan är bokförda på den. Lämna tomt för något nyköpt.
         </p>
-      </div>
-
-      <div className="faltgrupp">
-        <label htmlFor="fastighet-kategori">Typ</label>
-        <select
-          id="fastighet-kategori"
-          className="falt"
-          value={kategorival}
-          onChange={(handelse) => setKategorival(handelse.target.value as Kategorival)}
-        >
-          <option value="byggnad">Byggnad</option>
-          <option value="markanlaggning">Markanläggning</option>
-          <option value="mark">Mark</option>
-          <option value="skog">Skog</option>
-        </select>
       </div>
 
       {kategorival === 'byggnad' && (
@@ -451,26 +447,13 @@ export function Fastighetssektion({
             setBenamning('');
             setBelopp('');
             setRedanAvskrivet('');
+            onKlar();
             return resultat;
           })
         }
       >
         Registrera
       </button>
-
-      {arbetar && <p data-testid="fastighet-arbetar">Arbetar …</p>}
-
-      {besked !== undefined && (
-        <p className="kort" role="status" data-testid="fastighet-besked">
-          {besked}
-        </p>
-      )}
-
-      {fel !== undefined && (
-        <p role="alert" data-testid="fastighet-fel">
-          {fel}
-        </p>
-      )}
-    </section>
+    </>
   );
 }

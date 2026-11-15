@@ -29,7 +29,15 @@ test('registers an anläggningstillgång and marks it avyttrad', async ({ page }
   await expect(page.getByTestId('anlaggning-besked')).toContainText(
     'Försäljningen registrerad',
   );
-  await expect(page.getByTestId('anlaggningslista')).toContainText('Såld');
+  // Out of the holding and into the folded section for what has been sold.
+  await expect(page.getByTestId('inga-anlaggningar')).toBeVisible();
+  await page
+    .getByTestId('salda-poster')
+    .getByText(/Sålda och utrangerade/)
+    .click();
+  await expect(page.getByTestId('salda-poster')).toContainText('Betgrep');
+  await expect(page.getByTestId('salda-poster')).toContainText('Sålt');
+  await expect(page.getByTestId('salda-poster')).toContainText('37 000');
 });
 
 test('warns before registering something that qualifies for direktavdrag', async ({
@@ -169,12 +177,13 @@ test('stops asking about a purchase that was not an asset', async ({ page }) => 
 test('registers an older building with what is already written off', async ({ page }) => {
   await page.goto('/#anlaggning');
 
+  await page.getByLabel('Vad ska läggas till?').selectOption('byggnad');
   await page.getByLabel('Komponentens benämning').fill('B2 ekonomibyggnader');
   await page.getByLabel('Komponentens anskaffningsdatum').fill('2011-12-01');
   await page.getByLabel('Komponentens anskaffningsvärde').fill('77734');
   await page.getByLabel('Redan avskrivet (valfritt)').fill('9328,08');
   await page.getByTestId('registrera-fastighet').click();
-  await expect(page.getByTestId('fastighet-besked')).toContainText('registrerad');
+  await expect(page.getByTestId('anlaggning-besked')).toContainText('registrerad');
 
   const rad = page.getByTestId('fastighetslista');
   await expect(rad).toContainText('4 %');
@@ -183,11 +192,12 @@ test('registers an older building with what is already written off', async ({ pa
 
 test('takes a register entry with no depreciation out again', async ({ page }) => {
   await page.goto('/#anlaggning');
+  await page.getByLabel('Vad ska läggas till?').selectOption('markanlaggning');
   await page.getByLabel('Komponentens benämning').fill('Dubblerad brunn');
   await page.getByLabel('Komponentens anskaffningsdatum').fill('2026-11-09');
   await page.getByLabel('Komponentens anskaffningsvärde').fill('79010');
   await page.getByTestId('registrera-fastighet').click();
-  await expect(page.getByTestId('fastighet-besked')).toContainText('registrerad');
+  await expect(page.getByTestId('anlaggning-besked')).toContainText('registrerad');
 
   const lista = page.getByTestId('fastighetslista');
   await lista.getByRole('button', { name: /Dubblerad brunn/ }).click();
@@ -195,11 +205,12 @@ test('takes a register entry with no depreciation out again', async ({ page }) =
   await page.locator('[data-testid^="makulera-fastighet-"][data-testid$="-ja"]').click();
 
   await expect(page.getByTestId('inga-fastigheter')).toBeVisible();
-  await expect(page.getByTestId('fastighet-besked')).toContainText('borttagen');
+  await expect(page.getByTestId('anlaggning-besked')).toContainText('borttagen');
 });
 
 test('offers no way to remove an entry that has depreciation', async ({ page }) => {
   await page.goto('/#anlaggning');
+  await page.getByLabel('Vad ska läggas till?').selectOption('byggnad');
   await page.getByLabel('Komponentens benämning').fill('B2 ekonomibyggnader');
   await page.getByLabel('Komponentens anskaffningsdatum').fill('2011-12-01');
   await page.getByLabel('Komponentens anskaffningsvärde').fill('77734');
