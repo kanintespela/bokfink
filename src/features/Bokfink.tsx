@@ -112,6 +112,8 @@ import {
   lasOregistreradeAnlaggningskop,
 } from '../data/anlaggningskop';
 import { Anlaggningsforslag } from './anlaggning/Anlaggningsforslag';
+import { tolkaRegisterfil } from '../domain/anlaggning/registerfil';
+import { genomforRegisterimport, planeraRegisterimport } from '../data/registerimport';
 import { lasUppServerbok, tolkaServerbocker } from './synk/serverbocker';
 import { Serverbocker } from './bocker/Serverbocker';
 import { useAutosynk } from './synk/autosynk';
@@ -2120,6 +2122,18 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
             anlaggningar={laddat.anlaggningar}
             fastigheter={laddat.fastigheter}
             kop={laddat.anlaggningskop}
+            onPlaneraRegisterimport={async (text) =>
+              planeraRegisterimport(db, tolkaRegisterfil(text))
+            }
+            onGenomforRegisterimport={async (plan) => {
+              const antal = await genomforRegisterimport(
+                db,
+                await skrivkontext(db),
+                plan,
+              );
+              setLaddat(await hamta());
+              return antal;
+            }}
             oppnaKop={oppnaKop}
             onInteAnlaggning={async (verifikatId) => {
               await avfardaAnlaggningskop(db, verifikatId);

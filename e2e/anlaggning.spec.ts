@@ -161,3 +161,83 @@ test('registers an older building with what is already written off', async ({ pa
   await expect(rad).toContainText('4 %');
   await expect(rad).toContainText('68 405,92');
 });
+
+/*
+ * A register kept in a spreadsheet, taken in as one file: listed first,
+ * registered only when the button under the list is pressed, and each entry
+ * in the register it belongs to. The building has three years at 4 % behind
+ * it - 77 734 − 9 328,08 = 68 405,92 kr.
+ */
+test('reads a register file in, after showing what it holds', async ({ page }) => {
+  const registerfil = JSON.stringify({
+    format: 'bokfink-anlaggningsregister',
+    version: 1,
+    inventarier: [
+      {
+        benamning: 'Sågverk',
+        anskaffningsdatum: '2022-01-01',
+        anskaffningsvarde: '38100',
+        nyttjandeperiod: 5,
+      },
+    ],
+    fastighet: [
+      {
+        benamning: 'Ekonomibyggnad',
+        anskaffningsdatum: '2011-12-01',
+        anskaffningsvarde: '77734',
+        kategori: 'byggnad',
+        byggnadstyp: 'ekonomibyggnad_ovrig',
+        ackumuleradAvskrivning: '9328,08',
+      },
+      {
+        benamning: 'Skogen',
+        anskaffningsdatum: '2011-12-01',
+        anskaffningsvarde: '265922',
+        kategori: 'skog',
+      },
+    ],
+  });
+  const valj = () =>
+    page.getByTestId('registerfil').setInputFiles({
+      name: 'register.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(registerfil),
+    });
+
+  await page.goto('/#anlaggning');
+  await valj();
+
+  // Listed, and nothing registered yet.
+  const plan = page.getByTestId('registerimportplan');
+  await expect(plan).toContainText('Ekonomibyggnad');
+  await expect(plan).toContainText('Redan avskrivet 9 328,08');
+  await expect(plan).toContainText('Sågverk');
+  await expect(page.getByTestId('inga-anlaggningar')).toBeVisible();
+
+  await page.getByTestId('genomfor-registerimport').click();
+
+  await expect(page.getByTestId('anlaggningslista')).toContainText('Sågverk');
+  const fastighet = page.getByTestId('fastighetslista');
+  await expect(fastighet).toContainText('68 405,92');
+  await expect(fastighet).toContainText('Skogen');
+
+  // The same file again adds nothing.
+  await valj();
+  await expect(plan).toContainText('Allt i filen finns redan i registret');
+  await expect(page.getByTestId('genomfor-registerimport')).toHaveCount(0);
+});
+
+test('refuses a file that is not a register, and says so', async ({ page }) => {
+  await page.goto('/#anlaggning');
+
+  await page.getByTestId('registerfil').setInputFiles({
+    name: 'annat.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from('{"handelser":[]}'),
+  });
+
+  await expect(
+    page.getByRole('region', { name: 'Läs in ett register från fil' }),
+  ).toContainText('inte ett anläggningsregister');
+  await expect(page.getByTestId('registerimportplan')).toHaveCount(0);
+});
