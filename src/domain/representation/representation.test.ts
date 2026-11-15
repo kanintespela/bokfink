@@ -3,7 +3,16 @@ import { describe, expect, it } from 'vitest';
 
 import { ore, sum, type Ore } from '../belopp/ore';
 import { kontonummer } from '../konto/konto';
-import { fordelaRepresentation, type Representationstyp } from './representation';
+import { beraknaSaldon } from '../rapport/saldon';
+import { bokfor, skapaUtkast, type Kontering } from '../verifikat/verifikat';
+import { verifikatserie } from '../verifikat/serie';
+import { uuidv7 } from '../id/uuidv7';
+import { datum } from '../tid/datum';
+import {
+  ejAvdragsgillRepresentationIKronor,
+  fordelaRepresentation,
+  type Representationstyp,
+} from './representation';
 
 const kr = (kronor: number): Ore => ore(Math.round(kronor * 100));
 const BANK = kontonummer('1930');
@@ -159,5 +168,53 @@ describe('fordelaRepresentation', () => {
         },
       ),
     );
+  });
+});
+
+describe('ejAvdragsgillRepresentationIKronor', () => {
+  function saldonFor(...rader: Kontering[][]) {
+    return beraknaSaldon(
+      [],
+      rader.map((konteringar, index) =>
+        bokfor(
+          skapaUtkast({
+            id: uuidv7(1_788_554_000_000 + index, new Uint8Array(10)),
+            datum: datum('2026-09-01'),
+            beskrivning: 'Representation',
+            konteringar,
+          }),
+          {
+            serie: verifikatserie('A'),
+            nummer: index + 1,
+            bokfortDatum: datum('2026-09-01'),
+            kalla: 'manuell',
+          },
+        ),
+      ),
+    );
+  }
+
+  it('is the sum on 6072 in whole kronor, and leaves 6071 alone', () => {
+    const lunch = fordela('maltid', 1758, 258, 3).konteringar; // 6072: 1 603,20
+    const fika = fordela('enklare', 112, 12, 3).konteringar; // 6071: 100,00
+    expect(ejAvdragsgillRepresentationIKronor(saldonFor(lunch, fika))).toBe(1603);
+  });
+
+  it('rounds halves away from zero', () => {
+    // 6072 comes to 100,50 kr: a meal for one, 100,50 paid with no moms.
+    expect(
+      ejAvdragsgillRepresentationIKronor(
+        saldonFor(fordela('maltid', 100.5, 0, 1).konteringar),
+      ),
+    ).toBe(101);
+  });
+
+  it('is undefined when nothing is booked on 6072', () => {
+    expect(
+      ejAvdragsgillRepresentationIKronor(
+        saldonFor(fordela('enklare', 112, 12, 3).konteringar),
+      ),
+    ).toBeUndefined();
+    expect(ejAvdragsgillRepresentationIKronor(new Map())).toBeUndefined();
   });
 });

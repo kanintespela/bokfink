@@ -130,3 +130,37 @@ test('a construction service with reverse charge is reported in fields 24, 30 an
   await expect(rader.filter({ hasText: /^Ruta 48(?![0-9])/ })).toContainText('2 500,00');
   await expect(page.getByTestId('momssumma')).toContainText('0,00');
 });
+
+test('the NE-bilaga suggests adding back the representation that is not deductible, and fills nothing in itself', async ({
+  page,
+}) => {
+  await fixeraKlockan(page);
+  await tillRepresentation(page);
+  await page.getByLabel('Betalat, med moms').fill('1758');
+  await page.getByLabel('Varav moms enligt kvittot').fill('258');
+  await page.getByLabel('Antal personer').fill('3');
+  await page.getByLabel('Vilka var med?').fill('Anna och Erik');
+  await page.getByLabel('Varför? Vad var syftet?').fill('Offert');
+  await page.getByLabel(/omedelbart samband/).check();
+  await page.getByTestId('granska-representation').click();
+  await page.getByTestId('bokfor-fri').click();
+  await expect(page.getByTestId('fri-besked')).toContainText('A1');
+
+  await page.goto('/#nebilaga');
+  await expect(page.getByLabel(/^R13 /)).toHaveValue('');
+  const forslag = page.getByTestId('forslag-r13');
+  await expect(forslag).toContainText(/1\s603 kr/);
+  await expect(forslag).toContainText('6072');
+
+  await forslag.getByRole('button', { name: 'Använd det' }).click();
+  await expect(page.getByLabel(/^R13 /)).toHaveValue('1603');
+  await expect(page.getByTestId('forslag-r13')).toHaveCount(0);
+});
+
+test('the NE-bilaga suggests nothing when no representation is booked', async ({
+  page,
+}) => {
+  await page.goto('/#nebilaga');
+  await expect(page.getByLabel(/^R13 /)).toBeVisible();
+  await expect(page.getByTestId('forslag-r13')).toHaveCount(0);
+});

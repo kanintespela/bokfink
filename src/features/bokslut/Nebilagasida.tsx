@@ -18,6 +18,7 @@ import type { Uuid } from '../../domain/id/uuidv7';
 import type { Kontonummer } from '../../domain/konto/konto';
 import { omfattar, type Rakenskapsar } from '../../domain/rakenskapsar/rakenskapsar';
 import { beraknaSaldon } from '../../domain/rapport/saldon';
+import { ejAvdragsgillRepresentationIKronor } from '../../domain/representation/representation';
 import {
   beraknaNebilaga,
   JUSTERINGAR,
@@ -228,6 +229,22 @@ export function Nebilagasida({
     return beraknaNebilaga(beraknaForenkladArsbokslut(saldon, rutval), justeringar);
   }, [aret, verifikat, rutval, justeringar]);
 
+  /*
+   * The representation booked as not deductible, which R13 asks for. Suggested,
+   * never filled in: the user may have added it back already.
+   */
+  const forslagR13 = useMemo(() => {
+    if (aret === undefined) {
+      return undefined;
+    }
+    return ejAvdragsgillRepresentationIKronor(
+      beraknaSaldon(
+        aret.ingaendeBalanser,
+        verifikat.filter((post) => omfattar(aret, post.datum)),
+      ),
+    );
+  }, [aret, verifikat]);
+
   const forslagR24 = useMemo(() => {
     if (foregaende === undefined || foregaendeJusteringar?.arId !== foregaende.id) {
       return undefined;
@@ -368,6 +385,23 @@ export function Nebilagasida({
                 setJusteringstext({ ...justeringstext, [rad]: handelse.target.value })
               }
             />
+            {rad === 'R13' &&
+              forslagR13 !== undefined &&
+              (justeringstext.R13 ?? '') === '' && (
+                <p data-testid="forslag-r13">
+                  Du har bokfört {forslagR13.toLocaleString('sv-SE')} kr på 6072
+                  Representation, ej avdragsgill. Det är kostnader som inte får dras av.{' '}
+                  <button
+                    type="button"
+                    className="knapp knapp--text"
+                    onClick={() =>
+                      setJusteringstext({ ...justeringstext, R13: String(forslagR13) })
+                    }
+                  >
+                    Använd det
+                  </button>
+                </p>
+              )}
             {rad === 'R24' &&
               forslagR24 !== undefined &&
               (justeringstext.R24 ?? '') === '' && (

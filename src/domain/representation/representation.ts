@@ -1,5 +1,6 @@
 import { delaOchAvrunda, negate, ore, subtract, type Ore } from '../belopp/ore';
 import { kontonummer, type Kontonummer } from '../konto/konto';
+import type { Kontosaldo } from '../rapport/saldon';
 import type { Kontering } from '../verifikat/verifikat';
 
 /**
@@ -128,4 +129,30 @@ export function fordelaRepresentation(
     avdragsgillKostnad,
     ejAvdragsgillKostnad,
   };
+}
+
+/**
+ * The year's non-deductible representation, in whole kronor, for R13 on the
+ * NE-bilaga - or undefined when there is none.
+ *
+ * Skatteverket, "Skattemässiga justeringar": R13 "Bokförda kostnader som inte
+ * ska dras av" takes costs from R5-R10 that may be booked but not deducted,
+ * with representation as one of the examples. Its worked example adds back the
+ * whole of a dinner with suppliers. Only the part booked on 6072 is added back;
+ * what is on 6071 is deductible, and the page says nothing about it.
+ * https://www.skatteverket.se/foretag/inkomstdeklaration/deklareraenskildnaringsverksamhet/fyllainebilagan/skattemassigajusteringar.4.361dc8c15312eff6fd2c7d1.html
+ *
+ * A suggestion for the form, never filled in by itself (hard rule 10). The form
+ * is in whole kronor, so the amount is rounded to the nearest, halves away from
+ * zero, as in delaOchAvrunda.
+ */
+export function ejAvdragsgillRepresentationIKronor(
+  saldon: ReadonlyMap<Kontonummer, Kontosaldo>,
+): number | undefined {
+  const forandring = saldon.get(kontonummer('6072'))?.forandring ?? ore(0);
+  if (forandring <= 0) {
+    return undefined;
+  }
+  const kronor = delaOchAvrunda(forandring, 100);
+  return kronor > 0 ? kronor : undefined;
 }
