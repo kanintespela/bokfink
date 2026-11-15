@@ -2,6 +2,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import { skapaAnlaggningstillgang } from '../anlaggning/anlaggningstillgang';
+import { skapaFastighetstillgang } from '../anlaggning/fastighetstillgang';
 import { oreFromKronor } from '../belopp/ore';
 import { kontonummer, skapaKonto } from '../konto/konto';
 import { skapaRakenskapsar } from '../rakenskapsar/rakenskapsar';
@@ -323,5 +324,65 @@ describe('bygg', () => {
         },
       ]),
     ).toThrow(LoggkonfliktError);
+  });
+  describe('fastighet.makulerad', () => {
+    const brunn = () =>
+      skapaFastighetstillgang({
+        id: nyttId(),
+        benamning: 'Brunn',
+        anskaffningsdatum: datum('2026-11-09'),
+        anskaffningsvarde: oreFromKronor('79010'),
+        kategori: { typ: 'markanlaggning', markanlaggningstyp: 'ovrig' },
+      });
+
+    it('takes an entry out of the register but leaves it in the log', () => {
+      const tillgang = brunn();
+      const registrerad: Handelse = {
+        ...huvud(),
+        typ: 'fastighet.registrerad',
+        tillgang,
+      };
+      const makulerad: Handelse = {
+        ...huvud(),
+        typ: 'fastighet.makulerad',
+        tillgangId: tillgang.id,
+        orsak: 'dubblett',
+      };
+
+      expect(bygg([registrerad]).fastigheter.has(tillgang.id)).toBe(true);
+      expect(bygg([registrerad, makulerad]).fastigheter.has(tillgang.id)).toBe(false);
+    });
+
+    it('does nothing when the entry is already gone, as a sync may deliver it twice', () => {
+      const tillgang = brunn();
+      const registrerad: Handelse = {
+        ...huvud(),
+        typ: 'fastighet.registrerad',
+        tillgang,
+      };
+      const makulerad = (): Handelse => ({
+        ...huvud(),
+        typ: 'fastighet.makulerad',
+        tillgangId: tillgang.id,
+      });
+
+      expect(() => bygg([registrerad, makulerad(), makulerad()])).not.toThrow();
+    });
+
+    it('refuses an entry that has a written-off amount', () => {
+      const tillgang = brunn();
+      expect(() =>
+        bygg([
+          { ...huvud(), typ: 'fastighet.registrerad', tillgang },
+          {
+            ...huvud(),
+            typ: 'fastighet.avskrivningBokford',
+            tillgangId: tillgang.id,
+            belopp: oreFromKronor('100'),
+          },
+          { ...huvud(), typ: 'fastighet.makulerad', tillgangId: tillgang.id },
+        ]),
+      ).toThrow(/avskrivningar/);
+    });
   });
 });

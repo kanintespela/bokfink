@@ -134,6 +134,7 @@ import {
 import {
   avyttraFastighetstillgang,
   bokforFastighetsavskrivning,
+  makuleraFastighetstillgang,
   registreraFastighetstillgang,
 } from '../data/fastighet';
 import { bokforLagerforandring, registreraDjurlagerinventering } from '../data/lager';
@@ -2214,6 +2215,11 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
               return avyttring.typ === 'forsaljning'
                 ? 'Försäljningen registrerad.'
                 : 'Utrangeringen registrerad.';
+            }}
+            onMakuleraFastighet={async (id) => {
+              await makuleraFastighetstillgang(db, await skrivkontext(db), id);
+              setLaddat(await hamta());
+              return 'Posten är borttagen ur registret.';
             }}
             onBokforFastighetsavskrivning={async (
               id,

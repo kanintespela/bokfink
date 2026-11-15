@@ -12,6 +12,7 @@ import {
   avyttraFastighetstillgang,
   bokforFastighetsavskrivning,
   fastighetsavskrivningsforslag,
+  makuleraFastighetstillgang,
   registreraFastighetstillgang,
 } from './fastighet';
 import { lasTillstand, skyddaBokfordaVerifikat } from './bokforing';
@@ -92,6 +93,47 @@ describe('registreraFastighetstillgang och avyttraFastighetstillgang', () => {
       (await lasTillstand(db)).fastigheter.get(tillgang.id)?.avyttring
         ?.forsaljningsinkomst,
     ).toBe(oreFromKronor('20000'));
+  });
+});
+
+describe('makuleraFastighetstillgang', () => {
+  let db: BokfinkDatabase;
+
+  beforeEach(async () => {
+    db = await nyDb();
+  });
+
+  const brunn = () =>
+    registreraFastighetstillgang(db, kontext, {
+      benamning: 'Brunn',
+      anskaffningsdatum: datum('2026-11-09'),
+      anskaffningsvarde: oreFromKronor('79010'),
+      kategori: { typ: 'markanlaggning', markanlaggningstyp: 'ovrig' },
+    });
+
+  it('takes an entry with no depreciation out of the register', async () => {
+    const dubblett = await brunn();
+    const kvar = await brunn();
+
+    await makuleraFastighetstillgang(db, kontext, dubblett.id, 'dubblett');
+
+    const fastigheter = (await lasTillstand(db)).fastigheter;
+    expect(fastigheter.has(dubblett.id)).toBe(false);
+    expect(fastigheter.has(kvar.id)).toBe(true);
+  });
+
+  it('refuses an entry that has been sold, and leaves it in the register', async () => {
+    const tillgang = await brunn();
+    await avyttraFastighetstillgang(db, kontext, tillgang.id, {
+      datum: datum('2026-12-01'),
+      typ: 'utrangering',
+      forsaljningsinkomst: ZERO,
+    });
+
+    await expect(makuleraFastighetstillgang(db, kontext, tillgang.id)).rejects.toThrow(
+      /avyttrad/,
+    );
+    expect((await lasTillstand(db)).fastigheter.has(tillgang.id)).toBe(true);
   });
 });
 

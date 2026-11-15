@@ -259,7 +259,11 @@ export async function tillampa(
             await db.table<Anlaggningstillgang, Uuid>(ANLAGGNING_TABLE).put(effekt.post);
             break;
           case 'fastighet':
-            await db.table<Fastighetstillgang, Uuid>(FASTIGHET_TABLE).put(effekt.post);
+            if (effekt.atgard === 'satt') {
+              await db.table<Fastighetstillgang, Uuid>(FASTIGHET_TABLE).put(effekt.post);
+            } else {
+              await db.table<Fastighetstillgang, Uuid>(FASTIGHET_TABLE).delete(effekt.id);
+            }
             break;
           case 'djurlager':
             await db.table<Djurlagerinventering, Uuid>(DJURLAGER_TABLE).put(effekt.post);
@@ -599,6 +603,7 @@ async function laddaUppslag(
   if (
     handelse.typ === 'fastighet.registrerad' ||
     handelse.typ === 'fastighet.avyttrad' ||
+    handelse.typ === 'fastighet.makulerad' ||
     handelse.typ === 'fastighet.avskrivningBokford'
   ) {
     const id =

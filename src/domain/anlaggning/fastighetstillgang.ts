@@ -210,3 +210,33 @@ export function avyttraFastighet(
 
   return { ...tillgang, avyttring };
 }
+
+export class KanInteMakuleraFastighetError extends Error {
+  constructor(benamning: string, anledning: 'avyttrad' | 'avskriven') {
+    super(
+      anledning === 'avyttrad'
+        ? `"${benamning}" är avyttrad och står kvar i registret som underlag för försäljningen.`
+        : `"${benamning}" har avskrivningar. Annullera dem först, så att registret fortsätter stämma mot bokföringen.`,
+    );
+    this.name = 'KanInteMakuleraFastighetError';
+  }
+}
+
+/**
+ * Whether a register entry may be taken out again.
+ *
+ * Not a rule of the law: the register is a sidoordnad bokföring (5 kap. 4 §
+ * BFL), and BFN's vägledning om bokföring (kapitel 4, kommentaren till
+ * punkt 4.4) says entries that are no longer needed are regularly taken out
+ * of it. The limit is consistency. An entry that carries a written-off amount
+ * or a sale is what a booked verifikat in the ledger rests on, and removing
+ * it would leave the register and the ledger disagreeing.
+ */
+export function kravMakulerbar(tillgang: Fastighetstillgang): void {
+  if (tillgang.avyttring !== undefined) {
+    throw new KanInteMakuleraFastighetError(tillgang.benamning, 'avyttrad');
+  }
+  if (tillgang.ackumuleradAvskrivning > 0) {
+    throw new KanInteMakuleraFastighetError(tillgang.benamning, 'avskriven');
+  }
+}

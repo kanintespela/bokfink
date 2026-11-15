@@ -10,6 +10,8 @@ import {
   bokforAvskrivningPaFastighet,
   bokfortVarde,
   ForMycketAvskrivetError,
+  KanInteMakuleraFastighetError,
+  kravMakulerbar,
   forsaljningsresultat,
   RedanAvyttradFastighetError,
   skapaFastighetstillgang,
@@ -214,5 +216,36 @@ describe('avyttraFastighet', () => {
         forsaljningsinkomst: ZERO,
       }),
     ).toThrow(RedanAvyttradFastighetError);
+  });
+});
+
+describe('kravMakulerbar', () => {
+  const nyPost = (ackumuleradAvskrivning = ZERO) =>
+    skapaFastighetstillgang({
+      id: ID(),
+      benamning: 'Brunn',
+      anskaffningsdatum: datum('2026-11-09'),
+      anskaffningsvarde: oreFromKronor('79010'),
+      kategori: { typ: 'markanlaggning', markanlaggningstyp: 'ovrig' },
+      ackumuleradAvskrivning,
+    });
+
+  it('allows an entry with nothing written off and no sale', () => {
+    expect(() => kravMakulerbar(nyPost())).not.toThrow();
+  });
+
+  it('refuses an entry with an amount written off, however small', () => {
+    expect(() => kravMakulerbar(nyPost(oreFromKronor('0.01')))).toThrow(
+      KanInteMakuleraFastighetError,
+    );
+  });
+
+  it('refuses an entry that has been sold or scrapped', () => {
+    const avyttrad = avyttraFastighet(nyPost(), {
+      datum: datum('2026-12-01'),
+      typ: 'utrangering',
+      forsaljningsinkomst: ZERO,
+    });
+    expect(() => kravMakulerbar(avyttrad)).toThrow(KanInteMakuleraFastighetError);
   });
 });

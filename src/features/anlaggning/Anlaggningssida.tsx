@@ -88,6 +88,7 @@ interface Props {
       readonly forsaljningsinkomst: Ore;
     },
   ) => Promise<string>;
+  readonly onMakuleraFastighet: (id: Uuid) => Promise<string>;
   readonly onBokforFastighetsavskrivning: (
     id: Uuid,
     belopp: Ore,
@@ -123,6 +124,7 @@ export function Anlaggningssida({
   onBokforAvskrivning,
   onRegistreraFastighet,
   onAvyttraFastighet,
+  onMakuleraFastighet,
   onBokforFastighetsavskrivning,
   egnaPrisbasbelopp,
   onHamtaPrisbasbelopp,
@@ -610,6 +612,7 @@ export function Anlaggningssida({
         idag={idag}
         onRegistrera={onRegistreraFastighet}
         onAvyttra={onAvyttraFastighet}
+        onMakulera={onMakuleraFastighet}
         onBokforAvskrivning={onBokforFastighetsavskrivning}
       />
 

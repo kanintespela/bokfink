@@ -181,6 +181,37 @@ test('registers an older building with what is already written off', async ({ pa
   await expect(rad).toContainText('68 405,92');
 });
 
+test('takes a register entry with no depreciation out again', async ({ page }) => {
+  await page.goto('/#anlaggning');
+  await page.getByLabel('Komponentens benämning').fill('Dubblerad brunn');
+  await page.getByLabel('Komponentens anskaffningsdatum').fill('2026-11-09');
+  await page.getByLabel('Komponentens anskaffningsvärde').fill('79010');
+  await page.getByTestId('registrera-fastighet').click();
+  await expect(page.getByTestId('fastighet-besked')).toContainText('registrerad');
+
+  const lista = page.getByTestId('fastighetslista');
+  await lista.getByRole('button', { name: /Dubblerad brunn/ }).click();
+  await page.locator('[data-testid^="makulera-fastighet-"]').click();
+  await page.locator('[data-testid^="makulera-fastighet-"][data-testid$="-ja"]').click();
+
+  await expect(page.getByTestId('inga-fastigheter')).toBeVisible();
+  await expect(page.getByTestId('fastighet-besked')).toContainText('borttagen');
+});
+
+test('offers no way to remove an entry that has depreciation', async ({ page }) => {
+  await page.goto('/#anlaggning');
+  await page.getByLabel('Komponentens benämning').fill('B2 ekonomibyggnader');
+  await page.getByLabel('Komponentens anskaffningsdatum').fill('2011-12-01');
+  await page.getByLabel('Komponentens anskaffningsvärde').fill('77734');
+  await page.getByLabel('Redan avskrivet (valfritt)').fill('9328,08');
+  await page.getByTestId('registrera-fastighet').click();
+
+  const lista = page.getByTestId('fastighetslista');
+  await lista.getByRole('button', { name: /B2 ekonomibyggnader/ }).click();
+  await expect(lista).toContainText('kan inte tas bort ur registret');
+  await expect(page.locator('[data-testid^="makulera-fastighet-"]')).toHaveCount(0);
+});
+
 /*
  * A register kept in a spreadsheet, taken in as one file: listed first,
  * registered only when the button under the list is pressed, and each entry

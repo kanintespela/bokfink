@@ -42,6 +42,26 @@ export async function avyttraFastighetstillgang(
   });
 }
 
+/**
+ * Takes a register entry out again, for one made twice or by mistake.
+ *
+ * Refused for an entry with written-off amounts or a sale (see
+ * kravMakulerbar), and the refusal is the domain's: this does not look first.
+ */
+export async function makuleraFastighetstillgang(
+  db: BokfinkDatabase,
+  kontext: Skrivkontext,
+  tillgangId: Uuid,
+  orsak?: string,
+): Promise<void> {
+  await tillampa(db, {
+    ...huvud(kontext),
+    typ: 'fastighet.makulerad',
+    tillgangId,
+    ...(orsak !== undefined && orsak.trim() !== '' ? { orsak: orsak.trim() } : {}),
+  });
+}
+
 export interface Fastighetsavskrivningsforslag {
   readonly tillgang: Fastighetstillgang;
   /** Årets föreslagna avskrivning enligt tillgångens egen procentsats. */

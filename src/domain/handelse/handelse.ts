@@ -6,6 +6,7 @@ import {
 import {
   avyttraFastighet,
   bokforAvskrivningPaFastighet,
+  kravMakulerbar,
   type Fastighetsavyttring,
   type Fastighetstillgang,
 } from '../anlaggning/fastighetstillgang';
@@ -176,6 +177,16 @@ export type Handelse =
       readonly avyttring: Fastighetsavyttring;
     })
   | (Handelsehuvud & {
+      /**
+       * A register entry taken out again, because it was made twice or by
+       * mistake. The entry stays in the log, so what was in the register is
+       * still known; only the register stops listing it.
+       */
+      readonly typ: 'fastighet.makulerad';
+      readonly tillgangId: Uuid;
+      readonly orsak?: string;
+    })
+  | (Handelsehuvud & {
       readonly typ: 'fastighet.avskrivningBokford';
       readonly tillgangId: Uuid;
       readonly belopp: Ore;
@@ -254,6 +265,7 @@ export type Effekt =
       readonly atgard: 'satt';
       readonly post: Fastighetstillgang;
     }
+  | { readonly tabell: 'fastighet'; readonly atgard: 'ta-bort'; readonly id: Uuid }
   | {
       readonly tabell: 'djurlager';
       readonly atgard: 'satt';
@@ -476,6 +488,16 @@ export function effekter(
       ];
     }
 
+    case 'fastighet.makulerad': {
+      const post = uppslag.fastighet(handelse.tillgangId);
+      if (post === undefined) {
+        // Already gone. A sync can deliver the same removal twice.
+        return [];
+      }
+      kravMakulerbar(post);
+      return [{ tabell: 'fastighet', atgard: 'ta-bort', id: post.id }];
+    }
+
     case 'fastighet.avskrivningBokford': {
       const post = kravFastighet(uppslag, handelse.tillgangId, 'skriva av');
       return [
@@ -657,7 +679,11 @@ export function bygg(handelser: Iterable<Handelse>): Bokforingstillstand {
           anlaggningar.set(effekt.post.id, effekt.post);
           break;
         case 'fastighet':
-          fastigheter.set(effekt.post.id, effekt.post);
+          if (effekt.atgard === 'satt') {
+            fastigheter.set(effekt.post.id, effekt.post);
+          } else {
+            fastigheter.delete(effekt.id);
+          }
           break;
         case 'djurlager':
           djurlagerinventeringar.set(effekt.post.id, effekt.post);

@@ -17,6 +17,7 @@ import { formatKronor, oreFromKronor, type Ore } from '../../domain/belopp/ore';
 import { kontonummer } from '../../domain/konto/konto';
 import type { Datum } from '../../domain/tid/datum';
 import type { Uuid } from '../../domain/id/uuidv7';
+import { Bekraftaknapp } from '../../ui/Bekraftaknapp';
 import { kopt } from './Oregistreradekop';
 
 interface Props {
@@ -37,6 +38,8 @@ interface Props {
       readonly forsaljningsinkomst: Ore;
     },
   ) => Promise<string>;
+  /** Takes the entry out of the register; only offered for one with nothing written off. */
+  readonly onMakulera: (id: Uuid) => Promise<string>;
   readonly onBokforAvskrivning: (
     id: Uuid,
     belopp: Ore,
@@ -67,6 +70,7 @@ export function Fastighetssektion({
   idag,
   onRegistrera,
   onAvyttra,
+  onMakulera,
   onBokforAvskrivning,
 }: Props) {
   const [benamning, setBenamning] = useState('');
@@ -171,6 +175,24 @@ export function Fastighetssektion({
                       <dt>Årets föreslagna avskrivning</dt>
                       <dd>{formatKronor(forslag)}</dd>
                     </dl>
+
+                    {tillgang.ackumuleradAvskrivning === 0 ? (
+                      <p>
+                        <Bekraftaknapp
+                          testId={`makulera-fastighet-${tillgang.id}`}
+                          fraga={`Ta bort ${tillgang.benamning} ur registret? Den finns kvar i loggen men syns inte längre här.`}
+                          jaText="Ta bort"
+                          disabled={arbetar}
+                          onBekrafta={() => void kor(async () => onMakulera(tillgang.id))}
+                        >
+                          Ta bort ur registret
+                        </Bekraftaknapp>
+                      </p>
+                    ) : (
+                      <p className="hjalptext">
+                        Posten har avskrivningar och kan inte tas bort ur registret.
+                      </p>
+                    )}
 
                     {forslag > 0 && (
                       <>
