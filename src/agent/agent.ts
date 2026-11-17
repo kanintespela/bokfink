@@ -12,9 +12,9 @@ import { osankta, synka, type Krypto, type Synktransport } from '../data/synk';
 import { kopplaUnderlag, sparaUnderlag } from '../data/underlag';
 import { forberedUnderlag, underlagsnamn, type Bildkodare } from './fil';
 import { granskaForslag, type GranskatForslag } from './forslag';
-import type { Bokprofil } from '../domain/bok/bokprofil';
+import { STANDARD_BOKPROFIL, type Bokprofil } from '../domain/bok/bokprofil';
+import { tolkaBokbeskrivning } from '../domain/bok/bokbeskrivning';
 import { beskrivLage, sok } from './lage';
-import { lasNyaKvitton, type Kvittovakt } from './vakt';
 
 /**
  * A device with no screen, run by the assistant on the owner's own machine.
@@ -41,13 +41,6 @@ export interface Agentberoenden {
   readonly lasFil: (sokvag: string) => Promise<Uint8Array>;
   readonly lasText: (sokvag: string) => Promise<string>;
   readonly kodaBild: Bildkodare;
-  /** The receipt watcher's reader, limits and memory; set only where it runs. */
-  readonly vakt?: Kvittovakt;
-  /**
-   * What kind of book this is, from the watcher's settings, which is where the
-   * assistant is told: the sync log does not carry it. A firm's when absent.
-   */
-  readonly profil?: Bokprofil;
 }
 
 export type Agentkommando =
@@ -89,9 +82,13 @@ export function tolkaKommando(argv: readonly string[]): Agentkommando {
   throw new Error(ANVANDNING);
 }
 
+/**
+ * One command in one book. The watcher, which goes through every book, is
+ * run by vaktaAllaBocker in ./bocker instead.
+ */
 export async function korAgent(
   db: BokfinkDatabase,
-  kommando: Agentkommando,
+  kommando: Exclude<Agentkommando, { typ: 'las-nya' }>,
   beroenden: Agentberoenden,
 ): Promise<string> {
   await db.open();
@@ -100,26 +97,26 @@ export async function korAgent(
 
   switch (kommando.typ) {
     case 'lage':
-      return beskrivLage(bocker, beroenden.profil);
+      return beskrivLage(bocker, await bokensProfil(beroenden));
     case 'sok':
       return sok(bocker, kommando.fraga);
     case 'utkast':
       return skickaUtkast(db, bocker, kommando, beroenden);
-    case 'las-nya': {
-      const { vakt } = beroenden;
-      if (vakt === undefined) {
-        throw new Error(
-          'Kvittovakten är inte inställd: ~/.config/kontera/kvittovakt.json saknas. ' +
-            'Se server/kvittovakt/README.md.',
-        );
-      }
-      return lasNyaKvitton(db, bocker, kommando.prova, {
-        ...beroenden,
-        vakt,
-        synka: () => synkaMed(db, beroenden),
-      });
-    }
   }
+}
+
+/**
+ * What kind of book this is, from the description it left on the server.
+ *
+ * A book with none yet is taken for a firm's, as every book was before
+ * profiles; one whose description cannot be read says so (hard rule 11).
+ */
+async function bokensProfil(beroenden: Agentberoenden): Promise<Bokprofil> {
+  const text = await beroenden.transport.bokbeskrivning();
+  if (text === undefined || text === '') {
+    return STANDARD_BOKPROFIL;
+  }
+  return tolkaBokbeskrivning(await beroenden.krypto.dekryptera(text)).profil;
 }
 
 async function skickaUtkast(
@@ -259,7 +256,10 @@ function beskrivForslag(
  * the server had none, which the sync treats as nothing to fetch; uploads go
  * through untouched.
  */
-async function synkaMed(db: BokfinkDatabase, beroenden: Agentberoenden): Promise<void> {
+export async function synkaMed(
+  db: BokfinkDatabase,
+  beroenden: Pick<Agentberoenden, 'transport' | 'krypto' | 'enhet' | 'hasha'>,
+): Promise<void> {
   const transport: Synktransport = {
     ...beroenden.transport,
     hamtaFil: async () => undefined,

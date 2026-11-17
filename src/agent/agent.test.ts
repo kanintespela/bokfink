@@ -92,8 +92,13 @@ describe('the receipt assistant’s device', () => {
     kodaBild: async () => KODAD,
   });
 
-  const kor = async (argv: string[]) =>
-    korAgent(await nyDb('pi'), tolkaKommando(argv), beroenden());
+  const kor = async (argv: string[]) => {
+    const kommando = tolkaKommando(argv);
+    if (kommando.typ === 'las-nya') {
+      throw new Error('the watcher is tested in vakt.test.ts');
+    }
+    return korAgent(await nyDb('pi'), kommando, beroenden());
+  };
 
   beforeEach(async () => {
     server = fejkserver();

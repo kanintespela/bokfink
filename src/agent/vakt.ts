@@ -80,6 +80,21 @@ export interface Vaktminne {
    * per spell rather than once per run.
    */
   readonly upptagen?: string;
+  /**
+   * Books left out of the last run, by book id, with the reason the owner was
+   * given. The owner hears once per reason rather than once per run, and again
+   * if the reason changes; a book read again is taken off the list.
+   */
+  readonly overhoppade?: Readonly<Record<string, string>>;
+}
+
+/** What one book's run came to. */
+export interface Vaktresultat {
+  readonly text: string;
+  /** How many receipts were taken up, counted against the run's limit. */
+  readonly forsokta: number;
+  /** The reader was out of reach; the next book would meet the same wall. */
+  readonly upptagen: boolean;
 }
 
 /**
@@ -161,21 +176,28 @@ export async function lasNyaKvitton(
   bocker: Bokforingstillstand,
   prova: boolean,
   beroenden: Vaktberoenden,
-): Promise<string> {
+): Promise<Vaktresultat> {
   const { vakt } = beroenden;
   const minne = await vakt.minne.hamta();
   const kvitton = kvittonAttLasa(bocker.underlag.values(), minne, vakt, beroenden.idag());
   if (kvitton.length === 0) {
-    return 'Inga nya kvitton att läsa.\n';
+    return { text: 'Inga nya kvitton att läsa.\n', forsokta: 0, upptagen: false };
   }
 
   const rapport: string[] = [];
   let forsok = { ...minne.forsok };
   let upptagen = minne.upptagen;
-  const spara = () =>
-    vakt.minne.spara({ forsok, ...(upptagen === undefined ? {} : { upptagen }) });
+  let forsokta = 0;
+  let nadde = true;
+  // Whatever else the memory holds, such as the books left out, is kept.
+  const spara = () => {
+    const ovrigt: Vaktminne = { ...minne, forsok };
+    delete (ovrigt as { upptagen?: string }).upptagen;
+    return vakt.minne.spara(upptagen === undefined ? ovrigt : { ...ovrigt, upptagen });
+  };
 
   for (const kvitto of kvitton) {
+    forsokta += 1;
     const tidigare = forsok[kvitto.id];
     try {
       const resultat = await lasEtt(db, bocker, kvitto, prova, beroenden);
@@ -224,6 +246,7 @@ export async function lasNyaKvitton(
           await spara();
         }
         // The next receipt would meet the same wall.
+        nadde = false;
         break;
       }
       const fel = orsak instanceof Error ? orsak.message : String(orsak);
@@ -244,7 +267,7 @@ export async function lasNyaKvitton(
     }
   }
 
-  return `${rapport.join('\n\n')}\n`;
+  return { text: `${rapport.join('\n\n')}\n`, forsokta, upptagen: !nadde };
 }
 
 /** A message that could not be sent is said where the run is logged, not thrown. */

@@ -78,43 +78,52 @@ describe('tolkaVaktkonfig', () => {
       maxPerKorning: 3,
       maxPerDygn: 20,
       hermes: 'hermes',
-      redovisningsmetod: 'kontantmetoden',
-      profil: 'enskild_firma',
+      bocker: {},
     });
   });
 
-  it('takes a book for an association, and says so in the file', () => {
-    expect(
-      tolkaVaktkonfig('/v.json', '{"fran": "2026-10-28", "profil": "forening"}').profil,
-    ).toBe('forening');
+  it('reads what the owner says about single books', () => {
+    const vakt = tolkaVaktkonfig(
+      '/v.json',
+      JSON.stringify({
+        fran: '2026-10-28',
+        bocker: {
+          'bok-a': { foretag: 'Exempelbygdens bygdegårdsförening', fran: '2026-11-17' },
+          'bok-b': { vakta: false },
+        },
+      }),
+    );
+    expect(vakt.bocker).toEqual({
+      'bok-a': {
+        foretag: 'Exempelbygdens bygdegårdsförening',
+        fran: '2026-11-17',
+        vakta: true,
+      },
+      'bok-b': { vakta: false },
+    });
   });
 
-  it('refuses a profile it does not know', () => {
-    expect(() =>
-      tolkaVaktkonfig('/v.json', '{"fran": "2026-10-28", "profil": "stiftelse"}'),
-    ).toThrow('profil');
+  /*
+   * Beslut AE: what kind of book it is comes from the book itself. A file
+   * written before still says it, and is read without it rather than refused,
+   * so that the watcher keeps running through the update.
+   */
+  it('leaves out the profile and method that older files carry', () => {
+    const vakt = tolkaVaktkonfig(
+      '/v.json',
+      '{"fran": "2026-10-28", "profil": "forening", "redovisningsmetod": "kontantmetoden"}',
+    );
+    expect(vakt).not.toHaveProperty('profil');
+    expect(vakt).not.toHaveProperty('redovisningsmetod');
   });
 
-  it('refuses a registered association, which the assistant cannot book for yet', () => {
+  it('refuses a start day for a book that is not a date', () => {
     expect(() =>
       tolkaVaktkonfig(
         '/v.json',
-        '{"fran": "2026-10-28", "profil": "forening", "momsregistrerad": true}',
+        '{"fran": "2026-10-28", "bocker": {"a": {"fran": "igår"}}}',
       ),
-    ).toThrow('momsregistrerad');
-  });
-
-  it("lets an association say it is not registered, and leaves a firm's file alone", () => {
-    expect(
-      tolkaVaktkonfig(
-        '/v.json',
-        '{"fran": "2026-10-28", "profil": "forening", "momsregistrerad": false}',
-      ).momsregistrerad,
-    ).toBe(false);
-    expect(
-      tolkaVaktkonfig('/v.json', '{"fran": "2026-10-28", "momsregistrerad": true}')
-        .profil,
-    ).toBe('enskild_firma');
+    ).toThrow('bocker.a.fran');
   });
 
   it('says what is wrong with the file', () => {

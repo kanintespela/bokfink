@@ -15,7 +15,8 @@ import { synka, type Fjarrpost, type Synktransport } from '../data/synk';
 import { sparaUnderlag } from '../data/underlag';
 import { hashaFil } from '../platform/hash';
 import { synkkrypto } from '../platform/synkkrypto';
-import { korAgent, tolkaKommando, type Agentberoenden } from './agent';
+import { tolkaKommando } from './agent';
+import { vaktaAllaBocker, type Allabokberoenden, type Bokinstallning } from './bocker';
 import { kvittonAttLasa, LasarenUpptagen, type Kvittovakt, type Vaktminne } from './vakt';
 
 let raknare = 0;
@@ -112,20 +113,39 @@ describe('the receipt watcher', () => {
     },
   });
 
-  const kor = async (argv: string[], profil?: Bokprofil) =>
-    korAgent(await nyDb('pi'), tolkaKommando(argv), {
-      transport: server,
-      krypto: await synkkrypto(undefined),
-      enhet: 'claude-pi',
-      nu: () => '2026-09-12T18:05:00.000Z',
-      idag: () => datum('2026-09-12'),
-      nyttId,
-      hasha: hashaFil,
-      lasFil: async () => BILD,
-      lasText: async () => '',
-      kodaBild: async () => BILD,
-      vakt: { ...vakt(), ...(profil === undefined ? {} : { profil }) },
-    } satisfies Agentberoenden);
+  /** The book on the server as the app describes it, plain since it syncs unencrypted. */
+  const beskrivning = (profil: Bokprofil = 'enskild_firma', namn = 'Min bokföring') =>
+    JSON.stringify({ namn, profil });
+
+  const beroenden = async (
+    installning: Record<string, Bokinstallning> = {},
+    egen: Partial<Kvittovakt> = {},
+  ): Promise<Allabokberoenden> => ({
+    krypto: await synkkrypto(undefined),
+    enhet: 'claude-pi',
+    nu: () => '2026-09-12T18:05:00.000Z',
+    idag: () => datum('2026-09-12'),
+    nyttId,
+    hasha: hashaFil,
+    lasFil: async () => BILD,
+    lasText: async () => '',
+    kodaBild: async () => BILD,
+    vakt: { ...vakt(), ...egen },
+    installning: (bok) => installning[bok],
+    nyDb: (bok) => new BokfinkDatabase(`kontera-vakt-pi-${bok}-${(raknare += 1)}`),
+  });
+
+  const kor = async (argv: string[], profil?: Bokprofil) => {
+    const kommando = tolkaKommando(argv);
+    if (kommando.typ !== 'las-nya') {
+      throw new Error('only the watcher here');
+    }
+    return vaktaAllaBocker(
+      [{ id: 'kontera', beskrivning: beskrivning(profil), transport: server }],
+      kommando.prova,
+      await beroenden(),
+    );
+  };
 
   const fran = async () => {
     await synka(telefonen, server, await synkkrypto(undefined), 'telefonen', {
@@ -305,6 +325,163 @@ describe('the receipt watcher', () => {
 
     expect(await kor(['las-nya'])).toContain('Konto 5611 finns inte i kontoplanen');
     expect((await fran()).utkast.size).toBe(0);
+  });
+
+  describe('in every book on the server', () => {
+    const FORENINGEN = 'bok-foreningen';
+    let foreningen: Synktransport;
+    let kassorn: BokfinkDatabase;
+
+    /** A second book, the association's, with a receipt of its own waiting. */
+    beforeEach(async () => {
+      foreningen = fejkserver();
+      kassorn = await nyDb('kassorn');
+      await skrivRakenskapsar(
+        kassorn,
+        kontext('kassorn'),
+        skapaRakenskapsar({
+          id: '01990000-0000-7000-8000-000000012026' as Uuid,
+          start: datum('2026-01-01'),
+          slut: datum('2026-12-31'),
+        }),
+      );
+      for (const [nummer, namn] of [
+        ['5400', 'Förbrukningsinventarier'],
+        ['2640', 'Ingående moms'],
+        ['2013', 'Eget uttag'],
+      ] as const) {
+        await skrivKonto(kassorn, kontext('kassorn'), skapaKonto({ nummer, namn }));
+      }
+      const annan = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 9, 9, 9]);
+      await sparaUnderlag(kassorn, kontext('kassorn'), {
+        sha256: await hashaFil(annan),
+        mime: 'image/jpeg',
+        filnamn: 'foreningens-kvitto.jpg',
+        data: annan,
+      });
+      await franForeningen();
+    });
+
+    const franForeningen = async () => {
+      await synka(kassorn, foreningen, await synkkrypto(undefined), 'kassorn', {
+        hasha: hashaFil,
+      });
+      return lasTillstand(kassorn);
+    };
+
+    const bada = (foreningensBeskrivning = beskrivning('forening', 'Bygdegården')) => [
+      { id: 'kontera', beskrivning: beskrivning(), transport: server },
+      { id: FORENINGEN, beskrivning: foreningensBeskrivning, transport: foreningen },
+    ];
+
+    /*
+     * The owner switches book in the app and photographs a receipt there. It
+     * is read as that book's, and its draft lands in that book only.
+     */
+    it("reads each book's receipts as that book's, and says which book", async () => {
+      const rapport = await vaktaAllaBocker(bada(), false, await beroenden());
+
+      expect(rapport).toContain('Min bokföring:\nNytt utkast');
+      expect(rapport).toContain('Bygdegården:\nNytt utkast');
+      expect((await fran()).utkast.size).toBe(1);
+      expect((await franForeningen()).utkast.size).toBe(1);
+      const [kvitto] = [...(await franForeningen()).underlag.values()];
+      const [utkast] = [...(await franForeningen()).utkast.values()];
+      expect(kvitto?.verifikat).toEqual([utkast?.id]);
+
+      expect(fragor.map((fraga) => fraga.fraga.includes('en ideell förening'))).toEqual([
+        false,
+        false,
+        true,
+        true,
+      ]);
+      expect(meddelanden.map((text) => text.split(':')[0])).toEqual([
+        'Min bokföring',
+        'Bygdegården',
+      ]);
+    });
+
+    /* The firm's name is the owner's; an association goes by its own. */
+    it("does not call an association by the firm's name", async () => {
+      await vaktaAllaBocker(
+        bada(),
+        true,
+        await beroenden({}, { foretag: 'Anna Exempelsson' }),
+      );
+      expect(fragor[0]?.fraga).toContain('Firman är Anna Exempelsson');
+      expect(fragor[2]?.fraga).not.toContain('Anna Exempelsson');
+
+      fragor = [];
+      await vaktaAllaBocker(
+        bada(),
+        true,
+        await beroenden(
+          { [FORENINGEN]: { vakta: true, foretag: 'Exempelbygdens bygdegårdsförening' } },
+          { foretag: 'Anna Exempelsson' },
+        ),
+      );
+      expect(fragor[2]?.fraga).toContain(
+        'Föreningen är Exempelbygdens bygdegårdsförening',
+      );
+    });
+
+    it('leaves alone a book the owner has turned off', async () => {
+      const rapport = await vaktaAllaBocker(
+        bada(),
+        false,
+        await beroenden({ [FORENINGEN]: { vakta: false } }),
+      );
+
+      expect(rapport).not.toContain('Bygdegården');
+      expect((await franForeningen()).utkast.size).toBe(0);
+      // One book left, so the messages need no name.
+      expect(meddelanden[0]).toMatch(/^Nytt utkast/);
+    });
+
+    /*
+     * A registered association has no booking questions of its own, so its
+     * receipts are left for the owner. Said once, not every two minutes.
+     */
+    it('leaves out a registered association, and says so once', async () => {
+      const registrerad = JSON.stringify({
+        namn: 'Bygdegården',
+        profil: 'forening',
+        momsregistrerad: true,
+      });
+
+      for (let gang = 0; gang < 2; gang += 1) {
+        expect(
+          await vaktaAllaBocker(bada(registrerad), false, await beroenden()),
+        ).toContain('Bygdegården läses inte');
+      }
+      expect((await franForeningen()).utkast.size).toBe(0);
+      const om = meddelanden.filter((text) => text.includes('läses inte'));
+      expect(om).toHaveLength(1);
+      expect(om[0]).toContain('momsregistrerad förening');
+    });
+
+    /* A book that does not say what it is is not read as a firm's. */
+    it('leaves out a book that does not say what kind it is', async () => {
+      const rapport = await vaktaAllaBocker(bada(''), false, await beroenden());
+
+      expect(rapport).toContain(`Boken ${FORENINGEN} läses inte`);
+      expect((await franForeningen()).utkast.size).toBe(0);
+      expect((await fran()).utkast.size).toBe(1);
+    });
+
+    it('shares the limit per run between the books', async () => {
+      const rapport = await vaktaAllaBocker(
+        bada(),
+        false,
+        await beroenden({}, { maxPerKorning: 1 }),
+      );
+
+      expect(rapport).not.toContain('Bygdegården');
+      expect((await franForeningen()).utkast.size).toBe(0);
+      // Next run, the association's turn.
+      await vaktaAllaBocker(bada(), false, await beroenden({}, { maxPerKorning: 1 }));
+      expect((await franForeningen()).utkast.size).toBe(1);
+    });
   });
 });
 

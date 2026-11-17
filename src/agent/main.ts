@@ -25,9 +25,10 @@ import { BokfinkDatabase } from '../data/db';
 import { newIdentifier } from '../data/id';
 import { hashaFil } from '../platform/hash';
 import { systemklocka } from '../platform/klocka';
-import { loggaIn, pocketbaseTransport } from '../platform/pocketbase';
+import { bockerPaServern, loggaIn, pocketbaseTransport } from '../platform/pocketbase';
 import { synkkrypto } from '../platform/synkkrypto';
 import { korAgent, tolkaKommando } from './agent';
+import { vaktaAllaBocker } from './bocker';
 import type { Bildkodare } from './fil';
 import { tolkaKonfig, tolkaVaktkonfig, type Vaktkonfig } from './konfig';
 import { LasarenUpptagen, type Kvittovakt, type Vaktminne } from './vakt';
@@ -55,21 +56,53 @@ async function main(): Promise<void> {
   );
 
   const inloggning = await loggaIn(konfig.url, konfig.epost, konfig.losenord);
-  const utdata = await korAgent(new BokfinkDatabase('kontera-agent'), kommando, {
-    transport: pocketbaseTransport(inloggning, konfig.bok),
-    krypto: await synkkrypto(konfig.losenfras),
+  const krypto = await synkkrypto(konfig.losenfras);
+  const gemensamt = {
+    krypto,
     enhet: konfig.enhet,
     nu: () => new Date().toISOString(),
     idag: () => systemklocka().idag(),
     nyttId: () => newIdentifier(),
     hasha: hashaFil,
-    lasFil: async (sokvag) => new Uint8Array(await readFile(sokvag)),
-    lasText: (sokvag) => readFile(sokvag, 'utf8'),
+    lasFil: async (sokvag: string) => new Uint8Array(await readFile(sokvag)),
+    lasText: (sokvag: string) => readFile(sokvag, 'utf8'),
     kodaBild: magick,
-    ...(vaktkonfig === undefined
-      ? {}
-      : { vakt: kvittovakt(vaktkonfig), profil: vaktkonfig.profil }),
-  });
+  };
+
+  let utdata: string;
+  if (kommando.typ === 'las-nya') {
+    if (vaktkonfig === undefined) {
+      throw new Error(
+        `Kvittovakten är inte inställd: ${VAKTKONFIG} saknas. Se server/kvittovakt/README.md.`,
+      );
+    }
+    // Every book on the server, whatever agent.json names (beslut AE).
+    const bocker = (await bockerPaServern(inloggning)).map((bok) => ({
+      id: bok.bok,
+      beskrivning: bok.beskrivning,
+      transport: pocketbaseTransport(inloggning, bok.bok),
+    }));
+    utdata = await vaktaAllaBocker(bocker, kommando.prova, {
+      ...gemensamt,
+      vakt: kvittovakt(vaktkonfig),
+      installning: (bok) => {
+        const egen = vaktkonfig.bocker[bok];
+        return egen === undefined
+          ? undefined
+          : {
+              vakta: egen.vakta,
+              ...(egen.foretag === undefined ? {} : { foretag: egen.foretag }),
+              ...(egen.fran === undefined ? {} : { fran: datum(egen.fran) }),
+            };
+      },
+      nyDb: (bok) => new BokfinkDatabase(`kontera-agent-${bok}`),
+    });
+  } else {
+    utdata = await korAgent(new BokfinkDatabase('kontera-agent'), kommando, {
+      ...gemensamt,
+      transport: pocketbaseTransport(inloggning, konfig.bok),
+    });
+  }
   process.stdout.write(utdata);
 }
 
@@ -129,8 +162,6 @@ function kvittovakt(installning: Vaktkonfig): Kvittovakt {
     fran: datum(installning.fran),
     maxPerKorning: installning.maxPerKorning,
     maxPerDygn: installning.maxPerDygn,
-    metod: installning.redovisningsmetod,
-    profil: installning.profil,
     ...(installning.foretag === undefined ? {} : { foretag: installning.foretag }),
     las: (fraga, bild) => fragaHermes(installning.hermes, fraga, bild),
     minne: {

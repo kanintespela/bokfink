@@ -12,8 +12,13 @@ Beslutet att kvitton skickas till Anthropic utan ett tryck per kvitto är
 
 ## Så går det till
 
-1. Vakten synkar och hittar kvitton utan verifikat eller utkast, tillagda
-   från startdagen i inställningarna.
+1. Vakten går igenom varje bok på synkservern, synkar den och hittar kvitton
+   utan verifikat eller utkast, tillagda från startdagen i inställningarna.
+   Ett kvitto hör till den bok som var öppen när det fotades, och läses som
+   den bokens: en förenings kvitton med föreningens frågor och konton. Vilket
+   slags bok det är, redovisningsmetoden och om boken är momsregistrerad läser
+   vakten ur bokens beskrivning på servern ([beslut
+   AE](../../docs/UTVECKLINGSPLAN.md#9-öppna-beslut)).
 2. **Första frågan**, med bilden: leverantör, organisationsnummer, datum,
    betalt belopp, belopp exklusive moms och moms per momssats, avrundning.
    En PDF skickas som bild av de två första sidorna.
@@ -55,24 +60,41 @@ Vaktens egna inställningar, utan hemligheter, i
   "maxPerDygn": 20,
   "avisering": "discord:#bokforing",
   "foretag": "Anna Exempelsson",
-  "redovisningsmetod": "kontantmetoden"
+  "bocker": {
+    "01a18e57-0000-7000-8000-000000000001": {
+      "foretag": "Exempelbygdens bygdegårdsförening",
+      "fran": "2026-11-17"
+    },
+    "01a195e5-0000-7000-8000-000000000002": { "vakta": false }
+  }
 }
 ```
 
 | Fält | Betyder |
 |---|---|
 | `fran` | Bara kvitton som lagts till från och med den dagen |
-| `maxPerKorning` | Högst så många kvitton per körning (standard 3) |
-| `maxPerDygn` | Högst så många försök per dygn (standard 20) |
-| `avisering` | Vart Hermes skickar besked, som `hermes send --list` visar dem. Utelämnat: inga meddelanden |
-| `foretag` | Firmans eller ägarens namn så som det står på fakturor till firman. Utan det kan assistenten inte skilja en leverantörs faktura från en firman skrivit |
-| `redovisningsmetod` | `kontantmetoden` (standard) eller `faktureringsmetoden`. Med kontantmetoden dateras en faktura med dagen den fotades, som antas vara betalningsdagen, och kundfordringar och leverantörsskulder används inte |
-| `profil` | `enskild_firma` (standard) eller `forening`. Vilken sorts bok vakten är kopplad till. Profilen ligger i bokens egna inställningar, som synkloggen inte för med sig, så vakten kan inte läsa den själv och får veta den här. En förening får föreningens frågor och konton, och ingen momsrad |
-| `momsregistrerad` | Bara för en förening: `false` (standard). `true` stöds inte ännu, och vakten vägrar starta, eftersom en momsregistrerad förenings moms måste fördelas och det inte är utrett. En enskild firma har alltid moms |
+| `maxPerKorning` | Högst så många kvitton per körning, för alla böcker tillsammans (standard 3) |
+| `maxPerDygn` | Högst så många försök per dygn, för alla böcker tillsammans (standard 20) |
+| `avisering` | Vart Hermes skickar besked, som `hermes send --list` visar dem. Utelämnat: inga meddelanden. Med fler än en bok börjar varje besked med bokens namn |
+| `foretag` | Firmans eller ägarens namn så som det står på fakturor till firman. Utan det kan assistenten inte skilja en leverantörs faktura från en firman skrivit. Gäller en enskild firmas bok som inte har ett eget under `bocker`; en förening kallas aldrig ägarens namn |
+| `bocker` | Inställningar för enstaka böcker, efter bokens identitet. Den står längst ner under Mer, Böcker i appen när boken är öppen. En bok som inte nämns läses ändå |
+| `bocker.<id>.foretag` | Bokens namn så som det står på fakturor till den, till exempel föreningens |
+| `bocker.<id>.fran` | Egen startdag för den boken. Bra för en bok som läggs till senare, så att gamla okopplade kvitton i den inte läses |
+| `bocker.<id>.vakta` | `false` lämnar boken utan vakt, till exempel en bok för att prova saker i |
 
-En vakt hör till en bok och ett synkkonto, så en förening som synkar mot sitt
-eget konto får sin egen `kvittovakt.json` med `"profil": "forening"`. Två
-böcker får inte synka mot samma konto.
+Vakten läser inte en bok
+
+- som inte har en beskrivning på servern än. Den skickas när boken öppnas i
+  appen med synken på.
+- som är låst med en annan lösenfras än den i `agent.json`.
+- som är en momsregistrerad förening. Dess moms måste fördelas, och det är
+  inte utrett, så dess kvitton bokförs för hand.
+
+Ägaren får besked en gång när en bok hoppas över, och igen om skälet ändras.
+
+Fälten `profil`, `redovisningsmetod` och `momsregistrerad` som äldre filer
+har läses inte längre. Det boken själv säger gäller. Fältet `bok` i
+`agent.json` styr inte vakten.
 
 Bygg vakten till en fristående fil, prova, och slå på timern:
 
