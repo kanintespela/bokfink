@@ -43,30 +43,57 @@ export interface Agentberoenden {
   readonly kodaBild: Bildkodare;
 }
 
+/** Which book a command is for, by identity or name; agent.json decides when absent. */
+interface Bokval {
+  readonly bok?: string;
+}
+
 export type Agentkommando =
-  | { readonly typ: 'lage' }
-  | { readonly typ: 'sok'; readonly fraga: string }
-  | { readonly typ: 'utkast'; readonly sokvag: string; readonly prova: boolean }
+  | { readonly typ: 'bocker' }
+  | ({ readonly typ: 'lage' } & Bokval)
+  | ({ readonly typ: 'sok'; readonly fraga: string } & Bokval)
+  | ({
+      readonly typ: 'utkast';
+      readonly sokvag: string;
+      readonly prova: boolean;
+    } & Bokval)
   | { readonly typ: 'las-nya'; readonly prova: boolean };
 
 export const ANVANDNING = `Användning:
+  kontera-agent bocker                   böckerna på servern: namn, slag och identitet
   kontera-agent lage                     bokföringen i korthet: år, frågornas svar, konton, senaste verifikat
   kontera-agent sok <ord>                verifikat vars beskrivning innehåller orden
   kontera-agent utkast --prova <fil>     kontrollera ett förslag utan att skicka något
   kontera-agent utkast <fil>             skicka förslaget som utkast, med underlag, till appen
-  kontera-agent las-nya --prova          låt Hermes läsa nya kvitton och visa förslagen
-  kontera-agent las-nya                  läs nya kvitton och skicka dem som utkast till appen
+  kontera-agent las-nya --prova          låt Hermes läsa nya kvitton i alla böcker och visa förslagen
+  kontera-agent las-nya                  läs nya kvitton i alla böcker och skicka dem som utkast till appen
+
+  lage, sok och utkast tar --bok <namn eller identitet> för att välja bok.
 `;
 
 export function tolkaKommando(argv: readonly string[]): Agentkommando {
-  const [kommando, ...resten] = argv;
+  const [kommando, ...alla] = argv;
+
+  // --bok and its value, wherever they stand after the command.
+  const plats = alla.indexOf('--bok');
+  const bok = plats === -1 ? undefined : alla[plats + 1];
+  if (plats !== -1 && (bok === undefined || bok.startsWith('--'))) {
+    throw new Error(ANVANDNING);
+  }
+  const resten =
+    plats === -1 ? alla : alla.filter((_, i) => i !== plats && i !== plats + 1);
+  const val: Bokval = bok === undefined ? {} : { bok };
+
+  if (kommando === 'bocker' && alla.length === 0) {
+    return { typ: 'bocker' };
+  }
   if (kommando === 'lage' && resten.length === 0) {
-    return { typ: 'lage' };
+    return { typ: 'lage', ...val };
   }
   if (kommando === 'sok' && resten.length > 0) {
-    return { typ: 'sok', fraga: resten.join(' ') };
+    return { typ: 'sok', fraga: resten.join(' '), ...val };
   }
-  if (kommando === 'las-nya') {
+  if (kommando === 'las-nya' && plats === -1) {
     const ovrigt = resten.filter((del) => del !== '--prova');
     if (ovrigt.length === 0) {
       return { typ: 'las-nya', prova: resten.includes('--prova') };
@@ -76,19 +103,19 @@ export function tolkaKommando(argv: readonly string[]): Agentkommando {
     const prova = resten.includes('--prova');
     const filer = resten.filter((del) => del !== '--prova');
     if (filer.length === 1 && filer[0] !== undefined) {
-      return { typ: 'utkast', sokvag: filer[0], prova };
+      return { typ: 'utkast', sokvag: filer[0], prova, ...val };
     }
   }
   throw new Error(ANVANDNING);
 }
 
 /**
- * One command in one book. The watcher, which goes through every book, is
- * run by vaktaAllaBocker in ./bocker instead.
+ * One command in one book, already chosen. The book list and the watcher,
+ * which are about every book, are run from ./bocker instead.
  */
 export async function korAgent(
   db: BokfinkDatabase,
-  kommando: Exclude<Agentkommando, { typ: 'las-nya' }>,
+  kommando: Exclude<Agentkommando, { typ: 'las-nya' } | { typ: 'bocker' }>,
   beroenden: Agentberoenden,
 ): Promise<string> {
   await db.open();

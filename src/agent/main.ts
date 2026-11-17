@@ -28,7 +28,7 @@ import { systemklocka } from '../platform/klocka';
 import { bockerPaServern, loggaIn, pocketbaseTransport } from '../platform/pocketbase';
 import { synkkrypto } from '../platform/synkkrypto';
 import { korAgent, tolkaKommando } from './agent';
-import { vaktaAllaBocker } from './bocker';
+import { kannIgenBocker, listaBocker, valjBok, vaktaAllaBocker } from './bocker';
 import type { Bildkodare } from './fil';
 import { tolkaKonfig, tolkaVaktkonfig, type Vaktkonfig } from './konfig';
 import { LasarenUpptagen, type Kvittovakt, type Vaktminne } from './vakt';
@@ -69,6 +69,13 @@ async function main(): Promise<void> {
     kodaBild: magick,
   };
 
+  // Every book on the server; which of them a command is for is chosen below.
+  const bocker = (await bockerPaServern(inloggning)).map((bok) => ({
+    id: bok.bok,
+    beskrivning: bok.beskrivning,
+    transport: pocketbaseTransport(inloggning, bok.bok),
+  }));
+
   let utdata: string;
   if (kommando.typ === 'las-nya') {
     if (vaktkonfig === undefined) {
@@ -76,12 +83,7 @@ async function main(): Promise<void> {
         `Kvittovakten är inte inställd: ${VAKTKONFIG} saknas. Se server/kvittovakt/README.md.`,
       );
     }
-    // Every book on the server, whatever agent.json names (beslut AE).
-    const bocker = (await bockerPaServern(inloggning)).map((bok) => ({
-      id: bok.bok,
-      beskrivning: bok.beskrivning,
-      transport: pocketbaseTransport(inloggning, bok.bok),
-    }));
+    // Every book, whatever agent.json names (beslut AE).
     utdata = await vaktaAllaBocker(bocker, kommando.prova, {
       ...gemensamt,
       vakt: kvittovakt(vaktkonfig),
@@ -97,11 +99,28 @@ async function main(): Promise<void> {
       },
       nyDb: (bok) => new BokfinkDatabase(`kontera-agent-${bok}`),
     });
+  } else if (kommando.typ === 'bocker') {
+    utdata = listaBocker(await kannIgenBocker(bocker, gemensamt), konfig.bok);
   } else {
-    utdata = await korAgent(new BokfinkDatabase('kontera-agent'), kommando, {
-      ...gemensamt,
-      transport: pocketbaseTransport(inloggning, konfig.bok),
-    });
+    const vald = valjBok(
+      await kannIgenBocker(bocker, gemensamt),
+      kommando.bok,
+      konfig.bok,
+    );
+    const transport = bocker.find((bok) => bok.id === vald.id)?.transport;
+    if (transport === undefined) {
+      throw new Error(`Boken ${vald.id} finns inte på servern.`);
+    }
+    // Said first, so that whoever reads the answer knows which book it is about.
+    const namn = vald.beskrivning?.namn ?? vald.id;
+    utdata = `Bok: ${namn}\n\n${await korAgent(
+      new BokfinkDatabase('kontera-agent'),
+      kommando,
+      {
+        ...gemensamt,
+        transport,
+      },
+    )}`;
   }
   process.stdout.write(utdata);
 }

@@ -1,7 +1,5 @@
 import { z } from 'zod';
 
-import { URSPRUNGLIG_BOK } from '../data/bokidentitet';
-
 /**
  * What the assistant needs to reach the books: the sync server, a login to
  * it, and - if the books sync encrypted - the passphrase.
@@ -19,13 +17,13 @@ const konfigschema = z.object({
   losenord: z.string().min(1),
   losenfras: z.string().min(1).optional(),
   /**
-   * Which of the server's books the assistant works in.
+   * The book the assistant's commands are for when they name none.
    *
-   * A file that says nothing means the first book, which is the one every
-   * file written before a server could hold several was about. Another
-   * book's identity is shown under Böcker in the app.
+   * Left out, a server with one book needs no choosing, and one with several
+   * has the assistant ask which (beslut AE). The watcher reads every book
+   * whatever this says. A book's identity is shown under Böcker in the app.
    */
-  bok: z.string().min(1).max(64).default(URSPRUNGLIG_BOK),
+  bok: z.string().min(1).max(64).optional(),
   /** Written on every entry as the device it came from. */
   enhet: z.string().min(1).default('claude-pi'),
 });

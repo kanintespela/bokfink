@@ -24,15 +24,31 @@ ls -t ~/.claude/uploads/*/* | head -5
 Läs den senaste med Read-verktyget. Är det flera kvitton i samma meddelande
 blir det ett utkast per kvitto.
 
-## 2. Läs bokföringen
+## 2. Välj bok och läs bokföringen
 
-Kör från repots rot. Det tar ett par sekunder, eftersom hela loggen hämtas
-från synkservern varje gång.
+Kör från repots rot. Servern kan hålla flera böcker, till exempel ägarens
+firma och en förening, och kvittot ska till rätt en (beslut AE). Börja med att
+lista dem:
 
 ```bash
-npm run -s agent -- lage
-npm run -s agent -- sok lantmannen
+npm run -s agent -- bocker
 ```
+
+Välj bok efter kvittot: står en förening som köpare eller mottagare är det
+föreningens, annars oftast firmans. Säger kvittot inget och ägaren inte heller:
+fråga vilken bok. Ge sedan boken till varje kommando med `--bok` och namnet
+eller identiteten från listan. Svaret börjar med `Bok: <namn>`, så att det
+syns vilken bok det gäller.
+
+```bash
+npm run -s agent -- lage --bok kontera
+npm run -s agent -- sok --bok kontera lantmannen
+```
+
+Utan `--bok` används boken som `agent.json` namnger, eller den enda boken om
+servern bara har en. Annars svarar kommandot med listan och ber dig välja.
+Det tar ett par sekunder, eftersom hela bokens logg hämtas från synkservern
+varje gång.
 
 `lage` visar räkenskapsår och låsningar, svaren i appens frågor om vad som
 hänt (med konto, moms och betalsätt enligt BAS K1), väntande utkast, de 40
@@ -46,9 +62,10 @@ vad en leverantör brukar sälja och vilken momssats kvittot har.
 
 ## 3. Föreslå
 
-Skriv förslaget så att det går att svara ja på från telefonen:
+Skriv förslaget så att det går att svara ja på från telefonen, och skriv
+vilken bok det ska till när servern har fler än en:
 
-> **Lantmännen 2026-09-04, 500,00 kr**
+> **Lantmännen 2026-09-04, 500,00 kr** – i Min bokföring
 > 4000 Varor – debet 400,00
 > 2641 Debiterad ingående moms – debet 100,00
 > 2017 Egna insättningar – kredit 500,00 (betalt privat)
@@ -67,6 +84,8 @@ Regler när du föreslår:
 - **Gissa aldrig på regelverket.** Fråga i stället vid representation,
   inköp från utlandet eller EU (omvänd skattskyldighet), privat andel,
   bilkostnader, gåvor, och inventarier som kan vara anläggningstillgångar.
+- **En förening har egna frågor och konton**, och ingen moms om den inte är
+  momsregistrerad. Läs förslaget ur den bokens `lage`, inte ur firmans.
 - Utkastet får inte hamna i en momslåst period eller ett avslutat år –
   verktyget vägrar, men säg det hellre i förslaget.
 
@@ -92,13 +111,14 @@ Belopp är **strängar** i kronor, positivt för debet och negativt för kredit.
 Tal avvisas, eftersom JSON-tal är flyttal (hård regel 1).
 
 ```bash
-npm run -s agent -- utkast --prova /sökväg/till/forslag.json
-npm run -s agent -- utkast /sökväg/till/forslag.json
+npm run -s agent -- utkast --bok kontera --prova /sökväg/till/forslag.json
+npm run -s agent -- utkast --bok kontera /sökväg/till/forslag.json
 ```
 
 `--prova` kontrollerar allt och skickar ingenting. Visar den en varning om ett
-bokfört verifikat med samma datum och belopp: fråga innan du skickar. Svara
-sedan med en rad om att utkastet ligger under fliken Kvitton.
+bokfört verifikat med samma datum och belopp: fråga innan du skickar. Skicka
+till samma bok som förslaget gällde, den ägaren sa ja till. Svara sedan med en
+rad om att utkastet ligger under fliken Kvitton i den boken.
 
 Bilder konverteras till JPEG med längsta sida 2000 px, precis som appens
 kamera gör, och platsinformation i EXIF tas bort. PDF:er skickas oförändrade.
@@ -129,10 +149,10 @@ lösenord eller lösenfras åt ägaren – ge kommandot och låt ägaren fylla i
 }
 ```
 
-Servern kan hålla flera böcker. Assistenten arbetar i den första boken om
-filen inte säger annat. Ska den höra till en annan bok läggs raden
-`"bok": "<bokens identitet>"` till; identiteten står längst ner under Mer,
-Böcker i appen när boken är öppen.
+Servern kan hålla flera böcker. Filen behöver inte namnge någon: med en bok
+används den, med flera väljer du per kvitto med `--bok`. Raden
+`"bok": "<bokens identitet>"` gör en bok till den som används när ett kommando
+inte säger något. Kvittovakten läser alla böcker oavsett vad filen säger.
 
 `url` ska vara Bokfinks egen synkserver, på samma maskin `http://127.0.0.1:8091`.
 Maskinen kör fler PocketBase-instanser, och fram till 2026-10-28 pekade filen

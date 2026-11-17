@@ -151,7 +151,7 @@ export async function vaktaAllaBocker(
  * than read as a firm's.
  */
 async function lasBeskrivning(
-  bok: Bokpaserver,
+  bok: Pick<Bokpaserver, 'id' | 'beskrivning'>,
   beroenden: Pick<Agentberoenden, 'krypto'>,
 ): Promise<Bokbeskrivning> {
   if (bok.beskrivning === undefined || bok.beskrivning === '') {
@@ -210,4 +210,101 @@ async function glomOverhoppad(bok: string, vakt: Kvittovakt): Promise<void> {
     Object.entries(minne.overhoppade).filter(([id]) => id !== bok),
   );
   await vakt.minne.spara({ ...minne, overhoppade: kvar });
+}
+
+/** A book on the server, as far as the assistant can tell what it is. */
+export interface Kandbok {
+  readonly id: string;
+  /** Absent when the description is missing or cannot be read; `fel` says why. */
+  readonly beskrivning?: Bokbeskrivning;
+  readonly fel?: string;
+}
+
+/** Every book with what its description says, or why it says nothing. */
+export async function kannIgenBocker(
+  bocker: readonly Pick<Bokpaserver, 'id' | 'beskrivning'>[],
+  beroenden: Pick<Agentberoenden, 'krypto'>,
+): Promise<Kandbok[]> {
+  const resultat: Kandbok[] = [];
+  for (const bok of bocker) {
+    try {
+      resultat.push({ id: bok.id, beskrivning: await lasBeskrivning(bok, beroenden) });
+    } catch (orsak) {
+      if (!(orsak instanceof Hoppas)) {
+        throw orsak;
+      }
+      resultat.push({ id: bok.id, fel: orsak.message });
+    }
+  }
+  return resultat;
+}
+
+const SLAG = { enskild_firma: 'enskild firma', forening: 'förening' } as const;
+
+/** The books as the assistant reads them out, one per line. */
+export function listaBocker(bocker: readonly Kandbok[], standard?: string): string {
+  if (bocker.length === 0) {
+    return 'Servern har inga böcker än.\n';
+  }
+  return `${bocker
+    .map((bok) => {
+      const vad =
+        bok.beskrivning === undefined
+          ? `(okänd: ${bok.fel ?? 'ingen beskrivning'})`
+          : `${bok.beskrivning.namn} (${SLAG[bok.beskrivning.profil]})`;
+      return `${vad}  --bok ${bok.id}${bok.id === standard ? '  [agent.json]' : ''}`;
+    })
+    .join('\n')}\n`;
+}
+
+/**
+ * The book a command is for (beslut AE).
+ *
+ * Asked for by identity or by name; otherwise the one agent.json names; and
+ * with neither, the only book there is. With several and nothing to go on the
+ * assistant has to ask which one rather than guess, so the answer lists them.
+ */
+export function valjBok(
+  bocker: readonly Kandbok[],
+  onskad: string | undefined,
+  standard: string | undefined,
+): Kandbok {
+  const lista = () => `\n\n${listaBocker(bocker, standard)}`;
+  if (onskad !== undefined) {
+    const paId = bocker.find((bok) => bok.id === onskad);
+    if (paId !== undefined) {
+      return paId;
+    }
+    const pa = (namn: string) => namn.toLocaleLowerCase('sv-SE');
+    const paNamn = bocker.filter(
+      (bok) => bok.beskrivning !== undefined && pa(bok.beskrivning.namn) === pa(onskad),
+    );
+    const [enda] = paNamn;
+    if (paNamn.length === 1 && enda !== undefined) {
+      return enda;
+    }
+    throw new Error(
+      paNamn.length > 1
+        ? `Flera böcker heter "${onskad}". Välj med identiteten:${lista()}`
+        : `Servern har ingen bok som heter eller har identiteten "${onskad}".${lista()}`,
+    );
+  }
+  if (standard !== undefined) {
+    const vald = bocker.find((bok) => bok.id === standard);
+    if (vald === undefined) {
+      throw new Error(
+        `Boken "${standard}" i agent.json finns inte på servern.${lista()}`,
+      );
+    }
+    return vald;
+  }
+  const [enda] = bocker;
+  if (bocker.length === 1 && enda !== undefined) {
+    return enda;
+  }
+  throw new Error(
+    bocker.length === 0
+      ? 'Servern har inga böcker än.'
+      : `Servern har flera böcker. Säg vilken med --bok:${lista()}`,
+  );
 }

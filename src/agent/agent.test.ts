@@ -94,8 +94,8 @@ describe('the receipt assistant’s device', () => {
 
   const kor = async (argv: string[]) => {
     const kommando = tolkaKommando(argv);
-    if (kommando.typ === 'las-nya') {
-      throw new Error('the watcher is tested in vakt.test.ts');
+    if (kommando.typ === 'las-nya' || kommando.typ === 'bocker') {
+      throw new Error('commands about every book are tested in bocker.test.ts');
     }
     return korAgent(await nyDb('pi'), kommando, beroenden());
   };
@@ -260,7 +260,33 @@ describe('tolkaKommando', () => {
     });
   });
 
+  it('takes the book to work in, wherever it stands', () => {
+    expect(tolkaKommando(['bocker'])).toEqual({ typ: 'bocker' });
+    expect(tolkaKommando(['lage', '--bok', 'Bygdegården'])).toEqual({
+      typ: 'lage',
+      bok: 'Bygdegården',
+    });
+    expect(tolkaKommando(['sok', '--bok', 'kontera', 'foder'])).toEqual({
+      typ: 'sok',
+      fraga: 'foder',
+      bok: 'kontera',
+    });
+    expect(tolkaKommando(['utkast', '--prova', '/f.json', '--bok', 'kontera'])).toEqual({
+      typ: 'utkast',
+      sokvag: '/f.json',
+      prova: true,
+      bok: 'kontera',
+    });
+  });
+
   it('answers anything else with how it is used', () => {
+    expect(() => tolkaKommando(['lage', '--bok'])).toThrow('Användning');
+    expect(() => tolkaKommando(['utkast', '--bok', '--prova', '/f.json'])).toThrow(
+      'Användning',
+    );
+    // The watcher reads every book, so it is not told one.
+    expect(() => tolkaKommando(['las-nya', '--bok', 'kontera'])).toThrow('Användning');
+    expect(() => tolkaKommando(['bocker', 'extra'])).toThrow('Användning');
     expect(() => tolkaKommando([])).toThrow('Användning');
     expect(() => tolkaKommando(['utkast'])).toThrow('Användning');
     expect(() => tolkaKommando(['bokfor', '/f.json'])).toThrow('Användning');
