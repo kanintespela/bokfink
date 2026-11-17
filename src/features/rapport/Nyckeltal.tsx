@@ -11,9 +11,13 @@ import {
   momsskuld,
   resultatPerManad,
 } from '../../domain/rapport/nyckeltal';
+import { beraknaOversikt } from '../../domain/rapport/oversikt';
 import { aretsResultat } from '../../domain/rapport/resultatrakning';
 import { beraknaSaldon } from '../../domain/rapport/saldon';
 import type { BokfortVerifikat } from '../../domain/verifikat/verifikat';
+import { delaEllerSpara } from '../../platform/fil';
+import { useFilprefix } from '../../ui/bok';
+import { Uppgiftsstatus, useUppgift } from '../data/uppgift';
 import { Andelsstaplar, Manadslinje, Manadsstaplar } from './Diagram';
 
 interface Props {
@@ -23,6 +27,8 @@ interface Props {
   readonly idag: Datum;
   /** False for a book with no moms, which owes none and so shows no figure. */
   readonly visaMoms?: boolean;
+  /** The open book's name, which heads the PDF overview. */
+  readonly bokensNamn: string;
 }
 
 /**
@@ -39,7 +45,10 @@ export function Nyckeltal({
   rakenskapsar,
   idag,
   visaMoms = true,
+  bokensNamn,
 }: Props) {
+  const filprefix = useFilprefix();
+  const { arbetar, besked, fel, kor } = useUppgift();
   const ar = useMemo(
     () => [...rakenskapsar].sort((a, b) => b.start.localeCompare(a.start)),
     [rakenskapsar],
@@ -91,6 +100,37 @@ export function Nyckeltal({
           ))}
         </select>
       </div>
+
+      <p className="exportknappar">
+        <button
+          type="button"
+          className="knapp knapp--text"
+          data-testid="nyckeltal-pdf"
+          disabled={arbetar}
+          onClick={() =>
+            void kor(async () => {
+              // Imported when asked for, with pdf-lib behind it, like the archive.
+              const { skrivOversiktPdf } =
+                await import('../../domain/rapport/oversiktPdf');
+              const pdf = await skrivOversiktPdf({
+                namn: bokensNamn,
+                oversikt: beraknaOversikt(aret, rakenskapsar, verifikat, konton, idag),
+                visaMoms,
+                skapad: idag,
+              });
+              const arsnamn = aret.start.slice(0, 4);
+              const namn = `${filprefix}-nyckeltal-${arsnamn}.pdf`;
+              const utfall = await delaEllerSpara(namn, pdf, 'application/pdf');
+              return utfall === 'delad'
+                ? `Översikten för ${arsnamn} delades.`
+                : `Översikten sparades som ${namn}.`;
+            })
+          }
+        >
+          Spara översikt som PDF
+        </button>
+      </p>
+      <Uppgiftsstatus arbetar={arbetar} besked={besked} fel={fel} />
 
       <dl className="nyckeltal" data-testid="nyckeltal">
         <dt>Resultat i år</dt>

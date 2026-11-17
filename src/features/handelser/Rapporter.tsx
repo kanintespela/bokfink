@@ -38,6 +38,8 @@ interface Props {
   readonly projekt: readonly Projekt[];
   /** False for a book with no moms, which then has no moms figure to show. */
   readonly visaMoms?: boolean;
+  /** The open book's name, for the PDF overview. */
+  readonly bokensNamn: string;
 }
 
 /**
@@ -89,6 +91,7 @@ export function Rapporter(props: Props) {
           rakenskapsar={props.rakenskapsar}
           idag={props.idag}
           visaMoms={props.visaMoms ?? true}
+          bokensNamn={props.bokensNamn}
         />
       )}
 

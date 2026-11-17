@@ -1998,6 +1998,7 @@ export function Bokfink({ db, bokval }: { db: BokfinkDatabase; bokval: Bokval })
             idag={idag}
             projekt={laddat.projekt}
             visaMoms={laddat.momsregistrerad}
+            bokensNamn={bokval.aktiv.namn}
           />
         )}
 

@@ -296,3 +296,24 @@ test('says what each month of the charts stands for', async ({ page }) => {
   // Ten months, the ones that have begun.
   await expect(siffror.locator('dt')).toHaveCount(10);
 });
+
+/*
+ * The key figures on one sheet, for someone who is not in the app. Saved
+ * rather than shared in a desktop browser, under the book's file prefix.
+ */
+test('saves the key figures as a PDF', async ({ page }) => {
+  await bokforNagot(page);
+  await page.goto('/#rapporter');
+
+  const nedladdning = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Spara översikt som PDF' }).click();
+  const fil = await nedladdning;
+  expect(fil.suggestedFilename()).toBe('bokfink-nyckeltal-2026.pdf');
+  await expect(page.getByTestId('datautbyte-besked')).toContainText(
+    'sparades som bokfink-nyckeltal-2026.pdf',
+  );
+
+  const sokvag = await fil.path();
+  const { readFile } = await import('node:fs/promises');
+  expect((await readFile(sokvag)).subarray(0, 5).toString()).toBe('%PDF-');
+});
