@@ -9,11 +9,21 @@ import { beteckning, type BokfortVerifikat } from '../../domain/verifikat/verifi
 import { huvudbokTabell } from '../../domain/export/tabeller';
 import { Exportknappar } from '../rapport/Exportknappar';
 import { useFilprefix } from '../../ui/bok';
+import { delaEllerSpara } from '../../platform/fil';
+import type { Datum } from '../../domain/tid/datum';
+import type { Rakenskapsar } from '../../domain/rakenskapsar/rakenskapsar';
+import { Uppgiftsstatus, useUppgift } from '../data/uppgift';
 
 interface Props {
   readonly konton: ReadonlyMap<Kontonummer, Konto>;
   readonly verifikat: readonly BokfortVerifikat[];
   readonly ingaendeBalanser: readonly Ingaendebalans[];
+  /** The year the verifikat belong to, which the PDF names. */
+  readonly ar: Rakenskapsar | undefined;
+  /** The open book's name, which heads the PDF. */
+  readonly bokensNamn: string;
+  /** Today, for the "created" line on the PDF. */
+  readonly idag: Datum;
 }
 
 /**
@@ -29,8 +39,16 @@ interface Props {
  * figure wanted most often is the closing balance rather than the lines
  * behind it.
  */
-export function Huvudbok({ konton, verifikat, ingaendeBalanser }: Props) {
+export function Huvudbok({
+  konton,
+  verifikat,
+  ingaendeBalanser,
+  ar,
+  bokensNamn,
+  idag,
+}: Props) {
   const filprefix = useFilprefix();
+  const { arbetar, besked, fel, kor } = useUppgift();
   const [oppet, setOppet] = useState<Kontonummer | undefined>();
 
   const saldon = useMemo(
@@ -60,6 +78,40 @@ export function Huvudbok({ konton, verifikat, ingaendeBalanser }: Props) {
         tabell={huvudbokTabell(saldon, verifikat, konton)}
         namn={`${filprefix}-huvudbok`}
       />
+
+      {ar !== undefined && (
+        <p className="exportknappar">
+          <button
+            type="button"
+            className="knapp knapp--text"
+            data-testid="huvudbok-pdf"
+            disabled={arbetar}
+            onClick={() =>
+              void kor(async () => {
+                // Imported when asked for, with pdf-lib behind it, like the archive.
+                const { skrivHuvudbokPdf } =
+                  await import('../../domain/rapport/rapportPdf');
+                const pdf = await skrivHuvudbokPdf({
+                  foretagsnamn: bokensNamn,
+                  period: { fran: ar.start, till: ar.slut },
+                  saldon,
+                  verifikat,
+                  konton,
+                  skapad: idag,
+                });
+                const namn = `${filprefix}-huvudbok-${ar.start.slice(0, 4)}.pdf`;
+                const utfall = await delaEllerSpara(namn, pdf, 'application/pdf');
+                return utfall === 'delad'
+                  ? 'PDF:en delades.'
+                  : `PDF:en sparades som ${namn}.`;
+              })
+            }
+          >
+            Spara som PDF
+          </button>
+        </p>
+      )}
+      <Uppgiftsstatus arbetar={arbetar} besked={besked} fel={fel} />
 
       <ul className="lista" data-testid="huvudbok">
         {rader.map((saldo) => {

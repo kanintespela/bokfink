@@ -13,10 +13,12 @@ import {
   resultatrakningTabell,
   type Tabell,
 } from '../../domain/export/tabeller';
-import { delar } from '../../domain/tid/datum';
+import { delar, type Datum } from '../../domain/tid/datum';
 import { Exportknappar } from './Exportknappar';
 import type { BokfortVerifikat } from '../../domain/verifikat/verifikat';
 import { useFilprefix } from '../../ui/bok';
+import { delaEllerSpara } from '../../platform/fil';
+import { Uppgiftsstatus, useUppgift } from '../data/uppgift';
 
 interface Props {
   readonly konton: ReadonlyMap<Kontonummer, Konto>;
@@ -24,6 +26,10 @@ interface Props {
   readonly verifikat: readonly BokfortVerifikat[];
   readonly rakenskapsar: readonly Rakenskapsar[];
   readonly vilken: 'resultat' | 'balans';
+  /** The open book's name, which heads the PDF. */
+  readonly bokensNamn: string;
+  /** Today, for the "created" line on the PDF. */
+  readonly idag: Datum;
 }
 
 const LANGDER: readonly { readonly varde: Momsperiod; readonly namn: string }[] = [
@@ -40,8 +46,16 @@ const LANGDER: readonly { readonly varde: Momsperiod; readonly namn: string }[] 
  * and the answer to "how does this compare" is read after the figure itself,
  * not beside it.
  */
-export function Rakningar({ konton, verifikat, rakenskapsar, vilken }: Props) {
+export function Rakningar({
+  konton,
+  verifikat,
+  rakenskapsar,
+  vilken,
+  bokensNamn,
+  idag,
+}: Props) {
   const filprefix = useFilprefix();
+  const { arbetar, besked, fel, kor } = useUppgift();
   const ar = useMemo(
     () => [...rakenskapsar].sort((a, b) => b.start.localeCompare(a.start)),
     [rakenskapsar],
@@ -147,6 +161,35 @@ export function Rakningar({ konton, verifikat, rakenskapsar, vilken }: Props) {
   // above into a function declaration.
   const { fran, till } = period;
 
+  const skrivRapportPdf = async (): Promise<Uint8Array> => {
+    const grund = {
+      foretagsnamn: bokensNamn,
+      period: { fran, till },
+      skapad: idag,
+    };
+    const jamfor =
+      jamforelse === undefined || foregaende === undefined
+        ? undefined
+        : { namn: foregaende.period.namn, rapport: jamforelse };
+    const pdf = await import('../../domain/rapport/rapportPdf');
+    if ('grupper' in rapport) {
+      return pdf.skrivResultatPdf({
+        ...grund,
+        rapport,
+        ...(jamfor !== undefined && 'grupper' in jamfor.rapport
+          ? { jamforelse: { namn: jamfor.namn, rapport: jamfor.rapport } }
+          : {}),
+      });
+    }
+    return pdf.skrivBalansPdf({
+      ...grund,
+      rapport,
+      ...(jamfor !== undefined && 'tillgangar' in jamfor.rapport
+        ? { jamforelse: { namn: jamfor.namn, rapport: jamfor.rapport } }
+        : {}),
+    });
+  };
+
   const tidigare = (konto: Kontonummer): Ore | undefined => {
     if (jamforelse === undefined) {
       return undefined;
@@ -218,6 +261,29 @@ export function Rakningar({ konton, verifikat, rakenskapsar, vilken }: Props) {
       </p>
 
       <Exportknappar tabell={tabell} namn={`${filprefix}-${vilken}-${fran}-${till}`} />
+
+      <p className="exportknappar">
+        <button
+          type="button"
+          className="knapp knapp--text"
+          data-testid="rapport-pdf"
+          disabled={arbetar}
+          onClick={() =>
+            void kor(async () => {
+              // Imported when asked for, with pdf-lib behind it, like the archive.
+              const pdf = await skrivRapportPdf();
+              const namn = `${filprefix}-${vilken}-${fran}-${till}.pdf`;
+              const utfall = await delaEllerSpara(namn, pdf, 'application/pdf');
+              return utfall === 'delad'
+                ? 'PDF:en delades.'
+                : `PDF:en sparades som ${namn}.`;
+            })
+          }
+        >
+          Spara som PDF
+        </button>
+      </p>
+      <Uppgiftsstatus arbetar={arbetar} besked={besked} fel={fel} />
 
       {budgetunderlag !== undefined && (
         <div data-testid="budgetunderlag">

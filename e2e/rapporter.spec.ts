@@ -317,3 +317,45 @@ test('saves the key figures as a PDF', async ({ page }) => {
   const { readFile } = await import('node:fs/promises');
   expect((await readFile(sokvag)).subarray(0, 5).toString()).toBe('%PDF-');
 });
+
+/*
+ * The same for the statements: resultat and balans for the period on screen,
+ * and the huvudbok for the year, each as a file that opens in any PDF reader.
+ */
+for (const [rapport, filnamn] of [
+  ['Resultat', 'bokfink-resultat-2026-01-01-2026-12-31.pdf'],
+  ['Balans', 'bokfink-balans-2026-01-01-2026-12-31.pdf'],
+] as const) {
+  test(`saves the ${rapport.toLowerCase()} as a PDF`, async ({ page }) => {
+    await bokforNagot(page);
+    await page.goto('/#rapporter');
+    await page.getByRole('button', { name: rapport, exact: true }).click();
+
+    const nedladdning = page.waitForEvent('download');
+    await page.getByTestId('rapport-pdf').click();
+    const fil = await nedladdning;
+    expect(fil.suggestedFilename()).toBe(filnamn);
+    await expect(page.getByTestId('datautbyte-besked')).toContainText(
+      `sparades som ${filnamn}`,
+    );
+
+    const sokvag = await fil.path();
+    const { readFile } = await import('node:fs/promises');
+    expect((await readFile(sokvag)).subarray(0, 5).toString()).toBe('%PDF-');
+  });
+}
+
+test('saves the huvudbok as a PDF', async ({ page }) => {
+  await bokforNagot(page);
+  await page.goto('/#rapporter');
+  await page.getByRole('button', { name: 'Huvudbok', exact: true }).click();
+
+  const nedladdning = page.waitForEvent('download');
+  await page.getByTestId('huvudbok-pdf').click();
+  const fil = await nedladdning;
+  expect(fil.suggestedFilename()).toBe('bokfink-huvudbok-2026.pdf');
+
+  const sokvag = await fil.path();
+  const { readFile } = await import('node:fs/promises');
+  expect((await readFile(sokvag)).subarray(0, 5).toString()).toBe('%PDF-');
+});

@@ -40,6 +40,8 @@ interface Props {
   readonly visaMoms?: boolean;
   /** The open book's name, for the PDF overview. */
   readonly bokensNamn: string;
+  /** The year the huvudbok covers, which the PDF names. */
+  readonly aktuelltAr: Rakenskapsar | undefined;
 }
 
 /**
@@ -101,6 +103,8 @@ export function Rapporter(props: Props) {
           verifikat={props.allaVerifikat}
           rakenskapsar={props.rakenskapsar}
           vilken={vald}
+          bokensNamn={props.bokensNamn}
+          idag={props.idag}
         />
       )}
 
@@ -109,6 +113,9 @@ export function Rapporter(props: Props) {
           konton={props.konton}
           verifikat={props.verifikat}
           ingaendeBalanser={props.ingaendeBalanser}
+          ar={props.aktuelltAr}
+          bokensNamn={props.bokensNamn}
+          idag={props.idag}
         />
       )}
 
